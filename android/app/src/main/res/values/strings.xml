@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Keynear</string>
+    <string name="notification_channel_name">Keynear continuity</string>
+    <string name="notification_channel_description">Background nearby device continuity status</string>
+    <string name="notification_title">Keynear ready</string>
+    <string name="notification_text">Local device continuity active</string>
+    <string name="tile_label">Keynear</string>
+    <string name="visibility_hidden">Hidden</string>
+    <string name="visibility_paired">Paired devices only</string>
+    <string name="visibility_everyone">Everyone nearby</string>
+    <string name="status_loading">Checking core status...</string>
+    <string name="empty_devices_title">No paired devices yet</string>
+    <string name="empty_devices_body">Device pairing activates in 0.2.0-cygnus.</string>
+    <string name="action_cycle_visibility">Cycle visibility mode</string>
+    <string name="action_retry">Retry</string>
+    <string name="share_invalid_message">Unsupported share payload</string>
+</resources>
+

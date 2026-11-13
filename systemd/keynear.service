@@ -1,0 +1,12 @@
+[Unit]
+Description=Keynear background continuity daemon
+After=graphical-session.target bluetooth.target
+
+[Service]
+ExecStart=%h/.local/bin/keynear-linux
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
+

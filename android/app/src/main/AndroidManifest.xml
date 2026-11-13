@@ -20,7 +20,8 @@
 
     <application
         android:allowBackup="false"
-        android:label="Keynear">
+        android:label="@string/app_name"
+        android:theme="@style/Theme.Keynear">
 
         <activity
             android:name=".MainActivity"
