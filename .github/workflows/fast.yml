@@ -1,0 +1,20 @@
+name: Fast Feedback
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+
+jobs:
+  fast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Shell syntax & repo check
+        run: |
+          bash -n scripts/*/*.sh
+          bash scripts/validation/repo-check.sh
+      - name: Cargo check
+        run: cargo check --workspace
+

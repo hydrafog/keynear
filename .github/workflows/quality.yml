@@ -1,0 +1,23 @@
+name: Quality Gate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Repository hygiene
+        run: bash scripts/validation/repo-check.sh
+      - name: Project checks
+        run: bash scripts/project/check.sh
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+

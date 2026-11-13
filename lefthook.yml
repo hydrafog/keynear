@@ -1,0 +1,22 @@
+pre-commit:
+  parallel: true
+  commands:
+    repo-check:
+      run: bash scripts/validation/repo-check.sh
+    rust-fmt:
+      glob: "*.rs"
+      run: cargo fmt --check
+
+commit-msg:
+  commands:
+    lint-msg:
+      run: bash scripts/validation/commit-msg.sh {1}
+
+pre-push:
+  parallel: true
+  commands:
+    flake-check:
+      run: nix flake check --no-build
+    project-check:
+      run: bash scripts/project/check.sh
+
