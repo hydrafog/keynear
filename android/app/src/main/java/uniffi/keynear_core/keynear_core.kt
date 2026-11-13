@@ -675,11 +675,41 @@ internal object IntegrityCheckingUniffiLib {
     }
 
     internal fun ensureInitialized() = Unit
+    external fun uniffi_keynear_core_checksum_func_ble_service_uuid16(
+    ): Int
+    external fun uniffi_keynear_core_checksum_func_ble_service_uuid_string(
+    ): Int
     external fun uniffi_keynear_core_checksum_func_default_config_summary(
+    ): Int
+    external fun uniffi_keynear_core_checksum_func_everyone_nearby_timeout_secs(
     ): Int
     external fun uniffi_keynear_core_checksum_func_get_core_status(
     ): Int
+    external fun uniffi_keynear_core_checksum_func_pairing_timeout_secs(
+    ): Int
     external fun uniffi_keynear_core_checksum_method_corehandle_cycle_visibility_mode(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_corehandle_decode_everyone_nearby_beacon(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_corehandle_decode_paired_beacon(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_corehandle_derive_presence_token_bytes(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_corehandle_encode_everyone_nearby_beacon(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_corehandle_encode_paired_beacon(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_corehandle_everyone_nearby_remaining_secs(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_corehandle_generate_static_keypair(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_corehandle_load_paired_devices(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_corehandle_remove_paired_device(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_corehandle_save_paired_device(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_corehandle_set_visibility_mode(
     ): Int
     external fun uniffi_keynear_core_checksum_method_corehandle_status(
     ): Int
@@ -689,7 +719,27 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_keynear_core_checksum_method_corehandle_visibility_mode(
     ): Int
+    external fun uniffi_keynear_core_checksum_method_ffinoisepairingsession_approve_and_build_export(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_ffinoisepairingsession_complete_with_peer_export(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_ffinoisepairingsession_formatted_verification_code(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_ffinoisepairingsession_reject(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_ffinoisepairingsession_remaining_secs(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_ffinoisepairingsession_start_handshake(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_ffinoisepairingsession_state(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_ffinoisepairingsession_step(
+    ): Int
     external fun uniffi_keynear_core_checksum_constructor_corehandle_new(
+    ): Int
+    external fun uniffi_keynear_core_checksum_constructor_ffinoisepairingsession_new_initiator(
+    ): Int
+    external fun uniffi_keynear_core_checksum_constructor_ffinoisepairingsession_new_responder(
     ): Int
     external fun ffi_keynear_core_uniffi_contract_version(
     ): Int
@@ -719,6 +769,28 @@ internal object UniffiLib {
     ): Long
     external fun uniffi_keynear_core_fn_method_corehandle_cycle_visibility_mode(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_corehandle_decode_everyone_nearby_beacon(`ptr`: Long,`serviceData`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_corehandle_decode_paired_beacon(`ptr`: Long,`serviceData`: RustBuffer.ByValue,`deviceId`: RustBuffer.ByValue,`expectedCounter`: Int,`lastAcceptedCounter`: RustBuffer.ByValue,`reconnectKey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_corehandle_derive_presence_token_bytes(`ptr`: Long,`deviceId`: RustBuffer.ByValue,`counter`: Int,`reconnectKey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_corehandle_encode_everyone_nearby_beacon(`ptr`: Long,`role`: RustBuffer.ByValue,`capabilityFlags`: Int,`displayName`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_corehandle_encode_paired_beacon(`ptr`: Long,`deviceId`: RustBuffer.ByValue,`counter`: Int,`reconnectKey`: RustBuffer.ByValue,`available`: Byte,`batteryLevel`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_corehandle_everyone_nearby_remaining_secs(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_keynear_core_fn_method_corehandle_generate_static_keypair(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_corehandle_load_paired_devices(`ptr`: Long,`devicesTomlPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_corehandle_remove_paired_device(`ptr`: Long,`devicesTomlPath`: RustBuffer.ByValue,`deviceId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_keynear_core_fn_method_corehandle_save_paired_device(`ptr`: Long,`devicesTomlPath`: RustBuffer.ByValue,`device`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_keynear_core_fn_method_corehandle_set_visibility_mode(`ptr`: Long,`mode`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_corehandle_status(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_corehandle_validate_config_toml(`ptr`: Long,`rawToml`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -727,10 +799,42 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_corehandle_visibility_mode(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_clone_ffinoisepairingsession(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_keynear_core_fn_free_ffinoisepairingsession(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_keynear_core_fn_constructor_ffinoisepairingsession_new_initiator(`localStaticPrivate`: RustBuffer.ByValue,`localDeviceId`: RustBuffer.ByValue,`localDisplayName`: RustBuffer.ByValue,`localRole`: RustBuffer.ByValue,`capabilityFlags`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_keynear_core_fn_constructor_ffinoisepairingsession_new_responder(`localStaticPrivate`: RustBuffer.ByValue,`localDeviceId`: RustBuffer.ByValue,`localDisplayName`: RustBuffer.ByValue,`localRole`: RustBuffer.ByValue,`capabilityFlags`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_keynear_core_fn_method_ffinoisepairingsession_approve_and_build_export(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_ffinoisepairingsession_complete_with_peer_export(`ptr`: Long,`peerCiphertext`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_ffinoisepairingsession_formatted_verification_code(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_ffinoisepairingsession_reject(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_keynear_core_fn_method_ffinoisepairingsession_remaining_secs(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_keynear_core_fn_method_ffinoisepairingsession_start_handshake(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_ffinoisepairingsession_state(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_ffinoisepairingsession_step(`ptr`: Long,`inbound`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_func_ble_service_uuid16(uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
+    external fun uniffi_keynear_core_fn_func_ble_service_uuid_string(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_func_default_config_summary(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_func_everyone_nearby_timeout_secs(uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
     external fun uniffi_keynear_core_fn_func_get_core_status(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_func_pairing_timeout_secs(uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
     external fun ffi_keynear_core_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun ffi_keynear_core_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -850,13 +954,58 @@ private fun uniffiCheckContractApiVersion(lib: IntegrityCheckingUniffiLib) {
 }
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
+    if ((lib.uniffi_keynear_core_checksum_func_ble_service_uuid16() and 0xFFFF) != 11067) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_func_ble_service_uuid_string() and 0xFFFF) != 56539) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_keynear_core_checksum_func_default_config_summary() and 0xFFFF) != 61020) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_func_everyone_nearby_timeout_secs() and 0xFFFF) != 3453) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_keynear_core_checksum_func_get_core_status() and 0xFFFF) != 16378) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_keynear_core_checksum_func_pairing_timeout_secs() and 0xFFFF) != 21109) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_keynear_core_checksum_method_corehandle_cycle_visibility_mode() and 0xFFFF) != 44366) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_corehandle_decode_everyone_nearby_beacon() and 0xFFFF) != 49500) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_corehandle_decode_paired_beacon() and 0xFFFF) != 30353) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_corehandle_derive_presence_token_bytes() and 0xFFFF) != 58915) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_corehandle_encode_everyone_nearby_beacon() and 0xFFFF) != 55858) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_corehandle_encode_paired_beacon() and 0xFFFF) != 15691) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_corehandle_everyone_nearby_remaining_secs() and 0xFFFF) != 4117) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_corehandle_generate_static_keypair() and 0xFFFF) != 31432) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_corehandle_load_paired_devices() and 0xFFFF) != 35108) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_corehandle_remove_paired_device() and 0xFFFF) != 65174) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_corehandle_save_paired_device() and 0xFFFF) != 54120) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_corehandle_set_visibility_mode() and 0xFFFF) != 41707) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_keynear_core_checksum_method_corehandle_status() and 0xFFFF) != 10794) {
@@ -871,7 +1020,37 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_keynear_core_checksum_method_corehandle_visibility_mode() and 0xFFFF) != 51801) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_keynear_core_checksum_method_ffinoisepairingsession_approve_and_build_export() and 0xFFFF) != 32223) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_ffinoisepairingsession_complete_with_peer_export() and 0xFFFF) != 28382) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_ffinoisepairingsession_formatted_verification_code() and 0xFFFF) != 6620) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_ffinoisepairingsession_reject() and 0xFFFF) != 10529) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_ffinoisepairingsession_remaining_secs() and 0xFFFF) != 40400) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_ffinoisepairingsession_start_handshake() and 0xFFFF) != 23456) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_ffinoisepairingsession_state() and 0xFFFF) != 17285) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_ffinoisepairingsession_step() and 0xFFFF) != 28255) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_keynear_core_checksum_constructor_corehandle_new() and 0xFFFF) != 13844) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_constructor_ffinoisepairingsession_new_initiator() and 0xFFFF) != 21571) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_constructor_ffinoisepairingsession_new_responder() and 0xFFFF) != 53776) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
 }
@@ -1029,6 +1208,60 @@ private class JavaLangRefCleanable(
     val cleanable: java.lang.ref.Cleaner.Cleanable
 ) : UniffiCleaner.Cleanable {
     override fun clean() = cleanable.clean()
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterUByte: FfiConverter<UByte, Byte> {
+    override fun lift(value: Byte): UByte {
+        return value.toUByte()
+    }
+
+    fun lift(value: Int): UByte {
+        return value.toUByte()
+    }
+
+    override fun read(buf: ByteBuffer): UByte {
+        return lift(buf.get())
+    }
+
+    override fun lower(value: UByte): Byte {
+        return value.toByte()
+    }
+
+    override fun allocationSize(value: UByte) = 1UL
+
+    override fun write(value: UByte, buf: ByteBuffer) {
+        buf.put(value.toByte())
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterUShort: FfiConverter<UShort, Short> {
+    override fun lift(value: Short): UShort {
+        return value.toUShort()
+    }
+
+    fun lift(value: Int): UShort {
+        return value.toUShort()
+    }
+
+    override fun read(buf: ByteBuffer): UShort {
+        return lift(buf.getShort())
+    }
+
+    override fun lower(value: UShort): Short {
+        return value.toShort()
+    }
+
+    override fun allocationSize(value: UShort) = 2UL
+
+    override fun write(value: UShort, buf: ByteBuffer) {
+        buf.putShort(value.toShort())
+    }
 }
 
 /**
@@ -1276,6 +1509,28 @@ public interface CoreHandleInterface {
     
     fun `cycleVisibilityMode`(): FfiVisibilityMode
     
+    fun `decodeEveryoneNearbyBeacon`(`serviceData`: kotlin.ByteArray): FfiEveryoneNearbyBeacon
+    
+    fun `decodePairedBeacon`(`serviceData`: kotlin.ByteArray, `deviceId`: kotlin.String, `expectedCounter`: kotlin.UInt, `lastAcceptedCounter`: kotlin.UInt?, `reconnectKey`: kotlin.ByteArray): FfiPairedBeaconState
+    
+    fun `derivePresenceTokenBytes`(`deviceId`: kotlin.String, `counter`: kotlin.UInt, `reconnectKey`: kotlin.ByteArray): kotlin.ByteArray
+    
+    fun `encodeEveryoneNearbyBeacon`(`role`: FfiDeviceRole, `capabilityFlags`: kotlin.UInt, `displayName`: kotlin.String): kotlin.ByteArray
+    
+    fun `encodePairedBeacon`(`deviceId`: kotlin.String, `counter`: kotlin.UInt, `reconnectKey`: kotlin.ByteArray, `available`: kotlin.Boolean, `batteryLevel`: kotlin.UByte?): kotlin.ByteArray
+    
+    fun `everyoneNearbyRemainingSecs`(): kotlin.ULong
+    
+    fun `generateStaticKeypair`(): FfiStaticKeypair
+    
+    fun `loadPairedDevices`(`devicesTomlPath`: kotlin.String): List<FfiPairedDevice>
+    
+    fun `removePairedDevice`(`devicesTomlPath`: kotlin.String, `deviceId`: kotlin.String): kotlin.Boolean
+    
+    fun `savePairedDevice`(`devicesTomlPath`: kotlin.String, `device`: FfiPairedDevice)
+    
+    fun `setVisibilityMode`(`mode`: FfiVisibilityMode): FfiVisibilityMode
+    
     fun `status`(): CoreStatus
     
     fun `validateConfigToml`(`rawToml`: kotlin.String): FfiVisibilityMode
@@ -1409,6 +1664,179 @@ open class CoreHandle: Disposable, AutoCloseable, CoreHandleInterface
     }
     
 
+    
+    @Throws(FfiException::class)override fun `decodeEveryoneNearbyBeacon`(`serviceData`: kotlin.ByteArray): FfiEveryoneNearbyBeacon {
+            return FfiConverterTypeFfiEveryoneNearbyBeacon.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_corehandle_decode_everyone_nearby_beacon(
+        it,
+        
+        FfiConverterByteArray.lower(`serviceData`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `decodePairedBeacon`(`serviceData`: kotlin.ByteArray, `deviceId`: kotlin.String, `expectedCounter`: kotlin.UInt, `lastAcceptedCounter`: kotlin.UInt?, `reconnectKey`: kotlin.ByteArray): FfiPairedBeaconState {
+            return FfiConverterTypeFfiPairedBeaconState.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_corehandle_decode_paired_beacon(
+        it,
+        
+        FfiConverterByteArray.lower(`serviceData`),
+        FfiConverterString.lower(`deviceId`),
+        FfiConverterUInt.lower(`expectedCounter`),
+        FfiConverterOptionalUInt.lower(`lastAcceptedCounter`),
+        FfiConverterByteArray.lower(`reconnectKey`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `derivePresenceTokenBytes`(`deviceId`: kotlin.String, `counter`: kotlin.UInt, `reconnectKey`: kotlin.ByteArray): kotlin.ByteArray {
+            return FfiConverterByteArray.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_corehandle_derive_presence_token_bytes(
+        it,
+        
+        FfiConverterString.lower(`deviceId`),
+        FfiConverterUInt.lower(`counter`),
+        FfiConverterByteArray.lower(`reconnectKey`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `encodeEveryoneNearbyBeacon`(`role`: FfiDeviceRole, `capabilityFlags`: kotlin.UInt, `displayName`: kotlin.String): kotlin.ByteArray {
+            return FfiConverterByteArray.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_corehandle_encode_everyone_nearby_beacon(
+        it,
+        
+        FfiConverterTypeFfiDeviceRole.lower(`role`),
+        FfiConverterUInt.lower(`capabilityFlags`),
+        FfiConverterString.lower(`displayName`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `encodePairedBeacon`(`deviceId`: kotlin.String, `counter`: kotlin.UInt, `reconnectKey`: kotlin.ByteArray, `available`: kotlin.Boolean, `batteryLevel`: kotlin.UByte?): kotlin.ByteArray {
+            return FfiConverterByteArray.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_corehandle_encode_paired_beacon(
+        it,
+        
+        FfiConverterString.lower(`deviceId`),
+        FfiConverterUInt.lower(`counter`),
+        FfiConverterByteArray.lower(`reconnectKey`),
+        FfiConverterBoolean.lower(`available`),
+        FfiConverterOptionalUByte.lower(`batteryLevel`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `everyoneNearbyRemainingSecs`(): kotlin.ULong {
+            return FfiConverterULong.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_corehandle_everyone_nearby_remaining_secs(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    override fun `generateStaticKeypair`(): FfiStaticKeypair {
+            return FfiConverterTypeFfiStaticKeypair.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_corehandle_generate_static_keypair(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `loadPairedDevices`(`devicesTomlPath`: kotlin.String): List<FfiPairedDevice> {
+            return FfiConverterSequenceTypeFfiPairedDevice.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_corehandle_load_paired_devices(
+        it,
+        
+        FfiConverterString.lower(`devicesTomlPath`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `removePairedDevice`(`devicesTomlPath`: kotlin.String, `deviceId`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_corehandle_remove_paired_device(
+        it,
+        
+        FfiConverterString.lower(`devicesTomlPath`),
+        FfiConverterString.lower(`deviceId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `savePairedDevice`(`devicesTomlPath`: kotlin.String, `device`: FfiPairedDevice)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_corehandle_save_paired_device(
+        it,
+        
+        FfiConverterString.lower(`devicesTomlPath`),
+        FfiConverterTypeFfiPairedDevice.lower(`device`),_status)
+}
+    }
+    
+    
+
+    override fun `setVisibilityMode`(`mode`: FfiVisibilityMode): FfiVisibilityMode {
+            return FfiConverterTypeFfiVisibilityMode.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_corehandle_set_visibility_mode(
+        it,
+        
+        FfiConverterTypeFfiVisibilityMode.lower(`mode`),_status)
+}
+    }
+    )
+    }
+    
+
     override fun `status`(): CoreStatus {
             return FfiConverterTypeCoreStatus.lift(
     callWithHandle {
@@ -1504,6 +1932,405 @@ public object FfiConverterTypeCoreHandle: FfiConverter<CoreHandle, Long> {
 }
 
 
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+public interface FfiNoisePairingSessionInterface {
+    
+    fun `approveAndBuildExport`(): kotlin.ByteArray
+    
+    fun `completeWithPeerExport`(`peerCiphertext`: kotlin.ByteArray): FfiPairingCompleted
+    
+    fun `formattedVerificationCode`(): kotlin.String
+    
+    fun `reject`()
+    
+    fun `remainingSecs`(): kotlin.ULong
+    
+    fun `startHandshake`(): FfiPairingStep
+    
+    fun `state`(): FfiPairingState
+    
+    fun `step`(`inbound`: kotlin.ByteArray): FfiPairingStep
+    
+    companion object
+}
+
+open class FfiNoisePairingSession: Disposable, AutoCloseable, FfiNoisePairingSessionInterface
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    /**
+     * Whether the current object has been destroyed and its reference is gone in the Rust side.
+     */
+    val uniffiIsDestroyed: Boolean get() = wasDestroyed.get()
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_keynear_core_fn_free_ffinoisepairingsession(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_keynear_core_fn_clone_ffinoisepairingsession(handle, status)
+        }
+    }
+
+    
+    @Throws(FfiException::class)override fun `approveAndBuildExport`(): kotlin.ByteArray {
+            return FfiConverterByteArray.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_ffinoisepairingsession_approve_and_build_export(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `completeWithPeerExport`(`peerCiphertext`: kotlin.ByteArray): FfiPairingCompleted {
+            return FfiConverterTypeFfiPairingCompleted.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_ffinoisepairingsession_complete_with_peer_export(
+        it,
+        
+        FfiConverterByteArray.lower(`peerCiphertext`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `formattedVerificationCode`(): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_ffinoisepairingsession_formatted_verification_code(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `reject`()
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_ffinoisepairingsession_reject(
+        it,
+        _status)
+}
+    }
+    
+    
+
+    override fun `remainingSecs`(): kotlin.ULong {
+            return FfiConverterULong.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_ffinoisepairingsession_remaining_secs(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `startHandshake`(): FfiPairingStep {
+            return FfiConverterTypeFfiPairingStep.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_ffinoisepairingsession_start_handshake(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    override fun `state`(): FfiPairingState {
+            return FfiConverterTypeFfiPairingState.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_ffinoisepairingsession_state(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `step`(`inbound`: kotlin.ByteArray): FfiPairingStep {
+            return FfiConverterTypeFfiPairingStep.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_ffinoisepairingsession_step(
+        it,
+        
+        FfiConverterByteArray.lower(`inbound`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+
+    
+
+
+    
+    companion object {
+        
+    @Throws(FfiException::class) fun `newInitiator`(`localStaticPrivate`: kotlin.ByteArray, `localDeviceId`: kotlin.String, `localDisplayName`: kotlin.String, `localRole`: FfiDeviceRole, `capabilityFlags`: kotlin.UInt): FfiNoisePairingSession {
+            return FfiConverterTypeFfiNoisePairingSession.lift(
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_constructor_ffinoisepairingsession_new_initiator(
+    
+        
+        FfiConverterByteArray.lower(`localStaticPrivate`),
+        FfiConverterString.lower(`localDeviceId`),
+        FfiConverterString.lower(`localDisplayName`),
+        FfiConverterTypeFfiDeviceRole.lower(`localRole`),
+        FfiConverterUInt.lower(`capabilityFlags`),_status)
+}
+    )
+    }
+    
+
+        
+    @Throws(FfiException::class) fun `newResponder`(`localStaticPrivate`: kotlin.ByteArray, `localDeviceId`: kotlin.String, `localDisplayName`: kotlin.String, `localRole`: FfiDeviceRole, `capabilityFlags`: kotlin.UInt): FfiNoisePairingSession {
+            return FfiConverterTypeFfiNoisePairingSession.lift(
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_constructor_ffinoisepairingsession_new_responder(
+    
+        
+        FfiConverterByteArray.lower(`localStaticPrivate`),
+        FfiConverterString.lower(`localDeviceId`),
+        FfiConverterString.lower(`localDisplayName`),
+        FfiConverterTypeFfiDeviceRole.lower(`localRole`),
+        FfiConverterUInt.lower(`capabilityFlags`),_status)
+}
+    )
+    }
+    
+
+        
+    }
+    
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiNoisePairingSession: FfiConverter<FfiNoisePairingSession, Long> {
+    override fun lower(value: FfiNoisePairingSession): Long {
+        return value.uniffiCloneHandle()
+    }
+
+    override fun lift(value: Long): FfiNoisePairingSession {
+        return FfiNoisePairingSession(UniffiWithHandle, value)
+    }
+
+    override fun read(buf: ByteBuffer): FfiNoisePairingSession {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: FfiNoisePairingSession) = 8UL
+
+    override fun write(value: FfiNoisePairingSession, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+
+
 
 data class CoreStatus (
     var `version`: kotlin.String
@@ -1548,6 +2375,343 @@ public object FfiConverterTypeCoreStatus: FfiConverterRustBuffer<CoreStatus> {
 
 
 
+data class FfiEveryoneNearbyBeacon (
+    var `role`: FfiDeviceRole
+    , 
+    var `capabilityFlags`: kotlin.UInt
+    , 
+    var `displayName`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiEveryoneNearbyBeacon: FfiConverterRustBuffer<FfiEveryoneNearbyBeacon> {
+    override fun read(buf: ByteBuffer): FfiEveryoneNearbyBeacon {
+        return FfiEveryoneNearbyBeacon(
+            FfiConverterTypeFfiDeviceRole.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiEveryoneNearbyBeacon) = (
+            FfiConverterTypeFfiDeviceRole.allocationSize(value.`role`) +
+            FfiConverterUInt.allocationSize(value.`capabilityFlags`) +
+            FfiConverterString.allocationSize(value.`displayName`)
+    )
+
+    override fun write(value: FfiEveryoneNearbyBeacon, buf: ByteBuffer) {
+            FfiConverterTypeFfiDeviceRole.write(value.`role`, buf)
+            FfiConverterUInt.write(value.`capabilityFlags`, buf)
+            FfiConverterString.write(value.`displayName`, buf)
+    }
+}
+
+
+
+data class FfiPairedBeaconState (
+    var `counter`: kotlin.UInt
+    , 
+    var `available`: kotlin.Boolean
+    , 
+    var `batteryLevel`: kotlin.UByte?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiPairedBeaconState: FfiConverterRustBuffer<FfiPairedBeaconState> {
+    override fun read(buf: ByteBuffer): FfiPairedBeaconState {
+        return FfiPairedBeaconState(
+            FfiConverterUInt.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalUByte.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiPairedBeaconState) = (
+            FfiConverterUInt.allocationSize(value.`counter`) +
+            FfiConverterBoolean.allocationSize(value.`available`) +
+            FfiConverterOptionalUByte.allocationSize(value.`batteryLevel`)
+    )
+
+    override fun write(value: FfiPairedBeaconState, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`counter`, buf)
+            FfiConverterBoolean.write(value.`available`, buf)
+            FfiConverterOptionalUByte.write(value.`batteryLevel`, buf)
+    }
+}
+
+
+
+data class FfiPairedDevice (
+    var `deviceId`: kotlin.String
+    , 
+    var `displayName`: kotlin.String
+    , 
+    var `deviceRole`: FfiDeviceRole
+    , 
+    var `staticX25519Pubkey`: kotlin.String
+    , 
+    var `lastBleAddress`: kotlin.String
+    , 
+    var `lastLanAddress`: kotlin.String
+    , 
+    var `capabilityFlags`: kotlin.UInt
+    , 
+    var `autoAcceptFiles`: kotlin.Boolean
+    , 
+    var `pairedAt`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiPairedDevice: FfiConverterRustBuffer<FfiPairedDevice> {
+    override fun read(buf: ByteBuffer): FfiPairedDevice {
+        return FfiPairedDevice(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiDeviceRole.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiPairedDevice) = (
+            FfiConverterString.allocationSize(value.`deviceId`) +
+            FfiConverterString.allocationSize(value.`displayName`) +
+            FfiConverterTypeFfiDeviceRole.allocationSize(value.`deviceRole`) +
+            FfiConverterString.allocationSize(value.`staticX25519Pubkey`) +
+            FfiConverterString.allocationSize(value.`lastBleAddress`) +
+            FfiConverterString.allocationSize(value.`lastLanAddress`) +
+            FfiConverterUInt.allocationSize(value.`capabilityFlags`) +
+            FfiConverterBoolean.allocationSize(value.`autoAcceptFiles`) +
+            FfiConverterString.allocationSize(value.`pairedAt`)
+    )
+
+    override fun write(value: FfiPairedDevice, buf: ByteBuffer) {
+            FfiConverterString.write(value.`deviceId`, buf)
+            FfiConverterString.write(value.`displayName`, buf)
+            FfiConverterTypeFfiDeviceRole.write(value.`deviceRole`, buf)
+            FfiConverterString.write(value.`staticX25519Pubkey`, buf)
+            FfiConverterString.write(value.`lastBleAddress`, buf)
+            FfiConverterString.write(value.`lastLanAddress`, buf)
+            FfiConverterUInt.write(value.`capabilityFlags`, buf)
+            FfiConverterBoolean.write(value.`autoAcceptFiles`, buf)
+            FfiConverterString.write(value.`pairedAt`, buf)
+    }
+}
+
+
+
+data class FfiPairingCompleted (
+    var `peerDeviceId`: kotlin.String
+    , 
+    var `peerDisplayName`: kotlin.String
+    , 
+    var `peerRole`: FfiDeviceRole
+    , 
+    var `peerCapabilityFlags`: kotlin.UInt
+    , 
+    var `peerStaticPubkeyHex`: kotlin.String
+    , 
+    var `reconnectSecret`: kotlin.ByteArray
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiPairingCompleted: FfiConverterRustBuffer<FfiPairingCompleted> {
+    override fun read(buf: ByteBuffer): FfiPairingCompleted {
+        return FfiPairingCompleted(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiDeviceRole.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterByteArray.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiPairingCompleted) = (
+            FfiConverterString.allocationSize(value.`peerDeviceId`) +
+            FfiConverterString.allocationSize(value.`peerDisplayName`) +
+            FfiConverterTypeFfiDeviceRole.allocationSize(value.`peerRole`) +
+            FfiConverterUInt.allocationSize(value.`peerCapabilityFlags`) +
+            FfiConverterString.allocationSize(value.`peerStaticPubkeyHex`) +
+            FfiConverterByteArray.allocationSize(value.`reconnectSecret`)
+    )
+
+    override fun write(value: FfiPairingCompleted, buf: ByteBuffer) {
+            FfiConverterString.write(value.`peerDeviceId`, buf)
+            FfiConverterString.write(value.`peerDisplayName`, buf)
+            FfiConverterTypeFfiDeviceRole.write(value.`peerRole`, buf)
+            FfiConverterUInt.write(value.`peerCapabilityFlags`, buf)
+            FfiConverterString.write(value.`peerStaticPubkeyHex`, buf)
+            FfiConverterByteArray.write(value.`reconnectSecret`, buf)
+    }
+}
+
+
+
+data class FfiPairingStep (
+    var `outboundFrame`: kotlin.ByteArray?
+    , 
+    var `state`: FfiPairingState
+    , 
+    var `verificationCode`: kotlin.String?
+    , 
+    var `remainingSecs`: kotlin.ULong
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiPairingStep: FfiConverterRustBuffer<FfiPairingStep> {
+    override fun read(buf: ByteBuffer): FfiPairingStep {
+        return FfiPairingStep(
+            FfiConverterOptionalByteArray.read(buf),
+            FfiConverterTypeFfiPairingState.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiPairingStep) = (
+            FfiConverterOptionalByteArray.allocationSize(value.`outboundFrame`) +
+            FfiConverterTypeFfiPairingState.allocationSize(value.`state`) +
+            FfiConverterOptionalString.allocationSize(value.`verificationCode`) +
+            FfiConverterULong.allocationSize(value.`remainingSecs`)
+    )
+
+    override fun write(value: FfiPairingStep, buf: ByteBuffer) {
+            FfiConverterOptionalByteArray.write(value.`outboundFrame`, buf)
+            FfiConverterTypeFfiPairingState.write(value.`state`, buf)
+            FfiConverterOptionalString.write(value.`verificationCode`, buf)
+            FfiConverterULong.write(value.`remainingSecs`, buf)
+    }
+}
+
+
+
+data class FfiStaticKeypair (
+    var `privateKey`: kotlin.ByteArray
+    , 
+    var `publicKeyHex`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiStaticKeypair: FfiConverterRustBuffer<FfiStaticKeypair> {
+    override fun read(buf: ByteBuffer): FfiStaticKeypair {
+        return FfiStaticKeypair(
+            FfiConverterByteArray.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiStaticKeypair) = (
+            FfiConverterByteArray.allocationSize(value.`privateKey`) +
+            FfiConverterString.allocationSize(value.`publicKeyHex`)
+    )
+
+    override fun write(value: FfiStaticKeypair, buf: ByteBuffer) {
+            FfiConverterByteArray.write(value.`privateKey`, buf)
+            FfiConverterString.write(value.`publicKeyHex`, buf)
+    }
+}
+
+
+
+
+enum class FfiDeviceRole {
+    
+    DESKTOP,
+    MOBILE;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDeviceRole: FfiConverterRustBuffer<FfiDeviceRole> {
+    override fun read(buf: ByteBuffer) = try {
+        FfiDeviceRole.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDeviceRole) = 4UL
+
+    override fun write(value: FfiDeviceRole, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
 
 
 sealed class FfiException: kotlin.Exception() {
@@ -1581,6 +2745,42 @@ sealed class FfiException: kotlin.Exception() {
     }
     
     class Protocol(
+        
+        val `detail`: kotlin.String
+        ) : FfiException() {
+        override val message
+            get() = "detail=${ `detail` }"
+    }
+    
+    class Crypto(
+        
+        val `detail`: kotlin.String
+        ) : FfiException() {
+        override val message
+            get() = "detail=${ `detail` }"
+    }
+    
+    class PairingExpired(
+        ) : FfiException() {
+        override val message
+            get() = ""
+    }
+    
+    class PairingRejected(
+        ) : FfiException() {
+        override val message
+            get() = ""
+    }
+    
+    class Keyring(
+        
+        val `detail`: kotlin.String
+        ) : FfiException() {
+        override val message
+            get() = "detail=${ `detail` }"
+    }
+    
+    class Bluetooth(
         
         val `detail`: kotlin.String
         ) : FfiException() {
@@ -1629,7 +2829,18 @@ public object FfiConverterTypeFfiError : FfiConverterRustBuffer<FfiException> {
             4 -> FfiException.Protocol(
                 FfiConverterString.read(buf),
                 )
-            5 -> FfiException.Io(
+            5 -> FfiException.Crypto(
+                FfiConverterString.read(buf),
+                )
+            6 -> FfiException.PairingExpired()
+            7 -> FfiException.PairingRejected()
+            8 -> FfiException.Keyring(
+                FfiConverterString.read(buf),
+                )
+            9 -> FfiException.Bluetooth(
+                FfiConverterString.read(buf),
+                )
+            10 -> FfiException.Io(
                 FfiConverterString.read(buf),
                 )
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
@@ -1656,6 +2867,29 @@ public object FfiConverterTypeFfiError : FfiConverterRustBuffer<FfiException> {
                 + FfiConverterULong.allocationSize(value.`max`)
             )
             is FfiException.Protocol -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`detail`)
+            )
+            is FfiException.Crypto -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`detail`)
+            )
+            is FfiException.PairingExpired -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is FfiException.PairingRejected -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is FfiException.Keyring -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`detail`)
+            )
+            is FfiException.Bluetooth -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
                 + FfiConverterString.allocationSize(value.`detail`)
@@ -1692,8 +2926,31 @@ public object FfiConverterTypeFfiError : FfiConverterRustBuffer<FfiException> {
                 FfiConverterString.write(value.`detail`, buf)
                 Unit
             }
-            is FfiException.Io -> {
+            is FfiException.Crypto -> {
                 buf.putInt(5)
+                FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+            is FfiException.PairingExpired -> {
+                buf.putInt(6)
+                Unit
+            }
+            is FfiException.PairingRejected -> {
+                buf.putInt(7)
+                Unit
+            }
+            is FfiException.Keyring -> {
+                buf.putInt(8)
+                FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+            is FfiException.Bluetooth -> {
+                buf.putInt(9)
+                FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+            is FfiException.Io -> {
+                buf.putInt(10)
                 FfiConverterString.write(value.`detail`, buf)
                 Unit
             }
@@ -1701,6 +2958,80 @@ public object FfiConverterTypeFfiError : FfiConverterRustBuffer<FfiException> {
     }
 
 }
+
+
+
+
+enum class FfiPairingRole {
+    
+    INITIATOR,
+    RESPONDER;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiPairingRole: FfiConverterRustBuffer<FfiPairingRole> {
+    override fun read(buf: ByteBuffer) = try {
+        FfiPairingRole.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiPairingRole) = 4UL
+
+    override fun write(value: FfiPairingRole, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class FfiPairingState {
+    
+    HANDSHAKE_M1,
+    HANDSHAKE_M2,
+    HANDSHAKE_M3,
+    AWAITING_CONFIRMATION,
+    APPROVED,
+    EXPIRED,
+    REJECTED,
+    COMPLETED;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiPairingState: FfiConverterRustBuffer<FfiPairingState> {
+    override fun read(buf: ByteBuffer) = try {
+        FfiPairingState.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiPairingState) = 4UL
+
+    override fun write(value: FfiPairingState, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
 
 
 
@@ -1735,6 +3066,182 @@ public object FfiConverterTypeFfiVisibilityMode: FfiConverterRustBuffer<FfiVisib
     }
 }
 
+
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalUByte: FfiConverterRustBuffer<kotlin.UByte?> {
+    override fun read(buf: ByteBuffer): kotlin.UByte? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterUByte.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.UByte?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterUByte.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.UByte?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterUByte.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalUInt: FfiConverterRustBuffer<kotlin.UInt?> {
+    override fun read(buf: ByteBuffer): kotlin.UInt? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterUInt.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.UInt?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterUInt.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.UInt?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterUInt.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?> {
+    override fun read(buf: ByteBuffer): kotlin.String? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterString.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.String?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterString.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.String?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterString.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalByteArray: FfiConverterRustBuffer<kotlin.ByteArray?> {
+    override fun read(buf: ByteBuffer): kotlin.ByteArray? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterByteArray.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.ByteArray?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterByteArray.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.ByteArray?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterByteArray.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiPairedDevice: FfiConverterRustBuffer<List<FfiPairedDevice>> {
+    override fun read(buf: ByteBuffer): List<FfiPairedDevice> {
+        val len = buf.getInt()
+        return List<FfiPairedDevice>(len) {
+            FfiConverterTypeFfiPairedDevice.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiPairedDevice>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiPairedDevice.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiPairedDevice>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiPairedDevice.write(it, buf)
+        }
+    }
+} fun `bleServiceUuid16`(): kotlin.UShort {
+            return FfiConverterUShort.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_keynear_core_fn_func_ble_service_uuid16(
+    
+        _status)
+}
+    )
+    }
+    
+ fun `bleServiceUuidString`(): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_keynear_core_fn_func_ble_service_uuid_string(
+    
+        _status)
+}
+    )
+    }
+    
  fun `defaultConfigSummary`(): kotlin.String {
             return FfiConverterString.lift(
     uniffiRustCall() { _status ->
@@ -1745,10 +3252,30 @@ public object FfiConverterTypeFfiVisibilityMode: FfiConverterRustBuffer<FfiVisib
     )
     }
     
+ fun `everyoneNearbyTimeoutSecs`(): kotlin.ULong {
+            return FfiConverterULong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_keynear_core_fn_func_everyone_nearby_timeout_secs(
+    
+        _status)
+}
+    )
+    }
+    
  fun `getCoreStatus`(): CoreStatus {
             return FfiConverterTypeCoreStatus.lift(
     uniffiRustCall() { _status ->
     UniffiLib.uniffi_keynear_core_fn_func_get_core_status(
+    
+        _status)
+}
+    )
+    }
+    
+ fun `pairingTimeoutSecs`(): kotlin.ULong {
+            return FfiConverterULong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_keynear_core_fn_func_pairing_timeout_secs(
     
         _status)
 }
