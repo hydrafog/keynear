@@ -1,0 +1,16 @@
+.agents
+AGENTS.md
+.agents/artifacts/
+__pycache__/
+framework-context.txt
+.prototype/
+target/
+android/.gradle/
+android/build/
+android/*/build/
+android/local.properties
+.direnv/
+result
+.env
+!.env.example
+exports/
