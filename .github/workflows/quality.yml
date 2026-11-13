@@ -14,10 +14,36 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      - name: Install system build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler libgtk-4-dev pkg-config
       - name: Repository hygiene
         run: bash scripts/validation/repo-check.sh
       - name: Project checks
         run: bash scripts/project/check.sh
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Workspace tests
+        run: cargo test --workspace
 
+  nix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v14
+      - name: Nix flake check
+        run: nix flake check --no-build
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: android-actions/setup-android@v3
+      - name: Android unit tests and debug APK
+        working-directory: android
+        run: ./gradlew testDebugUnitTest assembleDebug

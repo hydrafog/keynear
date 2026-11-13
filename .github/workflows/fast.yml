@@ -11,10 +11,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - name: Install system build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler libgtk-4-dev pkg-config
       - name: Shell syntax & repo check
         run: |
           bash -n scripts/*/*.sh
           bash scripts/validation/repo-check.sh
       - name: Cargo check
         run: cargo check --workspace
-
