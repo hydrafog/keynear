@@ -22,7 +22,9 @@ sequenceDiagram
 - **BLE Payload**: An AES-GCM encrypted state payload carries availability and battery status within the 31-byte BLE service-data limit.
 - **Pairing Handshake**: Initial pairing executes `Noise_XX_25519_ChaChaPoly_BLAKE2s` over BLE GATT, deriving a 6-digit verification code from the handshake transcript hash and exchanging a `SessionExportContribution` for subsequent silent reconnects.
 
-## Encrypted QUIC Transport
+## Encrypted QUIC Transport and FFI Boundary
 
-- **Wire Format**: Control and continuity messages serialize as `proto3` `Envelope` frames (`sequence`, `timestamp_ms`, and bounded `65_536`-byte control frames) over multiplexed QUIC streams (`iroh` with public relays and DNS/pkarr disabled).
+- **Proto3 Schema Compilation**: `crates/keynear-core/build.rs` compiles `proto/keynear/v1/envelope.proto` with `prost-build` into `keynear_core::proto::v1`.
+- **Bounded Control Framing**: Control and continuity messages serialize as `proto3` `Envelope` payloads (`HandshakePayload`, `TransferOffer`, `ClipboardPayload`, `AudioStatePayload`, `ControlAck`) wrapped in `ControlFrame` (`encode_control_frame`, `decode_control_frame`, `envelope_to_control_frame`, `control_frame_to_envelope`). Decoders validate the `MAX_CONTROL_FRAME_BYTES` (`65_536`-byte) limit before decoding and reject empty `Envelope` payloads or unknown frame kinds.
+- **UniFFI Bridge**: `crates/keynear-core/src/uniffi_bridge.rs` exports `CoreHandle`, `CoreStatus`, `FfiVisibilityMode`, and `FfiError` over `libkeynear_core.so` (`cdylib`) to `org.keynear.app` on Android.
 - **Post-Quantum TLS 1.3**: Wi-Fi QUIC links use `rustls` with hybrid `X25519MLKEM768` (RFC 10024) key exchange, selecting AES-256-GCM when hardware-accelerated on both peers and ChaCha20-Poly1305 otherwise.

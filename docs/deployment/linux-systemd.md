@@ -4,7 +4,7 @@
 
 ## Unit Configuration
 
-Create `~/.config/systemd/user/keynear.service`:
+Install the repository unit file `systemd/keynear.service` to `~/.config/systemd/user/keynear.service`:
 
 ```ini
 [Unit]
@@ -23,11 +23,12 @@ WantedBy=default.target
 Enable and start the service:
 
 ```bash
+mkdir -p ~/.config/systemd/user
+cp systemd/keynear.service ~/.config/systemd/user/keynear.service
 systemctl --user daemon-reload
 systemctl --user enable --now keynear.service
 ```
 
-## Configuration File
+## CLI Flags and Configuration File
 
-`DaemonConfig` reads camelCase keys from `~/.config/keynear/config.toml` (`visibilityMode`, `incomingDirectory`, `autoAcceptFromPaired`, `clipboardSyncEnabled`, `clipboardImagesEnabled`, `otpPassthroughEnabled`, `audioHandoffEnabled`, `ignoredMimeTypes`, `notifyAutoAcceptComplete`) and falls back to safe defaults when the file is absent.
-
+`keynear-linux` supports `--config <path>`, `--version`, and `--help`. When `--config <path>` is specified, the file must exist and pass `DaemonConfig::validate()`. When omitted, `DaemonConfig` loads from `~/.config/keynear/config.toml` (`visibilityMode`, `incomingDirectory`, `autoAcceptFromPaired`, `clipboardSyncEnabled`, `clipboardImagesEnabled`, `otpPassthroughEnabled`, `audioHandoffEnabled`, `ignoredMimeTypes`, `notifyAutoAcceptComplete`) and falls back to safe defaults when absent. `keynear-linux` handles `SIGINT` and `SIGTERM` cleanly through a unified shutdown loop.
