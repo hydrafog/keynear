@@ -14,3 +14,4 @@ result
 .env
 !.env.example
 exports/
+android/app/src/main/jniLibs/
