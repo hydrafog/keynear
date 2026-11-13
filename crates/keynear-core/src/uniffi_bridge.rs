@@ -41,6 +41,16 @@ pub enum FfiError {
     FrameTooLarge { size: u64, max: u64 },
     #[error("protocol error: {detail}")]
     Protocol { detail: String },
+    #[error("cryptographic error: {detail}")]
+    Crypto { detail: String },
+    #[error("pairing verification timed out after 120 seconds")]
+    PairingExpired,
+    #[error("pairing rejected")]
+    PairingRejected,
+    #[error("keyring error: {detail}")]
+    Keyring { detail: String },
+    #[error("bluetooth error: {detail}")]
+    Bluetooth { detail: String },
     #[error("i/o error: {detail}")]
     Io { detail: String },
 }
@@ -58,6 +68,11 @@ impl From<KeynearError> for FfiError {
                 max: max as u64,
             },
             KeynearError::Protocol(detail) => Self::Protocol { detail },
+            KeynearError::Crypto(detail) => Self::Crypto { detail },
+            KeynearError::PairingExpired => Self::PairingExpired,
+            KeynearError::PairingRejected => Self::PairingRejected,
+            KeynearError::Keyring(detail) => Self::Keyring { detail },
+            KeynearError::Bluetooth(detail) => Self::Bluetooth { detail },
             KeynearError::Io(io_err) => Self::Io {
                 detail: io_err.to_string(),
             },

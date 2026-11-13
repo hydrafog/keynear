@@ -7,20 +7,33 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "GPL-3.0-only"
 repository = "https://github.com/hydrafog/keynear"
 
 [workspace.dependencies]
+aes-gcm = "0.11"
+bluer = { version = "0.17", features = ["bluetoothd"] }
 gtk4 = "0.11"
+hex = "0.4"
+hkdf = "0.13"
+hmac = "0.13"
+oo7 = "0.7"
 prost = "0.14"
 prost-build = "0.14"
+rand = "0.10"
 relm4 = "0.11"
 serde = { version = "1", features = ["derive"] }
+sha2 = "0.11"
+snow = "0.10"
+subtle = "2.6"
 thiserror = "2"
 tokio = { version = "1", features = ["full"] }
 toml = "1.2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uniffi = "0.32"
+uuid = { version = "1.29", features = ["v4"] }
+x25519-dalek = { version = "3.0", features = ["static_secrets", "getrandom"] }
+zeroize = { version = "1.9", features = ["derive"] }
