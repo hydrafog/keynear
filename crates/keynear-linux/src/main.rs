@@ -1,3 +1,4 @@
+mod ble;
 mod service;
 
 use std::path::PathBuf;
