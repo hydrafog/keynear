@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package keynear.v1;
+
+message Envelope {
+  uint32 version = 1;
+  uint64 sequence = 2;
+  int64 timestamp_ms = 3;
+
+  oneof payload {
+    HandshakePayload handshake = 10;
+    TransferOffer transfer_offer = 11;
+    ClipboardPayload clipboard = 12;
+    AudioStatePayload audio_state = 13;
+    ControlAck control_ack = 14;
+  }
+}
+
+message HandshakePayload {
+  string device_id = 1;
+  string display_name = 2;
+  bytes ephemeral_pubkey = 3;
+  uint32 capability_flags = 4;
+}
+
+message TransferOffer {
+  string transfer_id = 1;
+  repeated TransferItemMeta items = 2;
+  uint64 total_bytes = 3;
+}
+
+message TransferItemMeta {
+  string name = 1;
+  string mime_type = 2;
+  uint64 size_bytes = 3;
+  bool is_directory = 4;
+}
+
+message ClipboardPayload {
+  string mime_type = 1;
+  bytes data = 2;
+  bool is_otp = 3;
+}
+
+message AudioStatePayload {
+  string peripheral_id = 1;
+  bool active_call = 2;
+  bool sink_claimed = 3;
+}
+
+message ControlAck {
+  uint64 acked_sequence = 1;
+  bool accepted = 2;
+  string reason = 3;
+}
+

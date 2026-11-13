@@ -1,0 +1,23 @@
+package org.keynear.app
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            MaterialTheme {
+                Surface {
+                    // TODO: Render companion permissions, paired devices, and settings UI.
+                    Text(text = "Keynear")
+                }
+            }
+        }
+    }
+}
+
