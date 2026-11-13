@@ -5,15 +5,27 @@
     <string name="notification_channel_description">Background nearby device continuity status</string>
     <string name="notification_title">Keynear ready</string>
     <string name="notification_text">Local device continuity active</string>
+    <string name="pairing_channel_name">Pairing verification</string>
+    <string name="pairing_channel_description">6-digit Noise XX pairing confirmation prompts</string>
+    <string name="pairing_prompt_title">Verify pairing code</string>
     <string name="tile_label">Keynear</string>
     <string name="visibility_hidden">Hidden</string>
     <string name="visibility_paired">Paired devices only</string>
     <string name="visibility_everyone">Everyone nearby</string>
     <string name="status_loading">Checking core status...</string>
     <string name="empty_devices_title">No paired devices yet</string>
-    <string name="empty_devices_body">Device pairing activates in 0.2.0-cygnus.</string>
+    <string name="empty_devices_body">Switch visibility to Everyone nearby to discover and pair nearby devices.</string>
+    <string name="nearby_peers_title">Nearby peers</string>
+    <string name="no_nearby_peers">No nearby devices discovered yet.</string>
+    <string name="paired_devices_title">Paired devices</string>
     <string name="action_cycle_visibility">Cycle visibility mode</string>
     <string name="action_retry">Retry</string>
+    <string name="action_pair">Pair</string>
+    <string name="action_confirm">Confirm</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_unpair">Unpair</string>
+    <string name="action_confirm_unpair">Confirm unpair</string>
+    <string name="action_allow_bluetooth">Allow Bluetooth</string>
+    <string name="action_enable_bluetooth">Open Bluetooth settings</string>
     <string name="share_invalid_message">Unsupported share payload</string>
 </resources>
-
