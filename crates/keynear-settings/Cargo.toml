@@ -7,7 +7,7 @@ repository.workspace = true
 
 [dependencies]
 gtk4.workspace = true
-keynear-core = { path = "../keynear-core" }
+keynear-core = { path = "../keynear-core", features = ["linux-oo7"] }
 relm4.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true

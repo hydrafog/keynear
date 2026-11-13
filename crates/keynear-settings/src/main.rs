@@ -2,8 +2,11 @@ mod app;
 
 use std::path::PathBuf;
 use std::process;
+use std::sync::Arc;
 
-use keynear_core::{default_config_path, DaemonConfig, KeynearError};
+use keynear_core::{
+    default_config_path, DaemonConfig, KeynearError, Oo7SecretStore, PairedDeviceStore, SecretStore,
+};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
@@ -79,11 +82,18 @@ pub fn validate_css_tokens() -> Result<(), KeynearError> {
         "#0B1016",
         "#004CED",
         "#0172F9",
+        "#FFF6D3",
+        "#381C00",
+        "#FFE7E7",
+        "#8B0016",
         "Plus Jakarta Sans",
         "min-height: 44px",
         ".keynear-window",
         ".keynear-card",
+        ".keynear-code",
+        ".keynear-warning",
         ".keynear-error",
+        ".keynear-danger-btn",
     ];
     for needle in required {
         if !app::STYLE_CSS.contains(needle) {
@@ -94,6 +104,41 @@ pub fn validate_css_tokens() -> Result<(), KeynearError> {
         }
     }
     Ok(())
+}
+
+struct LoadedStores {
+    device_store: PairedDeviceStore,
+    paired_devices: Vec<keynear_core::PairedDevice>,
+    secret_store: Option<Arc<dyn SecretStore>>,
+    warning_message: Option<String>,
+}
+
+fn load_stores() -> LoadedStores {
+    let device_store = PairedDeviceStore::default_location();
+    let (paired_devices, device_warn) = match device_store.load() {
+        Ok(list) => (list, None),
+        Err(err) => (
+            Vec::new(),
+            Some(format!("Failed to read paired devices: {err}")),
+        ),
+    };
+    let (secret_store, keyring_warn): (Option<Arc<dyn SecretStore>>, Option<String>) =
+        match Oo7SecretStore::open_default() {
+            Ok(store) => (Some(Arc::new(store)), None),
+            Err(err) => (
+                None,
+                Some(format!(
+                    "Keyring unavailable ({err}); running in read-only mode."
+                )),
+            ),
+        };
+    let warning_message = device_warn.or(keyring_warn);
+    LoadedStores {
+        device_store,
+        paired_devices,
+        secret_store,
+        warning_message,
+    }
 }
 
 fn main() {
@@ -143,14 +188,21 @@ fn main() {
                 Ok(config) => (config, None),
                 Err(err) => (DaemonConfig::default(), Some(err.to_string())),
             };
+            let stores = load_stores();
             info!(
                 event = "settings_launching",
                 visibility = ?config.visibility_mode,
+                paired_count = stores.paired_devices.len(),
                 has_error = error_message.is_some()
             );
             app::run_gui(app::SettingsInit {
                 config,
                 error_message,
+                warning_message: stores.warning_message,
+                paired_devices: stores.paired_devices,
+                nearby_peers: Vec::new(),
+                device_store: stores.device_store,
+                secret_store: stores.secret_store,
             });
         }
     }
@@ -158,7 +210,26 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    use keynear_core::{
+        commit_paired_device, DeviceRole, InMemorySecretStore, PairedDevice, PeerSecrets,
+        VisibilityMode, EVERYONE_NEARBY_TIMEOUT_SECS, PAIRING_TIMEOUT_SECS,
+    };
+
     use super::*;
+
+    fn temp_store(label: &str) -> (PathBuf, PairedDeviceStore) {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("keynear-settings-{label}-{nonce}"));
+        fs::create_dir_all(&dir).expect("tempdir");
+        let store = PairedDeviceStore::new(dir.join("devices.toml"));
+        (dir, store)
+    }
 
     #[test]
     fn cli_parses_validate_and_config() {
@@ -197,11 +268,15 @@ mod tests {
         let dark_canvas = parsed["dark"]["canvas"].as_str().unwrap();
         let light_accent = parsed["light"]["accent"].as_str().unwrap();
         let focus_ring = parsed["light"]["focusRing"].as_str().unwrap();
+        let light_warning = parsed["light"]["warningTonal"].as_str().unwrap();
+        let light_danger = parsed["light"]["errorTonal"].as_str().unwrap();
 
         assert!(app::STYLE_CSS.contains(light_canvas));
         assert!(app::STYLE_CSS.contains(dark_canvas));
         assert!(app::STYLE_CSS.contains(light_accent));
         assert!(app::STYLE_CSS.contains(focus_ring));
+        assert!(app::STYLE_CSS.contains(light_warning));
+        assert!(app::STYLE_CSS.contains(light_danger));
     }
 
     #[test]
@@ -209,5 +284,98 @@ mod tests {
         validate_css_tokens().expect("css tokens valid");
         let config = DaemonConfig::default();
         assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn visibility_countdown_ticks_and_auto_reverts() {
+        let (dir, device_store) = temp_store("timer");
+        let mut model = app::SettingsModel::from_init(app::SettingsInit {
+            config: DaemonConfig::default(),
+            error_message: None,
+            warning_message: None,
+            paired_devices: Vec::new(),
+            nearby_peers: Vec::new(),
+            device_store,
+            secret_store: None,
+        });
+
+        assert_eq!(model.visibility_mode(), VisibilityMode::PairedOnly);
+        model.apply_msg(app::SettingsMsg::CycleVisibility);
+        assert_eq!(model.visibility_mode(), VisibilityMode::EveryoneNearby);
+        assert_eq!(model.visibility_status_text(), "Everyone (10:00)");
+
+        model.apply_msg(app::SettingsMsg::Tick);
+        assert_eq!(model.visibility_status_text(), "Everyone (09:59)");
+
+        for _ in 1..EVERYONE_NEARBY_TIMEOUT_SECS {
+            model.apply_msg(app::SettingsMsg::Tick);
+        }
+        assert_eq!(model.visibility_mode(), VisibilityMode::PairedOnly);
+        assert_eq!(model.visibility_status_text(), "Paired devices only");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn unpair_and_pairing_timeout_transitions_remove_secrets_and_expire() {
+        let (dir, device_store) = temp_store("unpair");
+        let secret_store = Arc::new(InMemorySecretStore::new());
+        let dev = PairedDevice {
+            device_id: "pixel-9".to_string(),
+            display_name: "Pixel 9".to_string(),
+            device_role: DeviceRole::Mobile,
+            static_x25519_pubkey: "ab".repeat(32),
+            last_ble_address: String::new(),
+            last_lan_address: String::new(),
+            capability_flags: 0x03,
+            auto_accept_files: false,
+            paired_at: "1".to_string(),
+        };
+        commit_paired_device(
+            &device_store,
+            secret_store.as_ref(),
+            dev.clone(),
+            &PeerSecrets {
+                irk: [0x11; 32],
+                reconnect_secret: [0x22; 32],
+            },
+        )
+        .expect("commit device");
+
+        let mut model = app::SettingsModel::from_init(app::SettingsInit {
+            config: DaemonConfig::default(),
+            error_message: None,
+            warning_message: None,
+            paired_devices: vec![dev],
+            nearby_peers: Vec::new(),
+            device_store: device_store.clone(),
+            secret_store: Some(Arc::clone(&secret_store) as Arc<dyn SecretStore>),
+        });
+
+        model.apply_msg(app::SettingsMsg::RequestUnpair("pixel-9".to_string()));
+        assert_eq!(model.pending_unpair_id(), Some("pixel-9"));
+        model.apply_msg(app::SettingsMsg::ConfirmUnpair("pixel-9".to_string()));
+        assert!(model.paired_devices().is_empty());
+        assert!(device_store.load().expect("load").is_empty());
+        assert!(secret_store
+            .get_peer_secrets("pixel-9")
+            .expect("get")
+            .is_none());
+
+        model.set_pending_pairing_for_test(app::PendingPairingView {
+            peer_token: "tok-1".to_string(),
+            peer_name: "Pixel 9".to_string(),
+            verification_code: "482 193".to_string(),
+            remaining_secs: PAIRING_TIMEOUT_SECS,
+        });
+        for _ in 0..PAIRING_TIMEOUT_SECS {
+            model.apply_msg(app::SettingsMsg::Tick);
+        }
+        assert!(model.pending_pairing().is_none());
+        assert!(model
+            .error_message()
+            .unwrap_or_default()
+            .contains("120 seconds"));
+
+        let _ = fs::remove_dir_all(&dir);
     }
 }

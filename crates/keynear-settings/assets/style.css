@@ -70,6 +70,34 @@ window.keynear-window.dark .keynear-tonal {
   background-color: #1E202B;
 }
 
+.keynear-code {
+  background-color: #E7EDF8;
+  color: #07132B;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-family: monospace;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+window.keynear-window.dark .keynear-code {
+  background-color: #1E202B;
+  color: #F7F6F7;
+}
+
+.keynear-warning {
+  background-color: #FFF6D3;
+  color: #863300;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+window.keynear-window.dark .keynear-warning {
+  background-color: #381C00;
+  color: #FFEAA5;
+}
+
 .keynear-error {
   background-color: #FFE7E7;
   color: #8B0016;
@@ -109,8 +137,23 @@ window.keynear-window.dark button.keynear-secondary {
   color: #F7F6F7;
 }
 
+button.keynear-danger-btn {
+  background-color: #FFE7E7;
+  color: #8B0016;
+  border-radius: 12px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+window.keynear-window.dark button.keynear-danger-btn {
+  background-color: #3F0308;
+  color: #FFCFCF;
+}
+
 button:focus-visible {
   outline: 2px solid #0172F9;
   outline-offset: 2px;
 }
-
