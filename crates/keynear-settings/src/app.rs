@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use gtk4::gdk::Display;
@@ -6,9 +7,12 @@ use gtk4::pango::EllipsizeMode;
 use gtk4::prelude::*;
 use keynear_core::{
     remove_paired_device, DaemonConfig, DeviceRole, NearbyPeer, PairedDevice, PairedDeviceStore,
-    SecretStore, VisibilityMode, EVERYONE_NEARBY_TIMEOUT_SECS, PAIRING_TIMEOUT_SECS,
+    SecretStore, TransferDirection, TransferSession, TransferState, VisibilityMode,
+    EVERYONE_NEARBY_TIMEOUT_SECS, PAIRING_TIMEOUT_SECS,
 };
 use relm4::{ComponentParts, ComponentSender, RelmApp, SimpleComponent};
+
+use crate::ipc::{self, IpcRequest, IpcResponse};
 
 pub const STYLE_CSS: &str = include_str!("../assets/style.css");
 
@@ -27,8 +31,10 @@ pub struct SettingsInit {
     pub warning_message: Option<String>,
     pub paired_devices: Vec<PairedDevice>,
     pub nearby_peers: Vec<NearbyPeer>,
+    pub transfers: Vec<TransferSession>,
     pub device_store: PairedDeviceStore,
     pub secret_store: Option<Arc<dyn SecretStore>>,
+    pub ipc_socket_path: Option<PathBuf>,
 }
 
 pub struct SettingsModel {
@@ -37,12 +43,15 @@ pub struct SettingsModel {
     incoming_directory: String,
     error_message: Option<String>,
     warning_message: Option<String>,
+    transfer_error: Option<String>,
     nearby_peers: Vec<NearbyPeer>,
     paired_devices: Vec<PairedDevice>,
+    transfers: Vec<TransferSession>,
     pending_pairing: Option<PendingPairingView>,
     pending_unpair_id: Option<String>,
     device_store: PairedDeviceStore,
     secret_store: Option<Arc<dyn SecretStore>>,
+    ipc_socket_path: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -56,6 +65,10 @@ pub enum SettingsMsg {
     RequestUnpair(String),
     ConfirmUnpair(String),
     CancelUnpair,
+    SetAutoAcceptFiles { device_id: String, enabled: bool },
+    AcceptTransfer(String),
+    DeclineTransfer(String),
+    CancelTransfer(String),
 }
 
 pub struct SettingsWidgets {
@@ -66,6 +79,9 @@ pub struct SettingsWidgets {
     pairing_peer_label: gtk4::Label,
     pairing_code_label: gtk4::Label,
     pairing_timer_label: gtk4::Label,
+    transfers_error_banner: gtk4::Box,
+    transfers_error_label: gtk4::Label,
+    transfers_list_box: gtk4::Box,
     nearby_list_box: gtk4::Box,
     paired_list_box: gtk4::Box,
 }
@@ -116,12 +132,15 @@ impl SettingsModel {
             incoming_directory: init.config.incoming_directory,
             error_message: init.error_message,
             warning_message: init.warning_message,
+            transfer_error: None,
             nearby_peers: init.nearby_peers,
             paired_devices: init.paired_devices,
+            transfers: init.transfers,
             pending_pairing: None,
             pending_unpair_id: None,
             device_store: init.device_store,
             secret_store: init.secret_store,
+            ipc_socket_path: init.ipc_socket_path,
         }
     }
 
@@ -137,6 +156,16 @@ impl SettingsModel {
     #[cfg(test)]
     pub fn paired_devices(&self) -> &[PairedDevice] {
         &self.paired_devices
+    }
+
+    #[cfg(test)]
+    pub fn transfers(&self) -> &[TransferSession] {
+        &self.transfers
+    }
+
+    #[cfg(test)]
+    pub fn transfer_error(&self) -> Option<&str> {
+        self.transfer_error.as_deref()
     }
 
     #[cfg(test)]
@@ -156,6 +185,57 @@ impl SettingsModel {
     #[cfg(test)]
     pub fn set_pending_pairing_for_test(&mut self, prompt: PendingPairingView) {
         self.pending_pairing = Some(prompt);
+    }
+
+    fn refresh_transfers_from_ipc(&mut self) {
+        let Some(ref sock_path) = self.ipc_socket_path else {
+            return;
+        };
+        match ipc::send_request_to(sock_path, &IpcRequest::ListTransfers) {
+            Ok(IpcResponse::Transfers(list)) => {
+                self.transfers = list;
+                self.transfer_error = None;
+            }
+            Ok(IpcResponse::Error { message }) => {
+                self.transfer_error = Some(message);
+            }
+            Ok(_) => {
+                self.transfer_error = Some("Unexpected daemon IPC response.".to_string());
+            }
+            Err(_) => {
+                // Daemon may not be running while configuring settings offline.
+            }
+        }
+    }
+
+    fn send_transfer_action(&mut self, request: IpcRequest) {
+        let Some(ref sock_path) = self.ipc_socket_path else {
+            self.transfer_error = Some("Daemon IPC socket is not configured.".to_string());
+            return;
+        };
+        match ipc::send_request_to(sock_path, &request) {
+            Ok(IpcResponse::Transfer(updated)) => {
+                if let Some(existing) = self
+                    .transfers
+                    .iter_mut()
+                    .find(|t| t.transfer_id == updated.transfer_id)
+                {
+                    *existing = updated;
+                } else {
+                    self.transfers.insert(0, updated);
+                }
+                self.transfer_error = None;
+            }
+            Ok(IpcResponse::Error { message }) => {
+                self.transfer_error = Some(message);
+            }
+            Ok(_) => {
+                self.transfer_error = Some("Unexpected daemon IPC response.".to_string());
+            }
+            Err(err) => {
+                self.transfer_error = Some(err.to_string());
+            }
+        }
     }
 
     pub fn apply_msg(&mut self, msg: SettingsMsg) {
@@ -187,16 +267,20 @@ impl SettingsModel {
                         prompt.remaining_secs -= 1;
                     }
                 }
+                self.refresh_transfers_from_ipc();
             }
-            SettingsMsg::RefreshPeers => match self.device_store.load() {
-                Ok(devices) => {
-                    self.paired_devices = devices;
-                    self.error_message = None;
+            SettingsMsg::RefreshPeers => {
+                match self.device_store.load() {
+                    Ok(devices) => {
+                        self.paired_devices = devices;
+                        self.error_message = None;
+                    }
+                    Err(err) => {
+                        self.error_message = Some(err.to_string());
+                    }
                 }
-                Err(err) => {
-                    self.error_message = Some(err.to_string());
-                }
-            },
+                self.refresh_transfers_from_ipc();
+            }
             SettingsMsg::BeginPair(peer_token) => {
                 if let Some(peer) = self
                     .nearby_peers
@@ -247,6 +331,43 @@ impl SettingsModel {
                 self.paired_devices.retain(|d| d.device_id != device_id);
                 self.pending_unpair_id = None;
                 self.error_message = None;
+            }
+            SettingsMsg::SetAutoAcceptFiles { device_id, enabled } => {
+                let stored = match self.device_store.get(&device_id) {
+                    Ok(Some(dev)) => Some(dev),
+                    Ok(None) => self
+                        .paired_devices
+                        .iter()
+                        .find(|d| d.device_id == device_id)
+                        .cloned(),
+                    Err(err) => {
+                        self.error_message = Some(err.to_string());
+                        return;
+                    }
+                };
+                let Some(mut updated) = stored else {
+                    self.error_message = Some(format!("Paired device '{device_id}' not found."));
+                    return;
+                };
+                updated.auto_accept_files = enabled;
+                match self.device_store.upsert(updated) {
+                    Ok(devices) => {
+                        self.paired_devices = devices;
+                        self.error_message = None;
+                    }
+                    Err(err) => {
+                        self.error_message = Some(err.to_string());
+                    }
+                }
+            }
+            SettingsMsg::AcceptTransfer(transfer_id) => {
+                self.send_transfer_action(IpcRequest::AcceptTransfer { transfer_id });
+            }
+            SettingsMsg::DeclineTransfer(transfer_id) => {
+                self.send_transfer_action(IpcRequest::DeclineTransfer { transfer_id });
+            }
+            SettingsMsg::CancelTransfer(transfer_id) => {
+                self.send_transfer_action(IpcRequest::CancelTransfer { transfer_id });
             }
         }
     }
@@ -447,6 +568,38 @@ fn rebuild_paired_rows(
 
         outer.append(&row);
 
+        let auto_accept_row = gtk4::Box::builder()
+            .orientation(gtk4::Orientation::Horizontal)
+            .spacing(12)
+            .build();
+        let auto_accept_label = gtk4::Label::builder()
+            .label("Auto-accept files")
+            .xalign(0.0)
+            .wrap(true)
+            .hexpand(true)
+            .build();
+        auto_accept_label.add_css_class("keynear-description");
+
+        let auto_accept_switch = gtk4::Switch::builder()
+            .active(device.auto_accept_files)
+            .valign(gtk4::Align::Center)
+            .tooltip_text(format!("Auto-accept files from {}", device.display_name))
+            .build();
+        auto_accept_switch.add_css_class("keynear-switch");
+        let device_id_for_switch = device.device_id.clone();
+        let sender_for_switch = sender.clone();
+        auto_accept_switch.connect_state_set(move |_, enabled| {
+            sender_for_switch.input(SettingsMsg::SetAutoAcceptFiles {
+                device_id: device_id_for_switch.clone(),
+                enabled,
+            });
+            gtk4::glib::Propagation::Proceed
+        });
+
+        auto_accept_row.append(&auto_accept_label);
+        auto_accept_row.append(&auto_accept_switch);
+        outer.append(&auto_accept_row);
+
         if pending_unpair_id == Some(device.device_id.as_str()) {
             let warn = gtk4::Label::builder()
                 .label("This removes the device and deletes its stored keyring secrets.")
@@ -458,6 +611,144 @@ fn rebuild_paired_rows(
         }
 
         container.append(&outer);
+    }
+}
+
+fn transfer_fraction(session: &TransferSession) -> f64 {
+    if session.total_bytes == 0 {
+        return match session.state {
+            TransferState::Completed => 1.0,
+            _ => 0.0,
+        };
+    }
+    (session.transferred_bytes as f64 / session.total_bytes as f64).clamp(0.0, 1.0)
+}
+
+fn transfer_summary(session: &TransferSession) -> String {
+    let dir = match session.direction {
+        TransferDirection::Send => "To",
+        TransferDirection::Receive => "From",
+    };
+    let state = match session.state {
+        TransferState::PendingConsent => "Awaiting decision",
+        TransferState::Active => "Transferring",
+        TransferState::Completed => "Completed",
+        TransferState::Cancelled => "Cancelled",
+        TransferState::Failed => "Failed",
+    };
+    let item_label = if session.items.len() == 1 {
+        session.items[0].name.as_str()
+    } else {
+        "files"
+    };
+    let count_suffix = if session.items.len() > 1 {
+        format!(" ({} files)", session.items.len())
+    } else {
+        String::new()
+    };
+    format!(
+        "{dir} {} - {item_label}{count_suffix} ({state})",
+        session.peer_device_id
+    )
+}
+
+fn rebuild_transfers_rows(
+    container: &gtk4::Box,
+    transfers: &[TransferSession],
+    sender: &ComponentSender<SettingsModel>,
+) {
+    clear_box_children(container);
+    if transfers.is_empty() {
+        let empty = gtk4::Label::builder()
+            .label("No active transfers")
+            .xalign(0.0)
+            .wrap(true)
+            .build();
+        empty.add_css_class("keynear-description");
+        container.append(&empty);
+        return;
+    }
+
+    for session in transfers {
+        let row = gtk4::Box::builder()
+            .orientation(gtk4::Orientation::Vertical)
+            .spacing(8)
+            .build();
+        row.add_css_class("keynear-transfer-row");
+
+        let top = gtk4::Box::builder()
+            .orientation(gtk4::Orientation::Horizontal)
+            .spacing(12)
+            .build();
+        let title = gtk4::Label::builder()
+            .label(transfer_summary(session))
+            .xalign(0.0)
+            .ellipsize(EllipsizeMode::End)
+            .wrap(true)
+            .hexpand(true)
+            .build();
+        title.add_css_class("keynear-description");
+
+        let bytes_label = gtk4::Label::builder()
+            .label(format!(
+                "{}/{} B",
+                session.transferred_bytes, session.total_bytes
+            ))
+            .xalign(1.0)
+            .build();
+        bytes_label.add_css_class("keynear-description");
+
+        top.append(&title);
+        top.append(&bytes_label);
+        row.append(&top);
+
+        let progress = gtk4::ProgressBar::builder().build();
+        progress.add_css_class("keynear-progress");
+        progress.set_fraction(transfer_fraction(session));
+        row.append(&progress);
+
+        let actions = gtk4::Box::builder()
+            .orientation(gtk4::Orientation::Horizontal)
+            .spacing(8)
+            .build();
+
+        match session.state {
+            TransferState::PendingConsent => {
+                let accept_btn = gtk4::Button::with_label("Accept");
+                accept_btn.add_css_class("keynear-primary");
+                let accept_id = session.transfer_id.clone();
+                let accept_sender = sender.clone();
+                accept_btn.connect_clicked(move |_| {
+                    accept_sender.input(SettingsMsg::AcceptTransfer(accept_id.clone()));
+                });
+
+                let decline_btn = gtk4::Button::with_label("Decline");
+                decline_btn.add_css_class("keynear-danger-btn");
+                let decline_id = session.transfer_id.clone();
+                let decline_sender = sender.clone();
+                decline_btn.connect_clicked(move |_| {
+                    decline_sender.input(SettingsMsg::DeclineTransfer(decline_id.clone()));
+                });
+
+                actions.append(&accept_btn);
+                actions.append(&decline_btn);
+                row.append(&actions);
+            }
+            TransferState::Active => {
+                let cancel_btn = gtk4::Button::with_label("Cancel");
+                cancel_btn.add_css_class("keynear-secondary");
+                let cancel_id = session.transfer_id.clone();
+                let cancel_sender = sender.clone();
+                cancel_btn.connect_clicked(move |_| {
+                    cancel_sender.input(SettingsMsg::CancelTransfer(cancel_id.clone()));
+                });
+                actions.append(&cancel_btn);
+                row.append(&actions);
+            }
+            _ => {}
+        }
+
+        container.append(&row);
     }
 }
 
@@ -653,6 +944,37 @@ impl SimpleComponent for SettingsModel {
         pairing_card.append(&pairing_actions);
         container.append(&pairing_card);
 
+        let transfers_card = gtk4::Box::builder()
+            .orientation(gtk4::Orientation::Vertical)
+            .spacing(12)
+            .build();
+        transfers_card.add_css_class("keynear-card");
+
+        let transfers_heading = gtk4::Label::builder()
+            .label("Active transfers")
+            .xalign(0.0)
+            .build();
+        transfers_heading.add_css_class("keynear-heading");
+
+        let transfers_error_banner = gtk4::Box::builder()
+            .orientation(gtk4::Orientation::Vertical)
+            .spacing(4)
+            .visible(false)
+            .build();
+        transfers_error_banner.add_css_class("keynear-error");
+        let transfers_error_label = gtk4::Label::builder().xalign(0.0).wrap(true).build();
+        transfers_error_banner.append(&transfers_error_label);
+
+        let transfers_list_box = gtk4::Box::builder()
+            .orientation(gtk4::Orientation::Vertical)
+            .spacing(12)
+            .build();
+
+        transfers_card.append(&transfers_heading);
+        transfers_card.append(&transfers_error_banner);
+        transfers_card.append(&transfers_list_box);
+        container.append(&transfers_card);
+
         let nearby_card = gtk4::Box::builder()
             .orientation(gtk4::Orientation::Vertical)
             .spacing(12)
@@ -752,6 +1074,9 @@ impl SimpleComponent for SettingsModel {
             pairing_peer_label,
             pairing_code_label,
             pairing_timer_label,
+            transfers_error_banner,
+            transfers_error_label,
+            transfers_list_box,
             nearby_list_box,
             paired_list_box,
         };
@@ -797,6 +1122,14 @@ impl SimpleComponent for SettingsModel {
             widgets.pairing_card.set_visible(false);
         }
 
+        if let Some(err) = self.transfer_error.as_deref() {
+            widgets.transfers_error_label.set_label(err);
+            widgets.transfers_error_banner.set_visible(true);
+        } else {
+            widgets.transfers_error_banner.set_visible(false);
+        }
+
+        rebuild_transfers_rows(&widgets.transfers_list_box, &self.transfers, &sender);
         rebuild_nearby_rows(&widgets.nearby_list_box, &self.nearby_peers, &sender);
         rebuild_paired_rows(
             &widgets.paired_list_box,

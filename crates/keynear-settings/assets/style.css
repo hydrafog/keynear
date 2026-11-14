@@ -157,3 +157,49 @@ button:focus-visible {
   outline: 2px solid #0172F9;
   outline-offset: 2px;
 }
+
+.keynear-transfer-row {
+  background-color: #E7EDF8;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+window.keynear-window.dark .keynear-transfer-row {
+  background-color: #1E202B;
+}
+
+switch.keynear-switch {
+  min-height: 44px;
+  min-width: 44px;
+  background-color: #DEE6F6;
+  border-radius: 24px;
+}
+
+window.keynear-window.dark switch.keynear-switch {
+  background-color: #10141C;
+}
+
+switch.keynear-switch:checked {
+  background-color: #004CED;
+}
+
+switch:focus-visible {
+  outline: 2px solid #0172F9;
+  outline-offset: 2px;
+}
+
+progressbar.keynear-progress > trough {
+  background-color: #E7EDF8;
+  border-radius: 8px;
+  min-height: 8px;
+}
+
+window.keynear-window.dark progressbar.keynear-progress > trough {
+  background-color: #1E202B;
+}
+
+progressbar.keynear-progress > trough > progress {
+  background-color: #004CED;
+  border-radius: 8px;
+  min-height: 8px;
+}

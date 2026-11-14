@@ -1,4 +1,7 @@
 mod app;
+#[allow(dead_code)]
+#[path = "../../keynear-linux/src/ipc.rs"]
+mod ipc;
 
 use std::path::PathBuf;
 use std::process;
@@ -86,6 +89,10 @@ pub fn validate_css_tokens() -> Result<(), KeynearError> {
         "#381C00",
         "#FFE7E7",
         "#8B0016",
+        "#DEE6F6",
+        "#10141C",
+        "#E7EDF8",
+        "#1E202B",
         "Plus Jakarta Sans",
         "min-height: 44px",
         ".keynear-window",
@@ -94,6 +101,9 @@ pub fn validate_css_tokens() -> Result<(), KeynearError> {
         ".keynear-warning",
         ".keynear-error",
         ".keynear-danger-btn",
+        ".keynear-switch",
+        ".keynear-progress",
+        ".keynear-transfer-row",
     ];
     for needle in required {
         if !app::STYLE_CSS.contains(needle) {
@@ -195,14 +205,20 @@ fn main() {
                 paired_count = stores.paired_devices.len(),
                 has_error = error_message.is_some()
             );
+            let initial_transfers = match ipc::send_request(&ipc::IpcRequest::ListTransfers) {
+                Ok(ipc::IpcResponse::Transfers(transfers)) => transfers,
+                _ => Vec::new(),
+            };
             app::run_gui(app::SettingsInit {
                 config,
                 error_message,
                 warning_message: stores.warning_message,
                 paired_devices: stores.paired_devices,
                 nearby_peers: Vec::new(),
+                transfers: initial_transfers,
                 device_store: stores.device_store,
                 secret_store: stores.secret_store,
+                ipc_socket_path: Some(ipc::daemon_socket_path()),
             });
         }
     }
@@ -277,6 +293,10 @@ mod tests {
         assert!(app::STYLE_CSS.contains(focus_ring));
         assert!(app::STYLE_CSS.contains(light_warning));
         assert!(app::STYLE_CSS.contains(light_danger));
+        assert!(app::STYLE_CSS.contains(parsed["light"]["switchTrackOff"].as_str().unwrap()));
+        assert!(app::STYLE_CSS.contains(parsed["dark"]["switchTrackOff"].as_str().unwrap()));
+        assert!(app::STYLE_CSS.contains(parsed["light"]["surfaceTonal"].as_str().unwrap()));
+        assert!(app::STYLE_CSS.contains(parsed["dark"]["surfaceTonal"].as_str().unwrap()));
     }
 
     #[test]
@@ -295,8 +315,10 @@ mod tests {
             warning_message: None,
             paired_devices: Vec::new(),
             nearby_peers: Vec::new(),
+            transfers: Vec::new(),
             device_store,
             secret_store: None,
+            ipc_socket_path: None,
         });
 
         assert_eq!(model.visibility_mode(), VisibilityMode::PairedOnly);
@@ -326,6 +348,7 @@ mod tests {
             static_x25519_pubkey: "ab".repeat(32),
             last_ble_address: String::new(),
             last_lan_address: String::new(),
+            last_endpoint_id: String::new(),
             capability_flags: 0x03,
             auto_accept_files: false,
             paired_at: "1".to_string(),
@@ -347,8 +370,10 @@ mod tests {
             warning_message: None,
             paired_devices: vec![dev],
             nearby_peers: Vec::new(),
+            transfers: Vec::new(),
             device_store: device_store.clone(),
             secret_store: Some(Arc::clone(&secret_store) as Arc<dyn SecretStore>),
+            ipc_socket_path: None,
         });
 
         model.apply_msg(app::SettingsMsg::RequestUnpair("pixel-9".to_string()));
@@ -376,6 +401,203 @@ mod tests {
             .unwrap_or_default()
             .contains("120 seconds"));
 
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn auto_accept_toggle_persists_to_device_store() {
+        let (dir, device_store) = temp_store("auto-accept");
+        let dev = PairedDevice {
+            device_id: "pixel-9".to_string(),
+            display_name: "Pixel 9".to_string(),
+            device_role: DeviceRole::Mobile,
+            static_x25519_pubkey: "ab".repeat(32),
+            last_ble_address: String::new(),
+            last_lan_address: String::new(),
+            last_endpoint_id: String::new(),
+            capability_flags: 0x03,
+            auto_accept_files: false,
+            paired_at: "1".to_string(),
+        };
+        device_store.upsert(dev.clone()).expect("seed device");
+
+        let mut model = app::SettingsModel::from_init(app::SettingsInit {
+            config: DaemonConfig::default(),
+            error_message: None,
+            warning_message: None,
+            paired_devices: vec![dev],
+            nearby_peers: Vec::new(),
+            transfers: Vec::new(),
+            device_store: device_store.clone(),
+            secret_store: None,
+            ipc_socket_path: None,
+        });
+
+        model.apply_msg(app::SettingsMsg::SetAutoAcceptFiles {
+            device_id: "pixel-9".to_string(),
+            enabled: true,
+        });
+        assert!(model.paired_devices()[0].auto_accept_files);
+        assert!(device_store.load().expect("load")[0].auto_accept_files);
+
+        model.apply_msg(app::SettingsMsg::SetAutoAcceptFiles {
+            device_id: "pixel-9".to_string(),
+            enabled: false,
+        });
+        assert!(!model.paired_devices()[0].auto_accept_files);
+        assert!(!device_store.load().expect("load")[0].auto_accept_files);
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn active_transfers_accept_decline_cancel_communicate_over_ipc() {
+        use keynear_core::{TransferDirection, TransferItem, TransferSession, TransferState};
+        use std::io::{Read, Write};
+        use std::os::unix::net::UnixListener;
+
+        let (dir, device_store) = temp_store("transfers-ipc");
+        let sock_path = dir.join("daemon.sock");
+        ipc::prepare_daemon_socket_dir(&sock_path).expect("prepare sock dir");
+        let listener = UnixListener::bind(&sock_path).expect("bind test sock");
+        ipc::set_daemon_socket_permissions(&sock_path).expect("chmod test sock");
+
+        let initial_sessions = vec![
+            TransferSession {
+                transfer_id: "tx-1".to_string(),
+                peer_device_id: "pixel-9".to_string(),
+                direction: TransferDirection::Receive,
+                items: vec![TransferItem {
+                    name: "photo.jpg".to_string(),
+                    mime_type: "image/jpeg".to_string(),
+                    size_bytes: 2048,
+                    is_directory: false,
+                    target_path: None,
+                    checksum: Some("aa".repeat(32)),
+                }],
+                total_bytes: 2048,
+                transferred_bytes: 0,
+                state: TransferState::PendingConsent,
+                started_at: "1".to_string(),
+            },
+            TransferSession {
+                transfer_id: "tx-2".to_string(),
+                peer_device_id: "pixel-9".to_string(),
+                direction: TransferDirection::Receive,
+                items: vec![TransferItem {
+                    name: "notes.txt".to_string(),
+                    mime_type: "text/plain".to_string(),
+                    size_bytes: 512,
+                    is_directory: false,
+                    target_path: None,
+                    checksum: Some("bb".repeat(32)),
+                }],
+                total_bytes: 512,
+                transferred_bytes: 0,
+                state: TransferState::PendingConsent,
+                started_at: "2".to_string(),
+            },
+        ];
+
+        let mut server_sessions = initial_sessions.clone();
+        let handle = std::thread::spawn(move || {
+            for _ in 0..3 {
+                let (mut stream, _) = listener.accept().expect("accept");
+                let mut len_buf = [0u8; 4];
+                stream.read_exact(&mut len_buf).expect("read len");
+                let len = u32::from_be_bytes(len_buf) as usize;
+                let mut payload = vec![0u8; len];
+                stream.read_exact(&mut payload).expect("read payload");
+                let req = ipc::decode_request(&payload).expect("decode req");
+
+                let resp = match req {
+                    ipc::IpcRequest::AcceptTransfer { transfer_id } => {
+                        let updated = server_sessions
+                            .iter_mut()
+                            .find(|s| s.transfer_id == transfer_id)
+                            .map(|s| {
+                                s.state = TransferState::Active;
+                                s.clone()
+                            });
+                        match updated {
+                            Some(s) => ipc::IpcResponse::Transfer(s),
+                            None => ipc::IpcResponse::Error {
+                                message: "not found".to_string(),
+                            },
+                        }
+                    }
+                    ipc::IpcRequest::CancelTransfer { transfer_id } => {
+                        let updated = server_sessions
+                            .iter_mut()
+                            .find(|s| s.transfer_id == transfer_id)
+                            .map(|s| {
+                                s.state = TransferState::Cancelled;
+                                s.clone()
+                            });
+                        match updated {
+                            Some(s) => ipc::IpcResponse::Transfer(s),
+                            None => ipc::IpcResponse::Error {
+                                message: "not found".to_string(),
+                            },
+                        }
+                    }
+                    ipc::IpcRequest::DeclineTransfer { transfer_id } => {
+                        let updated = server_sessions
+                            .iter_mut()
+                            .find(|s| s.transfer_id == transfer_id)
+                            .map(|s| {
+                                s.state = TransferState::Cancelled;
+                                s.clone()
+                            });
+                        match updated {
+                            Some(s) => ipc::IpcResponse::Transfer(s),
+                            None => ipc::IpcResponse::Error {
+                                message: "not found".to_string(),
+                            },
+                        }
+                    }
+                    ipc::IpcRequest::ListTransfers => {
+                        ipc::IpcResponse::Transfers(server_sessions.clone())
+                    }
+                    other => ipc::IpcResponse::Error {
+                        message: format!("unexpected request: {other:?}"),
+                    },
+                };
+
+                let encoded = ipc::encode_response(&resp).expect("encode resp");
+                stream
+                    .write_all(&(encoded.len() as u32).to_be_bytes())
+                    .expect("write len");
+                stream.write_all(&encoded).expect("write payload");
+                stream.flush().expect("flush");
+            }
+        });
+
+        let mut model = app::SettingsModel::from_init(app::SettingsInit {
+            config: DaemonConfig::default(),
+            error_message: None,
+            warning_message: None,
+            paired_devices: Vec::new(),
+            nearby_peers: Vec::new(),
+            transfers: initial_sessions,
+            device_store,
+            secret_store: None,
+            ipc_socket_path: Some(sock_path),
+        });
+
+        model.apply_msg(app::SettingsMsg::AcceptTransfer("tx-1".to_string()));
+        assert!(model.transfer_error().is_none());
+        assert_eq!(model.transfers()[0].state, TransferState::Active);
+
+        model.apply_msg(app::SettingsMsg::CancelTransfer("tx-1".to_string()));
+        assert!(model.transfer_error().is_none());
+        assert_eq!(model.transfers()[0].state, TransferState::Cancelled);
+
+        model.apply_msg(app::SettingsMsg::DeclineTransfer("tx-2".to_string()));
+        assert!(model.transfer_error().is_none());
+        assert_eq!(model.transfers()[1].state, TransferState::Cancelled);
+
+        handle.join().expect("ipc server thread");
         let _ = fs::remove_dir_all(&dir);
     }
 }

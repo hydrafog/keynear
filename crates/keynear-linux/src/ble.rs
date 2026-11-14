@@ -4,15 +4,17 @@ use std::sync::Arc;
 use bluer::adv::Advertisement;
 use bluer::gatt::local::{
     Application, Characteristic, CharacteristicNotifier, CharacteristicNotify,
-    CharacteristicNotifyMethod, CharacteristicWrite, CharacteristicWriteMethod, ReqError, Service,
+    CharacteristicNotifyMethod, CharacteristicRead, CharacteristicWrite, CharacteristicWriteMethod,
+    ReqError, Service,
 };
 use bluer::{Adapter, AdapterEvent, Address, DiscoveryFilter, DiscoveryTransport, Session};
 use futures_util::StreamExt;
 use keynear_core::{
-    commit_paired_device, DeviceRole, EveryoneNearbyBeacon, KeynearError, NoisePairingSession,
-    PairedBeacon, PairedBeaconState, PairedDevice, PairedDeviceStore, PairingCompleted,
-    PairingPeerMetadata, PairingState, PeerSecrets, SecretStore, VisibilityMode,
-    KEYNEAR_BLE_SERVICE_UUID, MAX_BLE_SERVICE_DATA_BYTES, MAX_GATT_PAIRING_FRAME_BYTES,
+    commit_paired_device, v1, DeviceRole, EveryoneNearbyBeacon, KeynearError, LanEndpointCodec,
+    NoisePairingSession, PairedBeacon, PairedBeaconState, PairedDevice, PairedDeviceStore,
+    PairingCompleted, PairingPeerMetadata, PairingState, PeerSecrets, SecretStore, VisibilityMode,
+    KEYNEAR_BLE_SERVICE_UUID, LAN_ENDPOINT_CHAR_UUID, MAX_BLE_SERVICE_DATA_BYTES,
+    MAX_CONTROL_FRAME_BYTES, MAX_GATT_PAIRING_FRAME_BYTES,
 };
 use tokio::sync::{mpsc, watch, Mutex};
 use uuid::Uuid;
@@ -146,6 +148,8 @@ pub struct BleDriverParams {
     pub discovered_tx: Option<mpsc::Sender<DiscoveredBlePeer>>,
     pub pairing_decision_rx: Option<mpsc::Receiver<bool>>,
     pub pairing_event_tx: Option<mpsc::Sender<PairingUiEvent>>,
+    pub local_lan_endpoint_rx: Option<watch::Receiver<Option<v1::LanEndpoint>>>,
+    pub lan_endpoint_tx: Option<mpsc::Sender<v1::LanEndpoint>>,
 }
 
 #[derive(Debug, Clone)]
@@ -245,6 +249,7 @@ impl GattPairingResponder {
                         .or(peer_address)
                         .unwrap_or_default(),
                     last_lan_address: String::new(),
+                    last_endpoint_id: String::new(),
                     capability_flags: completed.peer_metadata.capability_flags,
                     auto_accept_files: false,
                     paired_at: format!(
@@ -341,12 +346,19 @@ impl BlePeerDriver {
             params.device_store.clone(),
         )));
         let notifier_slot: Arc<Mutex<Option<CharacteristicNotifier>>> = Arc::new(Mutex::new(None));
+        let ble_addr_map: Arc<Mutex<BTreeMap<String, String>>> =
+            Arc::new(Mutex::new(BTreeMap::new()));
 
-        let app = build_gatt_application(
-            Arc::clone(&responder),
-            Arc::clone(&notifier_slot),
-            params.pairing_event_tx.take(),
-        );
+        let app = build_gatt_application(GattApplicationContext {
+            responder: Arc::clone(&responder),
+            notifier_slot: Arc::clone(&notifier_slot),
+            pairing_event_tx: params.pairing_event_tx.take(),
+            secret_store: Arc::clone(&params.secret_store),
+            device_store: params.device_store.clone(),
+            local_lan_endpoint_rx: params.local_lan_endpoint_rx.clone(),
+            lan_endpoint_tx: params.lan_endpoint_tx.clone(),
+            ble_addr_map: Arc::clone(&ble_addr_map),
+        });
         let _gatt_handle = adapter
             .serve_gatt_application(app)
             .await
@@ -422,6 +434,12 @@ impl BlePeerDriver {
                             params.secret_store.as_ref(),
                             &mut last_counters,
                         ).await {
+                            if let DecodedBleBeacon::Paired { ref device_id, .. } = peer.beacon {
+                                ble_addr_map
+                                    .lock()
+                                    .await
+                                    .insert(peer.address.to_ascii_lowercase(), device_id.clone());
+                            }
                             if let Some(ref tx) = params.discovered_tx {
                                 let _ = tx.try_send(peer);
                             }
@@ -522,14 +540,111 @@ async fn recv_optional<T>(rx: &mut Option<mpsc::Receiver<T>>) -> Option<T> {
     }
 }
 
-fn build_gatt_application(
+struct GattApplicationContext {
     responder: Arc<Mutex<GattPairingResponder>>,
     notifier_slot: Arc<Mutex<Option<CharacteristicNotifier>>>,
     pairing_event_tx: Option<mpsc::Sender<PairingUiEvent>>,
-) -> Application {
-    let tx_responder = Arc::clone(&responder);
-    let tx_notifier = Arc::clone(&notifier_slot);
-    let rx_notifier = Arc::clone(&notifier_slot);
+    secret_store: Arc<dyn SecretStore>,
+    device_store: PairedDeviceStore,
+    local_lan_endpoint_rx: Option<watch::Receiver<Option<v1::LanEndpoint>>>,
+    lan_endpoint_tx: Option<mpsc::Sender<v1::LanEndpoint>>,
+    ble_addr_map: Arc<Mutex<BTreeMap<String, String>>>,
+}
+
+pub fn encode_lan_endpoint_for_peer(
+    endpoint: &v1::LanEndpoint,
+    known_device_id: Option<&str>,
+    peer_ble_address: Option<&str>,
+    device_store: &PairedDeviceStore,
+    secret_store: &dyn SecretStore,
+) -> Result<Vec<u8>, KeynearError> {
+    let devices = device_store.load()?;
+    if devices.is_empty() {
+        return Err(KeynearError::UnauthorizedPeer(
+            "no paired devices registered for LAN endpoint exchange".to_string(),
+        ));
+    }
+
+    let matched = known_device_id
+        .and_then(|id| devices.iter().find(|d| d.device_id == id))
+        .or_else(|| {
+            peer_ble_address
+                .map(str::trim)
+                .filter(|addr| !addr.is_empty())
+                .and_then(|addr| {
+                    devices.iter().find(|d| {
+                        !d.last_ble_address.trim().is_empty()
+                            && d.last_ble_address.eq_ignore_ascii_case(addr)
+                    })
+                })
+        })
+        .or_else(|| {
+            if devices.len() == 1 {
+                devices.first()
+            } else {
+                None
+            }
+        })
+        .ok_or_else(|| {
+            KeynearError::UnauthorizedPeer(
+                "unrecognized BLE peer address for LAN endpoint read".to_string(),
+            )
+        })?;
+
+    let secrets = secret_store
+        .get_peer_secrets(&matched.device_id)?
+        .ok_or_else(|| {
+            KeynearError::UnauthorizedPeer(format!(
+                "missing pairwise reconnect secret for '{}'",
+                matched.device_id
+            ))
+        })?;
+
+    LanEndpointCodec::encode(endpoint, &secrets.reconnect_secret)
+}
+
+pub fn decode_lan_endpoint_from_known_peers(
+    encoded: &[u8],
+    device_store: &PairedDeviceStore,
+    secret_store: &dyn SecretStore,
+) -> Result<v1::LanEndpoint, KeynearError> {
+    if encoded.is_empty() || encoded.len() > MAX_CONTROL_FRAME_BYTES {
+        return Err(KeynearError::Validation {
+            field: "lanEndpoint",
+            message: format!(
+                "encrypted LAN endpoint length {} must be within 1..={MAX_CONTROL_FRAME_BYTES}",
+                encoded.len()
+            ),
+        });
+    }
+    let devices = device_store.load()?;
+    let mut keys: Vec<(String, [u8; 32])> = Vec::new();
+    for dev in devices {
+        if let Some(secrets) = secret_store.get_peer_secrets(&dev.device_id)? {
+            keys.push((dev.device_id, secrets.reconnect_secret));
+        }
+    }
+    LanEndpointCodec::decode_any(
+        encoded,
+        keys.iter().map(|(id, secret)| (id.as_str(), secret)),
+    )
+}
+
+fn build_gatt_application(ctx: GattApplicationContext) -> Application {
+    let tx_responder = Arc::clone(&ctx.responder);
+    let tx_notifier = Arc::clone(&ctx.notifier_slot);
+    let rx_notifier = Arc::clone(&ctx.notifier_slot);
+    let pairing_event_tx = ctx.pairing_event_tx;
+
+    let read_secrets = Arc::clone(&ctx.secret_store);
+    let read_devices = ctx.device_store.clone();
+    let read_lan_rx = ctx.local_lan_endpoint_rx.clone();
+    let read_addr_map = Arc::clone(&ctx.ble_addr_map);
+
+    let write_secrets = Arc::clone(&ctx.secret_store);
+    let write_devices = ctx.device_store;
+    let write_lan_tx = ctx.lan_endpoint_tx;
+    let write_addr_map = Arc::clone(&ctx.ble_addr_map);
 
     Application {
         services: vec![Service {
@@ -602,6 +717,86 @@ fn build_gatt_application(
                             let slot = Arc::clone(&rx_notifier);
                             Box::pin(async move {
                                 *slot.lock().await = Some(notifier);
+                            })
+                        })),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+                Characteristic {
+                    uuid: LAN_ENDPOINT_CHAR_UUID,
+                    read: Some(CharacteristicRead {
+                        read: true,
+                        fun: Box::new(move |req| {
+                            let secrets = Arc::clone(&read_secrets);
+                            let devices = read_devices.clone();
+                            let lan_rx = read_lan_rx.clone();
+                            let addr_map = Arc::clone(&read_addr_map);
+                            let peer_addr = req.device_address.to_string();
+                            Box::pin(async move {
+                                let Some(endpoint) =
+                                    lan_rx.as_ref().and_then(|rx| rx.borrow().clone())
+                                else {
+                                    return Err(ReqError::Failed);
+                                };
+                                let known_id = addr_map
+                                    .lock()
+                                    .await
+                                    .get(&peer_addr.to_ascii_lowercase())
+                                    .cloned();
+                                match encode_lan_endpoint_for_peer(
+                                    &endpoint,
+                                    known_id.as_deref(),
+                                    Some(&peer_addr),
+                                    &devices,
+                                    secrets.as_ref(),
+                                ) {
+                                    Ok(bytes) => Ok(bytes),
+                                    Err(KeynearError::UnauthorizedPeer(_)) => {
+                                        Err(ReqError::NotPermitted)
+                                    }
+                                    Err(_) => Err(ReqError::Failed),
+                                }
+                            })
+                        }),
+                        ..Default::default()
+                    }),
+                    write: Some(CharacteristicWrite {
+                        write: true,
+                        write_without_response: false,
+                        method: CharacteristicWriteMethod::Fun(Box::new(move |value, req| {
+                            let secrets = Arc::clone(&write_secrets);
+                            let devices = write_devices.clone();
+                            let lan_tx = write_lan_tx.clone();
+                            let addr_map = Arc::clone(&write_addr_map);
+                            let peer_addr = req.device_address.to_string();
+                            Box::pin(async move {
+                                if value.is_empty() || value.len() > MAX_CONTROL_FRAME_BYTES {
+                                    return Err(ReqError::InvalidValueLength);
+                                }
+                                match decode_lan_endpoint_from_known_peers(
+                                    &value,
+                                    &devices,
+                                    secrets.as_ref(),
+                                ) {
+                                    Ok(endpoint) => {
+                                        addr_map.lock().await.insert(
+                                            peer_addr.to_ascii_lowercase(),
+                                            endpoint.device_id.clone(),
+                                        );
+                                        if let Some(tx) = lan_tx {
+                                            let _ = tx.try_send(endpoint);
+                                        }
+                                        Ok(())
+                                    }
+                                    Err(KeynearError::Validation { .. }) => {
+                                        Err(ReqError::InvalidValueLength)
+                                    }
+                                    Err(KeynearError::UnauthorizedPeer(_)) => {
+                                        Err(ReqError::NotPermitted)
+                                    }
+                                    Err(_) => Err(ReqError::Failed),
+                                }
                             })
                         })),
                         ..Default::default()
@@ -794,6 +989,7 @@ mod tests {
             static_x25519_pubkey: "cd".repeat(32),
             last_ble_address: String::new(),
             last_lan_address: String::new(),
+            last_endpoint_id: String::new(),
             capability_flags: 0x03,
             auto_accept_files: false,
             paired_at: "1".to_string(),
@@ -814,5 +1010,149 @@ mod tests {
             decode_service_data_for_known_peers(&paired_raw, &devices, &secrets, &mut counters)
                 .expect("decode ok");
         assert!(replayed.is_none());
+    }
+
+    #[test]
+    fn lan_endpoint_gatt_characteristic_roundtrips_and_rejects_unpaired() {
+        let (dir, device_store) = temp_devices_store("lan-char");
+        let secrets = InMemorySecretStore::new();
+        let pixel_secret = [0x55u8; 32];
+        let tablet_secret = [0x66u8; 32];
+
+        commit_paired_device(
+            &device_store,
+            &secrets,
+            PairedDevice {
+                device_id: "pixel-9".to_string(),
+                display_name: "Pixel 9".to_string(),
+                device_role: DeviceRole::Mobile,
+                static_x25519_pubkey: "aa".repeat(32),
+                last_ble_address: "11:22:33:44:55:66".to_string(),
+                last_lan_address: String::new(),
+                last_endpoint_id: String::new(),
+                capability_flags: 0x07,
+                auto_accept_files: false,
+                paired_at: "1".to_string(),
+            },
+            &PeerSecrets {
+                irk: pixel_secret,
+                reconnect_secret: pixel_secret,
+            },
+        )
+        .expect("commit pixel");
+
+        commit_paired_device(
+            &device_store,
+            &secrets,
+            PairedDevice {
+                device_id: "galaxy-tab".to_string(),
+                display_name: "Galaxy Tab".to_string(),
+                device_role: DeviceRole::Mobile,
+                static_x25519_pubkey: "bb".repeat(32),
+                last_ble_address: "AA:BB:CC:DD:EE:FF".to_string(),
+                last_lan_address: String::new(),
+                last_endpoint_id: String::new(),
+                capability_flags: 0x07,
+                auto_accept_files: false,
+                paired_at: "2".to_string(),
+            },
+            &PeerSecrets {
+                irk: tablet_secret,
+                reconnect_secret: tablet_secret,
+            },
+        )
+        .expect("commit tablet");
+
+        let local_ep = v1::LanEndpoint {
+            device_id: "linux-workstation".to_string(),
+            endpoint_id: vec![0x11; 32],
+            socket_addrs: vec!["192.168.1.20:42000".to_string()],
+            capability_flags: DEFAULT_CAPABILITY_FLAGS,
+            issued_at_ms: 1_700_000_000_000,
+        };
+        let encoded = encode_lan_endpoint_for_peer(
+            &local_ep,
+            None,
+            Some("11:22:33:44:55:66"),
+            &device_store,
+            &secrets,
+        )
+        .expect("encode for matched peer");
+        let decoded_by_peer =
+            LanEndpointCodec::decode(&encoded, "linux-workstation", &pixel_secret)
+                .expect("peer decodes local endpoint");
+        assert_eq!(decoded_by_peer, local_ep);
+
+        let unrecognized = encode_lan_endpoint_for_peer(
+            &local_ep,
+            None,
+            Some("FF:FF:FF:FF:FF:FF"),
+            &device_store,
+            &secrets,
+        );
+        assert!(matches!(
+            unrecognized,
+            Err(KeynearError::UnauthorizedPeer(_))
+        ));
+
+        let inbound_ep = v1::LanEndpoint {
+            device_id: "pixel-9".to_string(),
+            endpoint_id: vec![0x22; 32],
+            socket_addrs: vec!["192.168.1.33:42001".to_string()],
+            capability_flags: 0x03,
+            issued_at_ms: 1_700_000_000_123,
+        };
+        let peer_wire =
+            LanEndpointCodec::encode(&inbound_ep, &pixel_secret).expect("encode inbound");
+        let decoded_inbound =
+            decode_lan_endpoint_from_known_peers(&peer_wire, &device_store, &secrets)
+                .expect("decode known peer write");
+        assert_eq!(decoded_inbound, inbound_ep);
+
+        let rogue_ep = v1::LanEndpoint {
+            device_id: "rogue-device".to_string(),
+            endpoint_id: vec![0x99; 32],
+            socket_addrs: vec!["192.168.1.99:42002".to_string()],
+            capability_flags: 0x01,
+            issued_at_ms: 1_700_000_000_999,
+        };
+        let rogue_wire = LanEndpointCodec::encode(&rogue_ep, &[0x99; 32]).expect("encode rogue");
+        assert!(matches!(
+            decode_lan_endpoint_from_known_peers(&rogue_wire, &device_store, &secrets),
+            Err(KeynearError::UnauthorizedPeer(_))
+        ));
+
+        let responder = Arc::new(Mutex::new(GattPairingResponder::new(
+            PairingPeerMetadata {
+                device_id: "linux-workstation".to_string(),
+                display_name: "Workstation".to_string(),
+                device_role: DeviceRole::Desktop,
+                capability_flags: DEFAULT_CAPABILITY_FLAGS,
+            },
+            Arc::new(secrets),
+            device_store,
+        )));
+        let app = build_gatt_application(GattApplicationContext {
+            responder,
+            notifier_slot: Arc::new(Mutex::new(None)),
+            pairing_event_tx: None,
+            secret_store: Arc::new(InMemorySecretStore::new()),
+            device_store: PairedDeviceStore::new(dir.join("devices.toml")),
+            local_lan_endpoint_rx: None,
+            lan_endpoint_tx: None,
+            ble_addr_map: Arc::new(Mutex::new(BTreeMap::new())),
+        });
+        assert_eq!(app.services.len(), 1);
+        assert_eq!(app.services[0].uuid, KEYNEAR_BLE_SERVICE_UUID);
+        let uuids: Vec<Uuid> = app.services[0]
+            .characteristics
+            .iter()
+            .map(|c| c.uuid)
+            .collect();
+        assert!(uuids.contains(&PAIRING_TX_CHAR_UUID));
+        assert!(uuids.contains(&PAIRING_RX_CHAR_UUID));
+        assert!(uuids.contains(&LAN_ENDPOINT_CHAR_UUID));
+
+        let _ = fs::remove_dir_all(&dir);
     }
 }
