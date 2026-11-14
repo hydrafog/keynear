@@ -711,11 +711,15 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_keynear_core_checksum_method_corehandle_generate_static_keypair(
     ): Int
+    external fun uniffi_keynear_core_checksum_method_corehandle_load_daemon_config(
+    ): Int
     external fun uniffi_keynear_core_checksum_method_corehandle_load_paired_devices(
     ): Int
     external fun uniffi_keynear_core_checksum_method_corehandle_remove_paired_device(
     ): Int
     external fun uniffi_keynear_core_checksum_method_corehandle_rename_paired_device(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_corehandle_save_daemon_config(
     ): Int
     external fun uniffi_keynear_core_checksum_method_corehandle_save_paired_device(
     ): Int
@@ -825,11 +829,15 @@ internal object UniffiLib {
     ): Long
     external fun uniffi_keynear_core_fn_method_corehandle_generate_static_keypair(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_corehandle_load_daemon_config(`ptr`: Long,`configTomlPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_corehandle_load_paired_devices(`ptr`: Long,`devicesTomlPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_corehandle_remove_paired_device(`ptr`: Long,`devicesTomlPath`: RustBuffer.ByValue,`deviceId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
     external fun uniffi_keynear_core_fn_method_corehandle_rename_paired_device(`ptr`: Long,`devicesTomlPath`: RustBuffer.ByValue,`deviceId`: RustBuffer.ByValue,`newDisplayName`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_corehandle_save_daemon_config(`ptr`: Long,`configTomlPath`: RustBuffer.ByValue,`config`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_corehandle_save_paired_device(`ptr`: Long,`devicesTomlPath`: RustBuffer.ByValue,`device`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -1088,6 +1096,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_keynear_core_checksum_method_corehandle_generate_static_keypair() and 0xFFFF) != 31432) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_keynear_core_checksum_method_corehandle_load_daemon_config() and 0xFFFF) != 45707) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_keynear_core_checksum_method_corehandle_load_paired_devices() and 0xFFFF) != 35108) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1095,6 +1106,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_keynear_core_checksum_method_corehandle_rename_paired_device() and 0xFFFF) != 25763) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_corehandle_save_daemon_config() and 0xFFFF) != 35313) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_keynear_core_checksum_method_corehandle_save_paired_device() and 0xFFFF) != 54120) {
@@ -1710,11 +1724,15 @@ public interface CoreHandleInterface {
     
     fun `generateStaticKeypair`(): FfiStaticKeypair
     
+    fun `loadDaemonConfig`(`configTomlPath`: kotlin.String): FfiDaemonConfig
+    
     fun `loadPairedDevices`(`devicesTomlPath`: kotlin.String): List<FfiPairedDevice>
     
     fun `removePairedDevice`(`devicesTomlPath`: kotlin.String, `deviceId`: kotlin.String): kotlin.Boolean
     
     fun `renamePairedDevice`(`devicesTomlPath`: kotlin.String, `deviceId`: kotlin.String, `newDisplayName`: kotlin.String): FfiPairedDevice
+    
+    fun `saveDaemonConfig`(`configTomlPath`: kotlin.String, `config`: FfiDaemonConfig): FfiDaemonConfig
     
     fun `savePairedDevice`(`devicesTomlPath`: kotlin.String, `device`: FfiPairedDevice)
     
@@ -2002,6 +2020,21 @@ open class CoreHandle: Disposable, AutoCloseable, CoreHandleInterface
     
 
     
+    @Throws(FfiException::class)override fun `loadDaemonConfig`(`configTomlPath`: kotlin.String): FfiDaemonConfig {
+            return FfiConverterTypeFfiDaemonConfig.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_corehandle_load_daemon_config(
+        it,
+        
+        FfiConverterString.lower(`configTomlPath`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(FfiException::class)override fun `loadPairedDevices`(`devicesTomlPath`: kotlin.String): List<FfiPairedDevice> {
             return FfiConverterSequenceTypeFfiPairedDevice.lift(
     callWithHandle {
@@ -2043,6 +2076,22 @@ open class CoreHandle: Disposable, AutoCloseable, CoreHandleInterface
         FfiConverterString.lower(`devicesTomlPath`),
         FfiConverterString.lower(`deviceId`),
         FfiConverterString.lower(`newDisplayName`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `saveDaemonConfig`(`configTomlPath`: kotlin.String, `config`: FfiDaemonConfig): FfiDaemonConfig {
+            return FfiConverterTypeFfiDaemonConfig.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_corehandle_save_daemon_config(
+        it,
+        
+        FfiConverterString.lower(`configTomlPath`),
+        FfiConverterTypeFfiDaemonConfig.lower(`config`),_status)
 }
     }
     )
@@ -3085,6 +3134,79 @@ public object FfiConverterTypeCoreStatus: FfiConverterRustBuffer<CoreStatus> {
             FfiConverterString.write(value.`version`, buf)
             FfiConverterUInt.write(value.`maxControlFrameBytes`, buf)
             FfiConverterBoolean.write(value.`ready`, buf)
+    }
+}
+
+
+
+data class FfiDaemonConfig (
+    var `visibilityMode`: FfiVisibilityMode
+    , 
+    var `incomingDirectory`: kotlin.String
+    , 
+    var `autoAcceptFromPaired`: kotlin.Boolean
+    , 
+    var `clipboardSyncEnabled`: kotlin.Boolean
+    , 
+    var `clipboardImagesEnabled`: kotlin.Boolean
+    , 
+    var `otpPassthroughEnabled`: kotlin.Boolean
+    , 
+    var `audioHandoffEnabled`: kotlin.Boolean
+    , 
+    var `ignoredMimeTypes`: List<kotlin.String>
+    , 
+    var `notifyAutoAcceptComplete`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDaemonConfig: FfiConverterRustBuffer<FfiDaemonConfig> {
+    override fun read(buf: ByteBuffer): FfiDaemonConfig {
+        return FfiDaemonConfig(
+            FfiConverterTypeFfiVisibilityMode.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDaemonConfig) = (
+            FfiConverterTypeFfiVisibilityMode.allocationSize(value.`visibilityMode`) +
+            FfiConverterString.allocationSize(value.`incomingDirectory`) +
+            FfiConverterBoolean.allocationSize(value.`autoAcceptFromPaired`) +
+            FfiConverterBoolean.allocationSize(value.`clipboardSyncEnabled`) +
+            FfiConverterBoolean.allocationSize(value.`clipboardImagesEnabled`) +
+            FfiConverterBoolean.allocationSize(value.`otpPassthroughEnabled`) +
+            FfiConverterBoolean.allocationSize(value.`audioHandoffEnabled`) +
+            FfiConverterSequenceString.allocationSize(value.`ignoredMimeTypes`) +
+            FfiConverterBoolean.allocationSize(value.`notifyAutoAcceptComplete`)
+    )
+
+    override fun write(value: FfiDaemonConfig, buf: ByteBuffer) {
+            FfiConverterTypeFfiVisibilityMode.write(value.`visibilityMode`, buf)
+            FfiConverterString.write(value.`incomingDirectory`, buf)
+            FfiConverterBoolean.write(value.`autoAcceptFromPaired`, buf)
+            FfiConverterBoolean.write(value.`clipboardSyncEnabled`, buf)
+            FfiConverterBoolean.write(value.`clipboardImagesEnabled`, buf)
+            FfiConverterBoolean.write(value.`otpPassthroughEnabled`, buf)
+            FfiConverterBoolean.write(value.`audioHandoffEnabled`, buf)
+            FfiConverterSequenceString.write(value.`ignoredMimeTypes`, buf)
+            FfiConverterBoolean.write(value.`notifyAutoAcceptComplete`, buf)
     }
 }
 

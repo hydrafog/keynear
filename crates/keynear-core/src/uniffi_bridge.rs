@@ -190,6 +190,56 @@ pub struct CoreStatus {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct FfiDaemonConfig {
+    pub visibility_mode: FfiVisibilityMode,
+    pub incoming_directory: String,
+    pub auto_accept_from_paired: bool,
+    pub clipboard_sync_enabled: bool,
+    pub clipboard_images_enabled: bool,
+    pub otp_passthrough_enabled: bool,
+    pub audio_handoff_enabled: bool,
+    pub ignored_mime_types: Vec<String>,
+    pub notify_auto_accept_complete: bool,
+}
+
+impl From<DaemonConfig> for FfiDaemonConfig {
+    fn from(value: DaemonConfig) -> Self {
+        Self {
+            visibility_mode: FfiVisibilityMode::from(value.visibility_mode),
+            incoming_directory: value.incoming_directory,
+            auto_accept_from_paired: value.auto_accept_from_paired,
+            clipboard_sync_enabled: value.clipboard_sync_enabled,
+            clipboard_images_enabled: value.clipboard_images_enabled,
+            otp_passthrough_enabled: value.otp_passthrough_enabled,
+            audio_handoff_enabled: value.audio_handoff_enabled,
+            ignored_mime_types: value.ignored_mime_types,
+            notify_auto_accept_complete: value.notify_auto_accept_complete,
+        }
+    }
+}
+
+impl From<FfiDaemonConfig> for DaemonConfig {
+    fn from(value: FfiDaemonConfig) -> Self {
+        Self {
+            visibility_mode: VisibilityMode::from(value.visibility_mode),
+            incoming_directory: value.incoming_directory,
+            auto_accept_from_paired: value.auto_accept_from_paired,
+            clipboard_sync_enabled: value.clipboard_sync_enabled,
+            clipboard_images_enabled: value.clipboard_images_enabled,
+            otp_passthrough_enabled: value.otp_passthrough_enabled,
+            audio_handoff_enabled: value.audio_handoff_enabled,
+            ignored_mime_types: value
+                .ignored_mime_types
+                .into_iter()
+                .map(|m| m.trim().to_string())
+                .filter(|m| !m.is_empty())
+                .collect(),
+            notify_auto_accept_complete: value.notify_auto_accept_complete,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct FfiPairedDevice {
     pub device_id: String,
     pub display_name: String,
@@ -706,6 +756,28 @@ impl CoreHandle {
             toml::from_str(&raw_toml).map_err(|err| KeynearError::Config(err.to_string()))?;
         parsed.validate()?;
         Ok(FfiVisibilityMode::from(parsed.visibility_mode))
+    }
+
+    pub fn load_daemon_config(
+        &self,
+        config_toml_path: String,
+    ) -> Result<FfiDaemonConfig, FfiError> {
+        let cfg = DaemonConfig::load_or_default(&PathBuf::from(config_toml_path))?;
+        let ffi_cfg = FfiDaemonConfig::from(cfg);
+        self.set_visibility_mode(ffi_cfg.visibility_mode);
+        Ok(ffi_cfg)
+    }
+
+    pub fn save_daemon_config(
+        &self,
+        config_toml_path: String,
+        config: FfiDaemonConfig,
+    ) -> Result<FfiDaemonConfig, FfiError> {
+        let daemon_cfg = DaemonConfig::from(config);
+        daemon_cfg.save_to_path(&PathBuf::from(config_toml_path))?;
+        let saved = FfiDaemonConfig::from(daemon_cfg);
+        self.set_visibility_mode(saved.visibility_mode);
+        Ok(saved)
     }
 
     pub fn validate_control_frame(&self, bytes: Vec<u8>) -> Result<String, FfiError> {
@@ -1587,6 +1659,58 @@ mod tests {
                 "   ".to_string()
             )
             .is_err());
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn uniffi_bridge_daemon_config_roundtrips_all_prototype_fields() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("keynear-uniffi-cfg-{nonce}"));
+        fs::create_dir_all(&dir).expect("mkdir");
+        let cfg_path = dir.join("config.toml");
+        let cfg_str = cfg_path.to_string_lossy().to_string();
+
+        let handle = CoreHandle::new();
+        let initial = handle
+            .load_daemon_config(cfg_str.clone())
+            .expect("load default daemon config");
+        assert_eq!(initial.visibility_mode, FfiVisibilityMode::PairedOnly);
+        assert!(initial.clipboard_sync_enabled);
+
+        let updated = FfiDaemonConfig {
+            visibility_mode: FfiVisibilityMode::EveryoneNearby,
+            incoming_directory: "Downloads/".to_string(),
+            auto_accept_from_paired: true,
+            clipboard_sync_enabled: false,
+            clipboard_images_enabled: false,
+            otp_passthrough_enabled: false,
+            audio_handoff_enabled: false,
+            ignored_mime_types: vec![
+                "application/x-secret".to_string(),
+                "  x-kde-passwordManagerHint  ".to_string(),
+            ],
+            notify_auto_accept_complete: false,
+        };
+        let saved = handle
+            .save_daemon_config(cfg_str.clone(), updated)
+            .expect("save daemon config");
+        assert_eq!(
+            saved.ignored_mime_types,
+            vec![
+                "application/x-secret".to_string(),
+                "x-kde-passwordManagerHint".to_string(),
+            ]
+        );
+        assert_eq!(handle.visibility_mode(), FfiVisibilityMode::EveryoneNearby);
+
+        let reloaded = handle
+            .load_daemon_config(cfg_str)
+            .expect("reload daemon config");
+        assert_eq!(reloaded, saved);
 
         let _ = fs::remove_dir_all(&dir);
     }
