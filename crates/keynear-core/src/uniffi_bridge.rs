@@ -826,6 +826,17 @@ impl CoreHandle {
         Ok(FfiPairedDevice::from(updated))
     }
 
+    pub fn rename_paired_device(
+        &self,
+        devices_toml_path: String,
+        device_id: String,
+        new_display_name: String,
+    ) -> Result<FfiPairedDevice, FfiError> {
+        let store = PairedDeviceStore::new(PathBuf::from(devices_toml_path));
+        let updated = store.rename(&device_id, &new_display_name)?;
+        Ok(FfiPairedDevice::from(updated))
+    }
+
     pub fn encode_lan_endpoint(
         &self,
         endpoint: FfiLanEndpoint,
@@ -1527,6 +1538,52 @@ mod tests {
 
         assert_eq!(fs::read(&out_path).expect("read received"), payload);
         receiver.shutdown();
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn rename_paired_device_updates_store_and_validates_input() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("keynear-uniffi-rename-{nonce}"));
+        fs::create_dir_all(&dir).expect("mkdir");
+        let devices_path = dir.join("devices.toml");
+        let devices_str = devices_path.to_string_lossy().to_string();
+
+        let handle = CoreHandle::new();
+        assert_eq!(get_core_status().version, "0.4.0");
+
+        let seeded = FfiPairedDevice {
+            device_id: "phone-1".to_string(),
+            display_name: "Pixel".to_string(),
+            device_role: FfiDeviceRole::Mobile,
+            static_x25519_pubkey: "abcd".to_string(),
+            last_ble_address: "11:22:33:44:55:66".to_string(),
+            last_lan_address: String::new(),
+            last_endpoint_id: String::new(),
+            capability_flags: 1,
+            auto_accept_files: false,
+            paired_at: "2026-11-14T00:00:00Z".to_string(),
+        };
+        handle
+            .save_paired_device(devices_str.clone(), seeded)
+            .expect("save device");
+
+        let updated = handle
+            .rename_paired_device(
+                devices_str.clone(),
+                "phone-1".to_string(),
+                "Pixel Daily".to_string(),
+            )
+            .expect("rename via uniffi");
+        assert_eq!(updated.display_name, "Pixel Daily");
+
+        assert!(handle
+            .rename_paired_device(devices_str.clone(), "phone-1".to_string(), "   ".to_string())
+            .is_err());
+
         let _ = fs::remove_dir_all(&dir);
     }
 }

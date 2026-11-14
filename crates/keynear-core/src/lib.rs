@@ -21,9 +21,10 @@ pub use keyring::{
 pub use lan_discovery::{DiscoveredLanPeer, MdnsDiscovery, KEYNEAR_MDNS_SERVICE_TYPE};
 pub use model::{
     default_config_dir, default_config_path, default_devices_path, sanitize_device_id,
-    DaemonConfig, DeviceRole, NearbyPeer, PairedDevice, PairedDeviceStore, TransferDirection,
-    TransferItem, TransferSession, TransferState, VisibilityMode, EVERYONE_NEARBY_TIMEOUT_SECS,
-    PAIRING_TIMEOUT_SECS, QUIC_ALPN, STREAM_CHUNK_BYTES, ZIP_IO_BUFFER_BYTES,
+    validate_display_name, DaemonConfig, DeviceRole, NearbyPeer, PairedDevice, PairedDeviceStore,
+    TransferDirection, TransferItem, TransferSession, TransferState, VisibilityMode,
+    EVERYONE_NEARBY_TIMEOUT_SECS, MAX_DISPLAY_NAME_LEN, PAIRING_TIMEOUT_SECS, QUIC_ALPN,
+    STREAM_CHUNK_BYTES, ZIP_IO_BUFFER_BYTES,
 };
 #[cfg(feature = "linux-oo7")]
 pub use oo7_keyring::Oo7SecretStore;

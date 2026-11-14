@@ -13,6 +13,7 @@ pub const PAIRING_TIMEOUT_SECS: u64 = 120;
 pub const STREAM_CHUNK_BYTES: usize = 61_440;
 pub const ZIP_IO_BUFFER_BYTES: usize = 1_048_576;
 pub const QUIC_ALPN: &[u8] = b"keynear/orion/1";
+pub const MAX_DISPLAY_NAME_LEN: usize = 64;
 const MAX_DEVICE_ID_BYTES: usize = 64;
 static TEMP_WRITE_SEQ: AtomicU64 = AtomicU64::new(0);
 
@@ -161,6 +162,85 @@ impl DaemonConfig {
             Err(err) => Err(KeynearError::Io(err)),
         }
     }
+
+    pub fn save_to_path(&self, path: &Path) -> Result<(), KeynearError> {
+        self.validate()?;
+        let encoded =
+            toml::to_string_pretty(self).map_err(|err| KeynearError::Config(err.to_string()))?;
+        write_toml_atomic(path, &encoded, "config.toml")
+    }
+}
+
+pub fn validate_display_name(raw: &str) -> Result<String, KeynearError> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Err(KeynearError::Validation {
+            field: "displayName",
+            message: "display_name must not be empty".to_string(),
+        });
+    }
+    if trimmed.chars().any(|ch| ch.is_control()) {
+        return Err(KeynearError::Validation {
+            field: "displayName",
+            message: "display_name must not contain control characters".to_string(),
+        });
+    }
+    if trimmed.chars().count() > MAX_DISPLAY_NAME_LEN {
+        return Err(KeynearError::Validation {
+            field: "displayName",
+            message: format!("display_name must not exceed {MAX_DISPLAY_NAME_LEN} characters"),
+        });
+    }
+    Ok(trimmed.to_string())
+}
+
+fn write_toml_atomic(
+    path: &Path,
+    encoded: &str,
+    fallback_file_name: &str,
+) -> Result<(), KeynearError> {
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent)?;
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let _ = fs::set_permissions(parent, fs::Permissions::from_mode(0o700));
+            }
+        }
+    }
+
+    let seq = TEMP_WRITE_SEQ.fetch_add(1, Ordering::Relaxed);
+    let file_name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or(fallback_file_name);
+    let tmp_path = path.with_file_name(format!(".{file_name}.tmp.{}.{seq}", std::process::id()));
+
+    let write_result = (|| -> Result<(), KeynearError> {
+        let mut opts = OpenOptions::new();
+        opts.create_new(true).write(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            opts.mode(0o600);
+        }
+        let mut file = opts.open(&tmp_path)?;
+        file.write_all(encoded.as_bytes())?;
+        file.sync_all()?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&tmp_path, fs::Permissions::from_mode(0o600))?;
+        }
+        fs::rename(&tmp_path, path)?;
+        Ok(())
+    })();
+
+    if write_result.is_err() {
+        let _ = fs::remove_file(&tmp_path);
+    }
+    write_result
 }
 
 pub fn sanitize_device_id(raw: &str) -> Result<String, KeynearError> {
@@ -261,12 +341,7 @@ impl PairedDeviceStore {
         for device in devices {
             let mut normalized = device.clone();
             normalized.device_id = sanitize_device_id(&normalized.device_id)?;
-            if normalized.display_name.trim().is_empty() {
-                return Err(KeynearError::Validation {
-                    field: "displayName",
-                    message: "display_name must not be empty".to_string(),
-                });
-            }
+            normalized.display_name = validate_display_name(&normalized.display_name)?;
             deduped.insert(normalized.device_id.clone(), normalized);
         }
 
@@ -275,62 +350,12 @@ impl PairedDeviceStore {
         };
         let encoded = toml::to_string_pretty(&payload)
             .map_err(|err| KeynearError::Config(err.to_string()))?;
-
-        if let Some(parent) = self.path.parent() {
-            if !parent.as_os_str().is_empty() {
-                fs::create_dir_all(parent)?;
-                #[cfg(unix)]
-                {
-                    use std::os::unix::fs::PermissionsExt;
-                    let _ = fs::set_permissions(parent, fs::Permissions::from_mode(0o700));
-                }
-            }
-        }
-
-        let seq = TEMP_WRITE_SEQ.fetch_add(1, Ordering::Relaxed);
-        let file_name = self
-            .path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("devices.toml");
-        let tmp_path = self
-            .path
-            .with_file_name(format!(".{file_name}.tmp.{}.{seq}", std::process::id()));
-
-        let write_result = (|| -> Result<(), KeynearError> {
-            let mut opts = OpenOptions::new();
-            opts.create_new(true).write(true);
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::OpenOptionsExt;
-                opts.mode(0o600);
-            }
-            let mut file = opts.open(&tmp_path)?;
-            file.write_all(encoded.as_bytes())?;
-            file.sync_all()?;
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::PermissionsExt;
-                fs::set_permissions(&tmp_path, fs::Permissions::from_mode(0o600))?;
-            }
-            fs::rename(&tmp_path, &self.path)?;
-            Ok(())
-        })();
-
-        if write_result.is_err() {
-            let _ = fs::remove_file(&tmp_path);
-        }
-        write_result
+        write_toml_atomic(&self.path, &encoded, "devices.toml")
     }
 
     pub fn upsert(&self, mut device: PairedDevice) -> Result<Vec<PairedDevice>, KeynearError> {
         device.device_id = sanitize_device_id(&device.device_id)?;
-        if device.display_name.trim().is_empty() {
-            return Err(KeynearError::Validation {
-                field: "displayName",
-                message: "display_name must not be empty".to_string(),
-            });
-        }
+        device.display_name = validate_display_name(&device.display_name)?;
         let mut devices = self.load()?;
         if let Some(existing) = devices.iter_mut().find(|d| d.device_id == device.device_id) {
             *existing = device;
@@ -404,6 +429,29 @@ impl PairedDeviceStore {
             if !lan_address.trim().is_empty() {
                 device.last_lan_address = lan_address.trim().to_string();
             }
+            device.clone()
+        };
+        self.save(&devices)?;
+        Ok(updated)
+    }
+
+    pub fn rename(
+        &self,
+        device_id: &str,
+        new_display_name: &str,
+    ) -> Result<PairedDevice, KeynearError> {
+        let clean_id = sanitize_device_id(device_id)?;
+        let normalized_name = validate_display_name(new_display_name)?;
+        let mut devices = self.load()?;
+        let updated = {
+            let device = devices
+                .iter_mut()
+                .find(|d| d.device_id == clean_id)
+                .ok_or_else(|| KeynearError::Validation {
+                    field: "deviceId",
+                    message: format!("paired device '{clean_id}' not found"),
+                })?;
+            device.display_name = normalized_name;
             device.clone()
         };
         self.save(&devices)?;
@@ -552,5 +600,92 @@ mod tests {
             sanitize_device_id(" pixel-9_pro.1 ").unwrap(),
             "pixel-9_pro.1"
         );
+    }
+
+    #[test]
+    fn validate_display_name_rejects_empty_control_and_overlong() {
+        assert!(matches!(
+            validate_display_name(""),
+            Err(KeynearError::Validation {
+                field: "displayName",
+                ..
+            })
+        ));
+        assert!(matches!(
+            validate_display_name("   \t\n  "),
+            Err(KeynearError::Validation {
+                field: "displayName",
+                ..
+            })
+        ));
+        assert!(matches!(
+            validate_display_name("bad\x07name"),
+            Err(KeynearError::Validation {
+                field: "displayName",
+                ..
+            })
+        ));
+        let overlong = "a".repeat(MAX_DISPLAY_NAME_LEN + 1);
+        assert!(matches!(
+            validate_display_name(&overlong),
+            Err(KeynearError::Validation {
+                field: "displayName",
+                ..
+            })
+        ));
+        assert_eq!(
+            validate_display_name("  Work Laptop  ").expect("valid trimmed name"),
+            "Work Laptop"
+        );
+    }
+
+    #[test]
+    fn paired_device_store_rename_updates_name_and_preserves_other_fields() {
+        let path = unique_temp_path("rename");
+        let store = PairedDeviceStore::new(path.clone());
+        store
+            .upsert(sample_device("pixel-9", "Pixel 9"))
+            .expect("seed paired device");
+
+        let renamed = store
+            .rename("pixel-9", "  Studio Phone  ")
+            .expect("rename succeeds");
+        assert_eq!(renamed.display_name, "Studio Phone");
+        assert_eq!(renamed.static_x25519_pubkey, "pubkey-hex");
+        assert!(renamed.auto_accept_files);
+
+        let loaded = store.get("pixel-9").expect("load renamed").expect("present");
+        assert_eq!(loaded.display_name, "Studio Phone");
+
+        let raw = fs::read_to_string(&path).expect("read devices toml");
+        assert!(!raw.contains("reconnect_secret"));
+        assert!(store.rename("missing-dev", "New Name").is_err());
+
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn daemon_config_save_to_path_roundtrips_with_restricted_mode() {
+        let dir = unique_temp_path("cfg-dir").with_extension("");
+        let path = dir.join("config.toml");
+        let cfg = DaemonConfig {
+            visibility_mode: VisibilityMode::Hidden,
+            incoming_directory: "/tmp/keynear-in".to_string(),
+            auto_accept_from_paired: true,
+            ..DaemonConfig::default()
+        };
+        cfg.save_to_path(&path).expect("save config");
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = fs::metadata(&path).expect("meta").permissions().mode() & 0o777;
+            assert_eq!(mode, 0o600);
+        }
+
+        let loaded = DaemonConfig::load_or_default(&path).expect("reload config");
+        assert_eq!(loaded, cfg);
+
+        let _ = fs::remove_dir_all(&dir);
     }
 }

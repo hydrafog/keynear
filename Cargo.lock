@@ -2335,7 +2335,7 @@ dependencies = [
 
 [[package]]
 name = "keynear-core"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "aes-gcm 0.11.1",
  "hex",
@@ -2365,7 +2365,7 @@ dependencies = [
 
 [[package]]
 name = "keynear-linux"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "bluer",
  "futures-util",
@@ -2382,7 +2382,7 @@ dependencies = [
 
 [[package]]
 name = "keynear-settings"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "gtk4",
  "keynear-core",
