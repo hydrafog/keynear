@@ -91,6 +91,10 @@ data class KeynearPalette(
     val gesturePill: Color = Color(KeynearTokenHex.LIGHT_GESTURE_PILL),
     val trackWell: Color = Color(KeynearTokenHex.LIGHT_TRACK_WELL),
     val scrim: Color = Color(KeynearTokenHex.LIGHT_SCRIM),
+    val errorAction: Color = Color(0xFFFFE7E7),
+    val onDangerAction: Color = Color(0xFF8B0016),
+    val mapRing: Color = Color(0x1F07132B),
+    val switchThumb: Color = Color(0xFFFFFFFE),
     val isDark: Boolean = false,
 )
 
@@ -155,6 +159,10 @@ val DarkKeynearPalette = KeynearPalette(
     gesturePill = Color(KeynearTokenHex.DARK_GESTURE_PILL),
     trackWell = Color(KeynearTokenHex.DARK_TRACK_WELL),
     scrim = Color(KeynearTokenHex.DARK_SCRIM),
+    errorAction = Color(0xFF4C040B),
+    onDangerAction = Color(0xFFFFA1A2),
+    mapRing = Color(0x299A9AA6),
+    switchThumb = Color(0xFFF7F6F7),
     isDark = true,
 )
 

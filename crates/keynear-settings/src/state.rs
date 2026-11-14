@@ -415,11 +415,7 @@ impl SettingsModel {
             pins.push(MapPin {
                 id: dev.device_id.clone(),
                 display_name: dev.display_name.clone(),
-                state_label: if online {
-                    "Wi-Fi".to_string()
-                } else {
-                    "Standby".to_string()
-                },
+                state_label: if online { "Wi-Fi" } else { "Standby" }.to_string(),
                 rssi: if online { -50 - (idx as i16 * 5) } else { -76 },
                 is_paired: true,
                 is_online: online,
@@ -461,12 +457,11 @@ impl SettingsModel {
             0
         };
         sync_visibility(self, mode);
-        let snack = match self.visibility_mode {
+        self.show_snackbar(match self.visibility_mode {
             VisibilityMode::Hidden => "Visibility set to hidden.",
             VisibilityMode::PairedOnly => "Listening for paired computers.",
             VisibilityMode::EveryoneNearby => "Visible to everyone nearby for 10 minutes.",
-        };
-        self.show_snackbar(snack);
+        });
     }
 
     fn stage_text_item(&mut self, text: &str, is_clipboard: bool) {
@@ -585,46 +580,22 @@ impl SettingsModel {
                 set_device_auto_accept(self, device_id, enabled);
             }
             SettingsMsg::SetGlobalAutoAccept(enabled) => {
-                if self.config.auto_accept_from_paired != enabled {
-                    self.config.auto_accept_from_paired = enabled;
-                    self.error_message = None;
-                    persist_config(self);
-                }
+                self.set_config_flag(enabled, |c| &mut c.auto_accept_from_paired)
             }
             SettingsMsg::ToggleClipboardSync(enabled) => {
-                if self.config.clipboard_sync_enabled != enabled {
-                    self.config.clipboard_sync_enabled = enabled;
-                    self.error_message = None;
-                    persist_config(self);
-                }
+                self.set_config_flag(enabled, |c| &mut c.clipboard_sync_enabled)
             }
             SettingsMsg::ToggleClipboardImages(enabled) => {
-                if self.config.clipboard_images_enabled != enabled {
-                    self.config.clipboard_images_enabled = enabled;
-                    self.error_message = None;
-                    persist_config(self);
-                }
+                self.set_config_flag(enabled, |c| &mut c.clipboard_images_enabled)
             }
             SettingsMsg::ToggleOtpPassthrough(enabled) => {
-                if self.config.otp_passthrough_enabled != enabled {
-                    self.config.otp_passthrough_enabled = enabled;
-                    self.error_message = None;
-                    persist_config(self);
-                }
+                self.set_config_flag(enabled, |c| &mut c.otp_passthrough_enabled)
             }
             SettingsMsg::ToggleAudioHandoff(enabled) => {
-                if self.config.audio_handoff_enabled != enabled {
-                    self.config.audio_handoff_enabled = enabled;
-                    self.error_message = None;
-                    persist_config(self);
-                }
+                self.set_config_flag(enabled, |c| &mut c.audio_handoff_enabled)
             }
             SettingsMsg::ToggleNotifyAutoAccept(enabled) => {
-                if self.config.notify_auto_accept_complete != enabled {
-                    self.config.notify_auto_accept_complete = enabled;
-                    self.error_message = None;
-                    persist_config(self);
-                }
+                self.set_config_flag(enabled, |c| &mut c.notify_auto_accept_complete)
             }
             SettingsMsg::ToggleMimeExpanded => self.mime_editor_open = !self.mime_editor_open,
             SettingsMsg::UpdateMimeInput(raw) => self.new_mime_input = raw,
@@ -788,6 +759,19 @@ impl SettingsModel {
                 remaining_secs: PAIRING_TIMEOUT_SECS,
             });
             self.error_message = None;
+        }
+    }
+
+    fn set_config_flag(
+        &mut self,
+        enabled: bool,
+        select: impl FnOnce(&mut DaemonConfig) -> &mut bool,
+    ) {
+        let slot = select(&mut self.config);
+        if *slot != enabled {
+            *slot = enabled;
+            self.error_message = None;
+            persist_config(self);
         }
     }
 

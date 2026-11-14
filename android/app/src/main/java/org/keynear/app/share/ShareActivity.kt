@@ -8,7 +8,6 @@ import android.provider.OpenableColumns
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -310,7 +309,7 @@ private fun SharePickerScreen(
                             color = palette.surfaceTonal,
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                ShareCloseIcon(color = palette.textPrimary, size = 16.dp)
+                                ShareCloseIcon(color = palette.error, size = 16.dp)
                             }
                         }
                     }
@@ -340,7 +339,7 @@ private fun SharePickerScreen(
                                 .defaultMinSize(minHeight = KeynearSpacing.MinTouchTarget),
                             shape = RoundedCornerShape(999.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = palette.accent,
+                                containerColor = palette.loading,
                                 contentColor = palette.onAccent,
                             ),
                         ) {
@@ -395,7 +394,7 @@ private fun SharePickerScreen(
                                             .defaultMinSize(minHeight = KeynearSpacing.MinTouchTarget),
                                         shape = RoundedCornerShape(999.dp),
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = palette.accent,
+                                            containerColor = palette.loading,
                                             contentColor = palette.onAccent,
                                         ),
                                     ) {
@@ -428,7 +427,7 @@ private fun SharePickerScreen(
                                         .padding(vertical = 24.dp),
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    CircularProgressIndicator(color = palette.accent)
+                                    CircularProgressIndicator(color = palette.loading)
                                 }
                             }
                             pairedDevices.isEmpty() -> {
@@ -457,7 +456,7 @@ private fun SharePickerScreen(
                                             modifier = Modifier.defaultMinSize(minHeight = KeynearSpacing.MinTouchTarget),
                                             shape = RoundedCornerShape(999.dp),
                                             colors = ButtonDefaults.buttonColors(
-                                                containerColor = palette.accent,
+                                                containerColor = palette.loading,
                                                 contentColor = palette.onAccent,
                                             ),
                                         ) {
@@ -531,8 +530,7 @@ private fun ShareDeviceTile(
         enabled = enabled,
         modifier = modifier.defaultMinSize(minHeight = 96.dp),
         shape = RoundedCornerShape(18.dp),
-        color = palette.surfaceTonal,
-        border = if (highlighted) BorderStroke(1.5.dp, palette.accent) else null,
+        color = if (highlighted) palette.loadingTonal else palette.surfaceTonal,
     ) {
         Column(
             modifier = Modifier
@@ -548,19 +546,19 @@ private fun ShareDeviceTile(
                 Surface(
                     modifier = Modifier.size(44.dp),
                     shape = RoundedCornerShape(14.dp),
-                    color = palette.surface,
+                    color = if (device.isOnline) palette.loadingTonal else palette.surface,
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         if (isSending) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(20.dp),
                                 strokeWidth = 2.dp,
-                                color = palette.accent,
+                                color = palette.loading,
                             )
                         } else {
                             ShareRoleIcon(
                                 role = device.role,
-                                color = if (device.isOnline) palette.accent else palette.textSecondary,
+                                color = if (device.isOnline) palette.onLoadingTonal else palette.textMuted,
                                 size = 22.dp,
                             )
                         }
