@@ -1,10 +1,10 @@
 # Android Build
 
-The Android companion app (`org.keynear.app`, `versionCode = 2`, `versionName = "0.2.0-cygnus"`) compiles `keynear-core` into `jniLibs` with `cargo-ndk` using 16 KB ELF page alignment before assembling the Gradle APK or AAB.
+The Android companion app (`org.keynear.app`, `versionCode = 3`, `versionName = "0.3.0-orion"`) compiles `keynear-core` into `jniLibs` with `cargo-ndk` using 16 KB ELF page alignment before assembling the Gradle APK or AAB.
 
 ## Native Library Compilation
 
-The Android devShell (`nix develop .#android`) provides the Rust Android targets (`aarch64-linux-android`, `x86_64-linux-android`), `cargo-ndk`, Android SDK platform `36`, build-tools `36.0.0`, NDK `30.0.16248370`, and `llvm-readelf`. `.cargo/config.toml` passes `-C link-arg=-Wl,-z,max-page-size=16384` for both Android targets. Invoke commands inside the devShell using `--command bash -c` (avoid `-l`, which resets `PATH`):
+The Android devShell (`nix develop .#android`) provides the Rust Android targets (`aarch64-linux-android`, `x86_64-linux-android`), `cargo-ndk`, `cmake` (for `aws-lc-sys` / `rustls` `X25519MLKEM768` cross-compilation), Android SDK platform `36`, build-tools `36.0.0`, NDK `30.0.16248370`, and `llvm-readelf`. `.cargo/config.toml` passes `-C link-arg=-Wl,-z,max-page-size=16384` for both Android targets. Invoke commands inside the devShell using `--command bash -c` (avoid `-l`, which resets `PATH`):
 
 ```bash
 nix develop .#android --command bash -c 'cargo ndk -t arm64-v8a -t x86_64 -o android/app/src/main/jniLibs build --release -p keynear-core'
