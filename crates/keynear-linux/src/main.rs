@@ -1,17 +1,19 @@
 mod ble;
 mod ipc;
+mod notifications;
 mod service;
+mod tray;
 
 use std::path::{Path, PathBuf};
 use std::process;
 
 use keynear_core::{
-    default_config_path, sanitize_device_id, DaemonConfig, KeynearError, TransferDirection,
-    TransferSession, TransferState,
+    default_config_path, sanitize_device_id, validate_display_name, DaemonConfig, KeynearError,
+    PairedDevice, TransferDirection, TransferSession, TransferState, VisibilityMode,
 };
 use tracing_subscriber::EnvFilter;
 
-use crate::ipc::{send_request_to, validate_transfer_id, IpcRequest, IpcResponse};
+use crate::ipc::{send_request_to, validate_transfer_id, DaemonStatus, IpcRequest, IpcResponse};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CliAction {
@@ -34,6 +36,15 @@ pub enum CliAction {
         transfer_id: String,
     },
     Transfers,
+    Status,
+    Devices,
+    SetVisibility {
+        mode: VisibilityMode,
+    },
+    RenameDevice {
+        device_id: String,
+        display_name: String,
+    },
 }
 
 pub fn parse_cli_args<I, S>(args: I) -> Result<CliAction, KeynearError>
@@ -71,6 +82,40 @@ where
             "--transfers" => {
                 ensure_no_prior_action(&pending_action, config_path.is_some())?;
                 pending_action = Some(CliAction::Transfers);
+            }
+            "--status" => {
+                ensure_no_prior_action(&pending_action, config_path.is_some())?;
+                pending_action = Some(CliAction::Status);
+            }
+            "--devices" => {
+                ensure_no_prior_action(&pending_action, config_path.is_some())?;
+                pending_action = Some(CliAction::Devices);
+            }
+            "--set-visibility" => {
+                ensure_no_prior_action(&pending_action, config_path.is_some())?;
+                let value = iter.next().ok_or_else(|| KeynearError::Validation {
+                    field: "visibilityMode",
+                    message: "--set-visibility requires hidden, paired, or everyone".to_string(),
+                })?;
+                let mode = parse_visibility_arg(&value)?;
+                pending_action = Some(CliAction::SetVisibility { mode });
+            }
+            "--rename-device" => {
+                ensure_no_prior_action(&pending_action, config_path.is_some())?;
+                let raw_device = iter.next().ok_or_else(|| KeynearError::Validation {
+                    field: "deviceId",
+                    message: "--rename-device requires <device_id> <display_name>".to_string(),
+                })?;
+                let device_id = sanitize_device_id(&raw_device)?;
+                let raw_name = iter.next().ok_or_else(|| KeynearError::Validation {
+                    field: "displayName",
+                    message: "--rename-device requires <device_id> <display_name>".to_string(),
+                })?;
+                let display_name = validate_display_name(&raw_name)?;
+                pending_action = Some(CliAction::RenameDevice {
+                    device_id,
+                    display_name,
+                });
             }
             "--accept" => {
                 ensure_no_prior_action(&pending_action, config_path.is_some())?;
@@ -162,6 +207,18 @@ fn ensure_no_prior_action(
     Ok(())
 }
 
+fn parse_visibility_arg(raw: &str) -> Result<VisibilityMode, KeynearError> {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "hidden" => Ok(VisibilityMode::Hidden),
+        "paired" | "paired_only" | "paired-only" => Ok(VisibilityMode::PairedOnly),
+        "everyone" | "everyone_nearby" | "everyone-nearby" => Ok(VisibilityMode::EveryoneNearby),
+        _ => Err(KeynearError::Validation {
+            field: "visibilityMode",
+            message: format!("unknown visibility mode '{raw}' (expected hidden, paired, or everyone)"),
+        }),
+    }
+}
+
 pub fn load_daemon_config(explicit_path: Option<&PathBuf>) -> Result<DaemonConfig, KeynearError> {
     match explicit_path {
         Some(path) => {
@@ -193,8 +250,72 @@ pub fn cli_action_to_ipc_request(action: &CliAction) -> Option<IpcRequest> {
             transfer_id: transfer_id.clone(),
         }),
         CliAction::Transfers => Some(IpcRequest::ListTransfers),
+        CliAction::Status => Some(IpcRequest::Status),
+        CliAction::Devices => Some(IpcRequest::ListDevices),
+        CliAction::SetVisibility { mode } => Some(IpcRequest::SetVisibility { mode: *mode }),
+        CliAction::RenameDevice {
+            device_id,
+            display_name,
+        } => Some(IpcRequest::RenameDevice {
+            device_id: device_id.clone(),
+            display_name: display_name.clone(),
+        }),
         CliAction::Version | CliAction::Help | CliAction::Run { .. } => None,
     }
+}
+
+fn format_visibility_mode(mode: VisibilityMode) -> &'static str {
+    match mode {
+        VisibilityMode::Hidden => "hidden",
+        VisibilityMode::PairedOnly => "paired",
+        VisibilityMode::EveryoneNearby => "everyone",
+    }
+}
+
+pub fn format_device_summary(device: &PairedDevice) -> String {
+    format!(
+        "{}\t{}\t{:?}\tauto_accept={}\t{}",
+        device.device_id,
+        device.display_name,
+        device.device_role,
+        device.auto_accept_files,
+        device.last_lan_address
+    )
+}
+
+pub fn format_status_summary(status: &DaemonStatus) -> String {
+    let remaining = status
+        .everyone_remaining_secs
+        .map(|secs| format!("{secs}s"))
+        .unwrap_or_else(|| "none".to_string());
+    let addrs = if status.listen_addrs.is_empty() {
+        "none".to_string()
+    } else {
+        status.listen_addrs.join(",")
+    };
+    format!(
+        "device_id={}\nendpoint_id={}\nvisibility={}\neveryone_remaining={}\nauto_accept_from_paired={}\nincoming_directory={}\nactive_transfers={}\npaired_devices={}\nmdns_degraded={}\nlisten_addrs={}",
+        status.device_id,
+        status.endpoint_id,
+        format_visibility_mode(status.visibility_mode),
+        remaining,
+        status.auto_accept_from_paired,
+        status.incoming_directory,
+        status.active_transfer_count,
+        status.paired_device_count,
+        status.mdns_degraded,
+        addrs
+    )
+}
+
+pub fn format_config_summary(config: &DaemonConfig) -> String {
+    format!(
+        "visibility={}\nauto_accept_from_paired={}\nincoming_directory={}\nnotify_auto_accept_complete={}",
+        format_visibility_mode(config.visibility_mode),
+        config.auto_accept_from_paired,
+        config.incoming_directory,
+        config.notify_auto_accept_complete
+    )
 }
 
 pub fn format_transfer_summary(session: &TransferSession) -> String {
@@ -243,10 +364,18 @@ pub fn run_ipc_command(socket_path: &Path, request: &IpcRequest) -> Result<Strin
                 Ok(lines.join("\n"))
             }
         }
+        IpcResponse::Status(status) => Ok(format_status_summary(&status)),
+        IpcResponse::Devices(devices) => {
+            if devices.is_empty() {
+                Ok("No paired devices".to_string())
+            } else {
+                let lines: Vec<String> = devices.iter().map(format_device_summary).collect();
+                Ok(lines.join("\n"))
+            }
+        }
+        IpcResponse::Device(device) => Ok(format_device_summary(&device)),
+        IpcResponse::Config(config) => Ok(format_config_summary(&config)),
         IpcResponse::Error { message } => Err(KeynearError::Transfer(message)),
-        IpcResponse::Status(_) => Err(KeynearError::Protocol(
-            "unexpected status response for transfer command".to_string(),
-        )),
     }
 }
 
@@ -288,7 +417,7 @@ async fn main() {
         }
         CliAction::Help => {
             println!(
-                "Usage: keynear-linux [--config <path>] [--version] [--help]\n       keynear-linux --send <device_id> <path>...\n       keynear-linux --accept <transfer_id>\n       keynear-linux --decline <transfer_id>\n       keynear-linux --cancel <transfer_id>\n       keynear-linux --transfers\n\nOptions:\n  --config <path>              Path to TOML daemon configuration\n  --send <device_id> <path>... Send files or directories via running daemon\n  --accept <transfer_id>       Accept an incoming transfer awaiting consent\n  --decline <transfer_id>      Decline an incoming transfer awaiting consent\n  --cancel <transfer_id>       Cancel an active or pending transfer\n  --transfers                  List known transfers from running daemon\n  --version, -V                Print version information\n  --help, -h                   Print this help message"
+                "Usage: keynear-linux [--config <path>] [--version] [--help]\n       keynear-linux --send <device_id> <path>...\n       keynear-linux --accept <transfer_id>\n       keynear-linux --decline <transfer_id>\n       keynear-linux --cancel <transfer_id>\n       keynear-linux --transfers\n       keynear-linux --status\n       keynear-linux --devices\n       keynear-linux --set-visibility <hidden|paired|everyone>\n       keynear-linux --rename-device <device_id> <display_name>\n\nOptions:\n  --config <path>                          Path to TOML daemon configuration\n  --send <device_id> <path>...             Send files or directories via running daemon\n  --accept <transfer_id>                   Accept an incoming transfer awaiting consent\n  --decline <transfer_id>                  Decline an incoming transfer awaiting consent\n  --cancel <transfer_id>                   Cancel an active or pending transfer\n  --transfers                              List known transfers from running daemon\n  --status                                 Print daemon status and visibility timer\n  --devices                                List paired devices from running daemon\n  --set-visibility <mode>                  Set daemon visibility (hidden|paired|everyone)\n  --rename-device <device_id> <name>       Rename a paired device\n  --version, -V                            Print version information\n  --help, -h                               Print this help message"
             );
         }
         CliAction::Run { config_path } => {
@@ -299,7 +428,10 @@ async fn main() {
                     process::exit(1);
                 }
             };
-            if let Err(err) = service::DaemonRuntime::run_until_shutdown(&config).await {
+            if let Err(err) =
+                service::DaemonRuntime::run_until_shutdown_with_config_path(&config, config_path)
+                    .await
+            {
                 eprintln!("error: {err}");
                 process::exit(1);
             }
@@ -308,7 +440,11 @@ async fn main() {
         | CliAction::Accept { .. }
         | CliAction::Decline { .. }
         | CliAction::Cancel { .. }
-        | CliAction::Transfers => unreachable!(),
+        | CliAction::Transfers
+        | CliAction::Status
+        | CliAction::Devices
+        | CliAction::SetVisibility { .. }
+        | CliAction::RenameDevice { .. } => unreachable!(),
     }
 }
 
@@ -491,5 +627,88 @@ mod tests {
         assert!(output.contains("photo.jpg"));
         server.join().expect("server");
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn cli_aquila_status_visibility_and_device_flags_parsed() {
+        assert_eq!(parse_cli_args(["--status"]).unwrap(), CliAction::Status);
+        assert_eq!(parse_cli_args(["--devices"]).unwrap(), CliAction::Devices);
+        assert_eq!(
+            parse_cli_args(["--set-visibility", "everyone"]).unwrap(),
+            CliAction::SetVisibility {
+                mode: VisibilityMode::EveryoneNearby,
+            }
+        );
+        assert_eq!(
+            parse_cli_args(["--set-visibility", "paired"]).unwrap(),
+            CliAction::SetVisibility {
+                mode: VisibilityMode::PairedOnly,
+            }
+        );
+        assert_eq!(
+            parse_cli_args(["--rename-device", "pixel-9", "My Pixel"]).unwrap(),
+            CliAction::RenameDevice {
+                device_id: "pixel-9".to_string(),
+                display_name: "My Pixel".to_string(),
+            }
+        );
+        assert!(matches!(
+            parse_cli_args(["--set-visibility", "public"]),
+            Err(KeynearError::Validation {
+                field: "visibilityMode",
+                ..
+            })
+        ));
+        assert!(matches!(
+            parse_cli_args(["--rename-device", "../bad", "Phone"]),
+            Err(KeynearError::Validation {
+                field: "deviceId",
+                ..
+            })
+        ));
+        assert!(matches!(
+            parse_cli_args(["--rename-device", "pixel-9", "   "]),
+            Err(KeynearError::Validation {
+                field: "displayName",
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn cli_ipc_formats_status_and_devices() {
+        let status = DaemonStatus {
+            device_id: "host-linux".to_string(),
+            endpoint_id: "ab".repeat(32),
+            listen_addrs: vec!["127.0.0.1:4242".to_string()],
+            visibility_mode: VisibilityMode::EveryoneNearby,
+            mdns_degraded: false,
+            active_transfer_count: 1,
+            paired_device_count: 1,
+            everyone_remaining_secs: Some(325),
+            auto_accept_from_paired: true,
+            incoming_directory: "/tmp/incoming".to_string(),
+        };
+        let rendered_status = format_status_summary(&status);
+        assert!(rendered_status.contains("visibility=everyone"));
+        assert!(rendered_status.contains("everyone_remaining=325s"));
+        assert!(rendered_status.contains("auto_accept_from_paired=true"));
+
+        let device = keynear_core::PairedDevice {
+            device_id: "pixel-9".to_string(),
+            display_name: "Pixel Desk".to_string(),
+            device_role: keynear_core::DeviceRole::Mobile,
+            static_x25519_pubkey: "cd".repeat(32),
+            last_ble_address: String::new(),
+            last_lan_address: "192.168.1.5:4242".to_string(),
+            last_endpoint_id: "ef".repeat(32),
+            capability_flags: 1,
+            auto_accept_files: true,
+            paired_at: "1".to_string(),
+        };
+        let rendered_device = format_device_summary(&device);
+        assert!(rendered_device.contains("pixel-9"));
+        assert!(rendered_device.contains("Pixel Desk"));
+        assert!(rendered_device.contains("auto_accept=true"));
     }
 }

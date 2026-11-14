@@ -6,8 +6,9 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use keynear_core::{
-    default_config_dir, sanitize_device_id, KeynearError, TransferDirection, TransferItem,
-    TransferSession, TransferState, VisibilityMode,
+    default_config_dir, sanitize_device_id, validate_display_name, DaemonConfig, DeviceRole,
+    KeynearError, PairedDevice, TransferDirection, TransferItem, TransferSession, TransferState,
+    VisibilityMode,
 };
 
 pub const MAX_IPC_FRAME_BYTES: usize = 262_144;
@@ -15,6 +16,8 @@ const IPC_WIRE_VERSION: u8 = 1;
 const MAX_IPC_PATHS: usize = 1024;
 const MAX_IPC_ITEMS: usize = 1024;
 const MAX_IPC_TRANSFERS: usize = 256;
+const MAX_IPC_DEVICES: usize = 256;
+const MAX_IPC_MIMES: usize = 128;
 const MAX_TRANSFER_ID_BYTES: usize = 128;
 const IPC_CONTROL_TIMEOUT_SECS: u64 = 10;
 const IPC_SEND_TIMEOUT_SECS: u64 = 300;
@@ -25,11 +28,20 @@ const REQ_DECLINE_TRANSFER: u8 = 3;
 const REQ_CANCEL_TRANSFER: u8 = 4;
 const REQ_LIST_TRANSFERS: u8 = 5;
 const REQ_STATUS: u8 = 6;
+const REQ_LIST_DEVICES: u8 = 7;
+const REQ_SET_VISIBILITY: u8 = 8;
+const REQ_GET_CONFIG: u8 = 9;
+const REQ_UPDATE_CONFIG: u8 = 10;
+const REQ_RENAME_DEVICE: u8 = 11;
+const REQ_SET_DEVICE_AUTO_ACCEPT: u8 = 12;
 
 const RESP_TRANSFER: u8 = 1;
 const RESP_TRANSFERS: u8 = 2;
 const RESP_STATUS: u8 = 3;
 const RESP_ERROR: u8 = 4;
+const RESP_DEVICES: u8 = 5;
+const RESP_DEVICE: u8 = 6;
+const RESP_CONFIG: u8 = 7;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IpcRequest {
@@ -48,6 +60,22 @@ pub enum IpcRequest {
     },
     ListTransfers,
     Status,
+    ListDevices,
+    SetVisibility {
+        mode: VisibilityMode,
+    },
+    GetConfig,
+    UpdateConfig {
+        config: DaemonConfig,
+    },
+    RenameDevice {
+        device_id: String,
+        display_name: String,
+    },
+    SetDeviceAutoAccept {
+        device_id: String,
+        enabled: bool,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -59,6 +87,9 @@ pub struct DaemonStatus {
     pub mdns_degraded: bool,
     pub active_transfer_count: u32,
     pub paired_device_count: u32,
+    pub everyone_remaining_secs: Option<u64>,
+    pub auto_accept_from_paired: bool,
+    pub incoming_directory: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -66,6 +97,9 @@ pub enum IpcResponse {
     Transfer(TransferSession),
     Transfers(Vec<TransferSession>),
     Status(DaemonStatus),
+    Devices(Vec<PairedDevice>),
+    Device(PairedDevice),
+    Config(DaemonConfig),
     Error { message: String },
 }
 
@@ -213,6 +247,37 @@ pub fn encode_request(request: &IpcRequest) -> Result<Vec<u8>, KeynearError> {
         IpcRequest::Status => {
             out.push(REQ_STATUS);
         }
+        IpcRequest::ListDevices => {
+            out.push(REQ_LIST_DEVICES);
+        }
+        IpcRequest::SetVisibility { mode } => {
+            out.push(REQ_SET_VISIBILITY);
+            out.push(encode_visibility(*mode));
+        }
+        IpcRequest::GetConfig => {
+            out.push(REQ_GET_CONFIG);
+        }
+        IpcRequest::UpdateConfig { config } => {
+            config.validate()?;
+            out.push(REQ_UPDATE_CONFIG);
+            write_daemon_config(&mut out, config)?;
+        }
+        IpcRequest::RenameDevice {
+            device_id,
+            display_name,
+        } => {
+            let clean_id = sanitize_device_id(device_id)?;
+            let clean_name = validate_display_name(display_name)?;
+            out.push(REQ_RENAME_DEVICE);
+            write_str(&mut out, &clean_id)?;
+            write_str(&mut out, &clean_name)?;
+        }
+        IpcRequest::SetDeviceAutoAccept { device_id, enabled } => {
+            let clean_id = sanitize_device_id(device_id)?;
+            out.push(REQ_SET_DEVICE_AUTO_ACCEPT);
+            write_str(&mut out, &clean_id)?;
+            out.push(u8::from(*enabled));
+        }
     }
 
     if out.len() > MAX_IPC_FRAME_BYTES {
@@ -283,6 +348,30 @@ pub fn decode_request(bytes: &[u8]) -> Result<IpcRequest, KeynearError> {
         }
         REQ_LIST_TRANSFERS => IpcRequest::ListTransfers,
         REQ_STATUS => IpcRequest::Status,
+        REQ_LIST_DEVICES => IpcRequest::ListDevices,
+        REQ_SET_VISIBILITY => IpcRequest::SetVisibility {
+            mode: decode_visibility(cur.read_u8()?)?,
+        },
+        REQ_GET_CONFIG => IpcRequest::GetConfig,
+        REQ_UPDATE_CONFIG => IpcRequest::UpdateConfig {
+            config: read_daemon_config(&mut cur)?,
+        },
+        REQ_RENAME_DEVICE => {
+            let raw_id = cur.read_string()?;
+            let device_id = sanitize_device_id(&raw_id)?;
+            let raw_name = cur.read_string()?;
+            let display_name = validate_display_name(&raw_name)?;
+            IpcRequest::RenameDevice {
+                device_id,
+                display_name,
+            }
+        }
+        REQ_SET_DEVICE_AUTO_ACCEPT => {
+            let raw_id = cur.read_string()?;
+            let device_id = sanitize_device_id(&raw_id)?;
+            let enabled = cur.read_bool()?;
+            IpcRequest::SetDeviceAutoAccept { device_id, enabled }
+        }
         other => {
             return Err(KeynearError::Protocol(format!(
                 "unknown IPC request kind {other}"
@@ -332,6 +421,37 @@ pub fn encode_response(response: &IpcResponse) -> Result<Vec<u8>, KeynearError> 
             out.push(u8::from(status.mdns_degraded));
             write_u32(&mut out, status.active_transfer_count);
             write_u32(&mut out, status.paired_device_count);
+            match status.everyone_remaining_secs {
+                Some(rem) => {
+                    out.push(1);
+                    write_u64(&mut out, rem);
+                }
+                None => out.push(0),
+            }
+            out.push(u8::from(status.auto_accept_from_paired));
+            write_str(&mut out, &status.incoming_directory)?;
+        }
+        IpcResponse::Devices(devices) => {
+            if devices.len() > MAX_IPC_DEVICES {
+                return Err(KeynearError::FrameTooLarge {
+                    size: devices.len(),
+                    max: MAX_IPC_DEVICES,
+                });
+            }
+            out.push(RESP_DEVICES);
+            write_u32(&mut out, devices.len() as u32);
+            for device in devices {
+                write_paired_device(&mut out, device)?;
+            }
+        }
+        IpcResponse::Device(device) => {
+            out.push(RESP_DEVICE);
+            write_paired_device(&mut out, device)?;
+        }
+        IpcResponse::Config(config) => {
+            config.validate()?;
+            out.push(RESP_CONFIG);
+            write_daemon_config(&mut out, config)?;
         }
         IpcResponse::Error { message } => {
             out.push(RESP_ERROR);
@@ -400,6 +520,13 @@ pub fn decode_response(bytes: &[u8]) -> Result<IpcResponse, KeynearError> {
             let mdns_degraded = cur.read_bool()?;
             let active_transfer_count = cur.read_u32()?;
             let paired_device_count = cur.read_u32()?;
+            let everyone_remaining_secs = if cur.read_bool()? {
+                Some(cur.read_u64()?)
+            } else {
+                None
+            };
+            let auto_accept_from_paired = cur.read_bool()?;
+            let incoming_directory = cur.read_string()?;
             IpcResponse::Status(DaemonStatus {
                 device_id,
                 endpoint_id,
@@ -408,8 +535,27 @@ pub fn decode_response(bytes: &[u8]) -> Result<IpcResponse, KeynearError> {
                 mdns_degraded,
                 active_transfer_count,
                 paired_device_count,
+                everyone_remaining_secs,
+                auto_accept_from_paired,
+                incoming_directory,
             })
         }
+        RESP_DEVICES => {
+            let count = cur.read_u32()? as usize;
+            if count > MAX_IPC_DEVICES {
+                return Err(KeynearError::FrameTooLarge {
+                    size: count,
+                    max: MAX_IPC_DEVICES,
+                });
+            }
+            let mut devices = Vec::with_capacity(count);
+            for _ in 0..count {
+                devices.push(read_paired_device(&mut cur)?);
+            }
+            IpcResponse::Devices(devices)
+        }
+        RESP_DEVICE => IpcResponse::Device(read_paired_device(&mut cur)?),
+        RESP_CONFIG => IpcResponse::Config(read_daemon_config(&mut cur)?),
         RESP_ERROR => {
             let message = cur.read_string()?;
             IpcResponse::Error { message }
@@ -562,6 +708,119 @@ fn decode_visibility(raw: u8) -> Result<VisibilityMode, KeynearError> {
             "invalid IPC visibility mode {other}"
         ))),
     }
+}
+
+fn encode_device_role(role: DeviceRole) -> u8 {
+    match role {
+        DeviceRole::Desktop => 1,
+        DeviceRole::Mobile => 2,
+    }
+}
+
+fn decode_device_role(raw: u8) -> Result<DeviceRole, KeynearError> {
+    match raw {
+        1 => Ok(DeviceRole::Desktop),
+        2 => Ok(DeviceRole::Mobile),
+        other => Err(KeynearError::Protocol(format!(
+            "invalid IPC device role {other}"
+        ))),
+    }
+}
+
+fn write_paired_device(out: &mut Vec<u8>, device: &PairedDevice) -> Result<(), KeynearError> {
+    write_str(out, &device.device_id)?;
+    write_str(out, &device.display_name)?;
+    out.push(encode_device_role(device.device_role));
+    write_str(out, &device.static_x25519_pubkey)?;
+    write_str(out, &device.last_ble_address)?;
+    write_str(out, &device.last_lan_address)?;
+    write_str(out, &device.last_endpoint_id)?;
+    write_u32(out, device.capability_flags);
+    out.push(u8::from(device.auto_accept_files));
+    write_str(out, &device.paired_at)?;
+    Ok(())
+}
+
+fn read_paired_device(cur: &mut Cursor<'_>) -> Result<PairedDevice, KeynearError> {
+    let device_id = sanitize_device_id(&cur.read_string()?)?;
+    let display_name = validate_display_name(&cur.read_string()?)?;
+    let device_role = decode_device_role(cur.read_u8()?)?;
+    let static_x25519_pubkey = cur.read_string()?;
+    let last_ble_address = cur.read_string()?;
+    let last_lan_address = cur.read_string()?;
+    let last_endpoint_id = cur.read_string()?;
+    let capability_flags = cur.read_u32()?;
+    let auto_accept_files = cur.read_bool()?;
+    let paired_at = cur.read_string()?;
+    Ok(PairedDevice {
+        device_id,
+        display_name,
+        device_role,
+        static_x25519_pubkey,
+        last_ble_address,
+        last_lan_address,
+        last_endpoint_id,
+        capability_flags,
+        auto_accept_files,
+        paired_at,
+    })
+}
+
+fn write_daemon_config(out: &mut Vec<u8>, config: &DaemonConfig) -> Result<(), KeynearError> {
+    if config.ignored_mime_types.len() > MAX_IPC_MIMES {
+        return Err(KeynearError::FrameTooLarge {
+            size: config.ignored_mime_types.len(),
+            max: MAX_IPC_MIMES,
+        });
+    }
+    out.push(encode_visibility(config.visibility_mode));
+    write_str(out, &config.incoming_directory)?;
+    out.push(u8::from(config.auto_accept_from_paired));
+    out.push(u8::from(config.clipboard_sync_enabled));
+    out.push(u8::from(config.clipboard_images_enabled));
+    out.push(u8::from(config.otp_passthrough_enabled));
+    out.push(u8::from(config.audio_handoff_enabled));
+    write_u32(out, config.ignored_mime_types.len() as u32);
+    for mime in &config.ignored_mime_types {
+        write_str(out, mime)?;
+    }
+    out.push(u8::from(config.notify_auto_accept_complete));
+    Ok(())
+}
+
+fn read_daemon_config(cur: &mut Cursor<'_>) -> Result<DaemonConfig, KeynearError> {
+    let visibility_mode = decode_visibility(cur.read_u8()?)?;
+    let incoming_directory = cur.read_string()?;
+    let auto_accept_from_paired = cur.read_bool()?;
+    let clipboard_sync_enabled = cur.read_bool()?;
+    let clipboard_images_enabled = cur.read_bool()?;
+    let otp_passthrough_enabled = cur.read_bool()?;
+    let audio_handoff_enabled = cur.read_bool()?;
+    let mime_count = cur.read_u32()? as usize;
+    if mime_count > MAX_IPC_MIMES {
+        return Err(KeynearError::FrameTooLarge {
+            size: mime_count,
+            max: MAX_IPC_MIMES,
+        });
+    }
+    let mut ignored_mime_types = Vec::with_capacity(mime_count);
+    for _ in 0..mime_count {
+        ignored_mime_types.push(cur.read_string()?);
+    }
+    let notify_auto_accept_complete = cur.read_bool()?;
+    let config = DaemonConfig {
+        visibility_mode,
+        incoming_directory,
+        auto_accept_from_paired,
+        clipboard_sync_enabled,
+        clipboard_images_enabled,
+        otp_passthrough_enabled,
+        audio_handoff_enabled,
+        ignored_mime_types,
+        notify_auto_accept_complete,
+    };
+    config.validate()?;
+    Ok(config)
 }
 
 fn write_u32(out: &mut Vec<u8>, value: u32) {
@@ -735,12 +994,46 @@ mod tests {
             },
             IpcRequest::ListTransfers,
             IpcRequest::Status,
+            IpcRequest::ListDevices,
+            IpcRequest::SetVisibility {
+                mode: VisibilityMode::EveryoneNearby,
+            },
+            IpcRequest::GetConfig,
+            IpcRequest::UpdateConfig {
+                config: DaemonConfig {
+                    visibility_mode: VisibilityMode::Hidden,
+                    incoming_directory: "/tmp/keynear-in".to_string(),
+                    auto_accept_from_paired: true,
+                    ..DaemonConfig::default()
+                },
+            },
+            IpcRequest::RenameDevice {
+                device_id: "pixel-9".to_string(),
+                display_name: "Pixel Renamed".to_string(),
+            },
+            IpcRequest::SetDeviceAutoAccept {
+                device_id: "pixel-9".to_string(),
+                enabled: true,
+            },
         ];
         for req in requests {
             let encoded = encode_request(&req).expect("encode request");
             let decoded = decode_request(&encoded).expect("decode request");
             assert_eq!(decoded, req);
         }
+
+        let sample_device = PairedDevice {
+            device_id: "pixel-9".to_string(),
+            display_name: "Pixel 9".to_string(),
+            device_role: DeviceRole::Mobile,
+            static_x25519_pubkey: "abcd".to_string(),
+            last_ble_address: "AA:BB:CC:DD:EE:FF".to_string(),
+            last_lan_address: "192.168.1.42:5555".to_string(),
+            last_endpoint_id: "ef".repeat(32),
+            capability_flags: 1,
+            auto_accept_files: true,
+            paired_at: "2026-11-14T00:00:00Z".to_string(),
+        };
 
         let responses = vec![
             IpcResponse::Transfer(sample_session()),
@@ -749,11 +1042,17 @@ mod tests {
                 device_id: "linux-workstation".to_string(),
                 endpoint_id: "ab".repeat(32),
                 listen_addrs: vec!["127.0.0.1:42000".to_string()],
-                visibility_mode: VisibilityMode::PairedOnly,
+                visibility_mode: VisibilityMode::EveryoneNearby,
                 mdns_degraded: true,
                 active_transfer_count: 2,
                 paired_device_count: 1,
+                everyone_remaining_secs: Some(321),
+                auto_accept_from_paired: true,
+                incoming_directory: "/tmp/keynear-in".to_string(),
             }),
+            IpcResponse::Devices(vec![sample_device.clone()]),
+            IpcResponse::Device(sample_device),
+            IpcResponse::Config(DaemonConfig::default()),
             IpcResponse::Error {
                 message: "transfer not found".to_string(),
             },

@@ -1,6 +1,8 @@
 [Unit]
 Description=Keynear background continuity daemon
+Wants=graphical-session.target
 After=graphical-session.target bluetooth.target
+StartLimitIntervalSec=0
 
 [Service]
 ExecStart=%h/.local/bin/keynear-linux
