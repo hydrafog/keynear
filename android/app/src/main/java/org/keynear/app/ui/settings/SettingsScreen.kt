@@ -1,10 +1,11 @@
 package org.keynear.app.ui.settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,10 +15,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,7 +24,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -39,11 +36,18 @@ import org.keynear.app.ui.components.RecessedInput
 import org.keynear.app.ui.components.SettingRow
 import org.keynear.app.ui.components.SettingsSection
 import org.keynear.app.ui.components.TactileSurface
+import org.keynear.app.ui.components.TactileTone
+import org.keynear.app.ui.icons.IconChevronDown
 import org.keynear.app.ui.icons.IconChevronRight
+import org.keynear.app.ui.icons.IconChevronUp
 import org.keynear.app.ui.icons.IconClose
 import org.keynear.app.ui.navigation.KeynearActions
+import org.keynear.app.ui.theme.KeynearLayout
+import org.keynear.app.ui.theme.KeynearRadii
+import org.keynear.app.ui.theme.KeynearShapes
 import org.keynear.app.ui.theme.LocalKeynearPalette
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     config: DaemonConfigUi,
@@ -60,31 +64,67 @@ fun SettingsScreen(
             .fillMaxSize()
             .background(palette.canvas)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(
+                horizontal = KeynearLayout.ScreenPaddingHorizontal,
+                vertical = KeynearLayout.ScreenPaddingVertical,
+            ),
+        verticalArrangement = Arrangement.spacedBy(KeynearLayout.SectionGap),
     ) {
-        SettingsSection(title = "Receiving") {
+        SettingsSection(title = "General & Storage") {
             SettingRow(
-                title = "Save folder",
-                subtitle = config.incomingDirectory,
-                onClick = actions.onPickSaveFolder,
+                title = "System permissions",
+                subtitle = "Bluetooth, Wi-Fi, notifications, and battery access",
+                onClick = actions.onOpenPermissions,
             ) {
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = palette.loadingTonal,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        text = "Change",
-                        color = palette.onLoadingTonal,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        text = if (permissions.missingPermissionsCount > 0) {
+                            "${permissions.missingPermissionsCount} missing"
+                        } else {
+                            "Allowed"
+                        },
+                        color = if (permissions.missingPermissionsCount > 0) palette.error else palette.textMuted,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
                     )
+                    IconChevronRight(modifier = Modifier.size(20.dp), tint = palette.textMuted)
                 }
             }
             SettingRow(
-                title = "Auto-accept from paired",
-                subtitle = "Accept files from paired computers automatically",
+                title = "Save folder",
+                subtitle = "Where received files are saved",
+                onClick = actions.onPickSaveFolder,
+            ) {
+                TactileSurface(
+                    shape = KeynearShapes.Xl,
+                    containerColor = palette.surfaceTonal,
+                    tone = TactileTone.TONAL,
+                    cornerRadius = KeynearRadii.Xl,
+                    onClick = actions.onPickSaveFolder,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .heightIn(min = 44.dp)
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = config.incomingDirectory,
+                            color = palette.textPrimary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+            SettingRow(
+                title = "Auto-accept from paired devices",
+                subtitle = "Save files from paired devices without asking",
             ) {
                 KeynearSwitch(
                     checked = config.autoAcceptFromPaired,
@@ -95,10 +135,10 @@ fun SettingsScreen(
             }
         }
 
-        SettingsSection(title = "Clipboard & continuity") {
+        SettingsSection(title = "Clipboard") {
             SettingRow(
-                title = "Sync clipboard with paired",
-                subtitle = "Relay copied text across your active session",
+                title = "Clipboard sync",
+                subtitle = "Keep clipboard text in sync",
             ) {
                 KeynearSwitch(
                     checked = config.clipboardSyncEnabled,
@@ -108,8 +148,8 @@ fun SettingsScreen(
                 )
             }
             SettingRow(
-                title = "Include images over Wi-Fi",
-                subtitle = "Relay clipboard screenshots while connected over LAN",
+                title = "Sync clipboard images",
+                subtitle = "Include images in clipboard sync",
             ) {
                 KeynearSwitch(
                     checked = config.clipboardImagesEnabled,
@@ -119,8 +159,8 @@ fun SettingsScreen(
                 )
             }
             SettingRow(
-                title = "Auto-clear SMS OTP codes",
-                subtitle = "Remove synced verification codes after handoff",
+                title = "2FA code pass-through",
+                subtitle = "Pass verification codes to the computer",
             ) {
                 KeynearSwitch(
                     checked = config.otpPassthroughEnabled,
@@ -130,27 +170,25 @@ fun SettingsScreen(
                 )
             }
             SettingRow(
-                title = "Ignored MIME types",
-                subtitle = "Sensitive clipboard formats never synced",
+                title = "Ignored clipboard formats",
+                subtitle = "Formats that are never shared",
                 onClick = { mimeExpanded = !mimeExpanded },
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = palette.loadingTonal,
-                    ) {
-                        Text(
-                            text = config.ignoredMimeTypes.size.toString(),
-                            color = palette.onLoadingTonal,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
-                        )
+                    Text(
+                        text = config.ignoredMimeTypes.size.toString(),
+                        color = palette.textMuted,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    if (mimeExpanded) {
+                        IconChevronUp(modifier = Modifier.size(20.dp), tint = palette.textMuted)
+                    } else {
+                        IconChevronDown(modifier = Modifier.size(20.dp), tint = palette.textMuted)
                     }
-                    IconChevronRight(tint = palette.textMuted)
                 }
             }
 
@@ -158,40 +196,61 @@ fun SettingsScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 4.dp, bottom = 6.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                        .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    config.ignoredMimeTypes.forEach { mime ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(palette.surfaceTonal)
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Text(
-                                text = mime,
-                                color = palette.textSecondary,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Surface(
-                                modifier = Modifier.size(34.dp),
-                                shape = RoundedCornerShape(10.dp),
-                                color = palette.errorAction,
-                                onClick = {
-                                    actions.onUpdateConfig {
-                                        it.copy(ignoredMimeTypes = it.ignoredMimeTypes.filterNot { item -> item == mime })
-                                    }
-                                },
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        config.ignoredMimeTypes.forEach { mime ->
+                            TactileSurface(
+                                shape = KeynearShapes.Xl,
+                                containerColor = palette.surfaceTonal,
+                                tone = TactileTone.TONAL,
+                                cornerRadius = KeynearRadii.Xl,
                             ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    IconClose(modifier = Modifier.size(14.dp), tint = palette.onDangerAction)
+                                Row(
+                                    modifier = Modifier
+                                        .heightIn(min = 38.dp)
+                                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Text(
+                                        text = mime,
+                                        color = palette.textPrimary,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    TactileSurface(
+                                        shape = KeynearShapes.Lg,
+                                        containerColor = palette.errorAction,
+                                        tone = TactileTone.TONAL,
+                                        cornerRadius = KeynearRadii.Lg,
+                                        onClick = {
+                                            actions.onUpdateConfig {
+                                                it.copy(
+                                                    ignoredMimeTypes = it.ignoredMimeTypes.filterNot { item ->
+                                                        item == mime
+                                                    },
+                                                )
+                                            }
+                                        },
+                                    ) {
+                                        Box(
+                                            modifier = Modifier.padding(4.dp),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            IconClose(
+                                                modifier = Modifier.size(16.dp),
+                                                tint = palette.error,
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -200,18 +259,19 @@ fun SettingsScreen(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         RecessedInput(
                             value = mimeInput,
                             onValueChange = { mimeInput = it },
-                            placeholder = "application/x-custom-secret",
+                            placeholder = "application/x-secret",
                             modifier = Modifier.weight(1f),
                         )
                         ActionButton(
                             label = "Add",
-                            primary = true,
+                            primary = false,
                             enabled = mimeInput.trim().isNotEmpty(),
+                            minHeight = 50.dp,
                             onClick = {
                                 val nextMime = mimeInput.trim()
                                 if (nextMime.isNotEmpty() && !config.ignoredMimeTypes.contains(nextMime)) {
@@ -227,10 +287,10 @@ fun SettingsScreen(
             }
         }
 
-        SettingsSection(title = "Audio & notifications") {
+        SettingsSection(title = "Audio & Notifications") {
             SettingRow(
-                title = "Audio call handoff",
-                subtitle = "Alert connected computer on incoming phone calls",
+                title = "Smart audio handoff",
+                subtitle = "Move audio between devices",
             ) {
                 KeynearSwitch(
                     checked = config.audioHandoffEnabled,
@@ -240,8 +300,8 @@ fun SettingsScreen(
                 )
             }
             SettingRow(
-                title = "Notify when auto-accepted",
-                subtitle = "Show silent banner when trusted transfers complete",
+                title = "Completion notifications",
+                subtitle = "Notify when files finish saving",
             ) {
                 KeynearSwitch(
                     checked = config.notifyAutoAcceptComplete,
@@ -255,7 +315,7 @@ fun SettingsScreen(
         SettingsSection(title = "Appearance") {
             SettingRow(
                 title = "Dark theme",
-                subtitle = "Use dark slate palette instead of daytime canvas",
+                subtitle = "Switch the app color theme",
             ) {
                 KeynearSwitch(
                     checked = config.darkTheme,
@@ -263,20 +323,6 @@ fun SettingsScreen(
                         actions.onUpdateConfig { it.copy(darkTheme = checked) }
                     },
                 )
-            }
-        }
-
-        SettingsSection(title = "System") {
-            SettingRow(
-                title = "System permissions",
-                subtitle = if (permissions.missingPermissionsCount == 0) {
-                    "All recommended permissions granted"
-                } else {
-                    "${permissions.missingPermissionsCount} permission(s) require attention"
-                },
-                onClick = actions.onOpenPermissions,
-            ) {
-                IconChevronRight(tint = palette.textMuted)
             }
         }
 
@@ -292,11 +338,11 @@ fun PermissionsScreen(
 ) {
     val palette = LocalKeynearPalette.current
     val rows = listOf(
-        Triple("Nearby devices", "Bluetooth scan, advertise, and Wi-Fi Direct", Pair(permissions.nearbyGranted, actions.onRequestNearbyOnboardingPermissions)),
-        Triple("Local network access", "Discover paired devices on this Wi-Fi LAN", Pair(permissions.localNetworkGranted, actions.onRequestLocalNetworkPermission)),
-        Triple("Companion device", "Wake Keynear on trusted Bluetooth sightings", Pair(permissions.companionAssociated, actions.onOpenAppSettings)),
-        Triple("Notifications", "Show incoming transfer consent alerts", Pair(permissions.notificationsGranted, actions.onRequestNotificationsPermission)),
-        Triple("Battery optimization", "Keep background transfers reliable", Pair(permissions.batteryOptimizationIgnored, actions.onRequestBatteryOptimization)),
+        Triple("Nearby devices", "Bluetooth and Wi-Fi discovery for nearby Linux desktops.", Pair(permissions.nearbyGranted, actions.onRequestNearbyOnboardingPermissions)),
+        Triple("Local network access", "Direct peer-to-peer transfers over your local Wi-Fi.", Pair(permissions.localNetworkGranted, actions.onRequestLocalNetworkPermission)),
+        Triple("Companion device presence", "Wakes the background service automatically when a paired PC is near.", Pair(permissions.companionAssociated, actions.onOpenAppSettings)),
+        Triple("Notifications", "Shows transfer requests, 6-digit pairing codes, and live progress.", Pair(permissions.notificationsGranted, actions.onRequestNotificationsPermission)),
+        Triple("Unrestricted battery", "Prevents Android from interrupting large transfers with the screen off.", Pair(permissions.batteryOptimizationIgnored, actions.onRequestBatteryOptimization)),
     )
 
     Column(
@@ -304,46 +350,55 @@ fun PermissionsScreen(
             .fillMaxSize()
             .background(palette.canvas)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(
+                horizontal = KeynearLayout.ScreenPaddingHorizontal,
+                vertical = KeynearLayout.ScreenPaddingVertical,
+            ),
+        verticalArrangement = Arrangement.spacedBy(KeynearLayout.CompactSectionGap),
     ) {
         TactileSurface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = KeynearShapes.Card,
             containerColor = palette.surface,
+            tone = TactileTone.SURFACE,
+            cornerRadius = KeynearRadii.TwoXl,
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 rows.forEach { (title, sub, actionPair) ->
                     val (granted, onClick) = actionPair
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 48.dp)
-                            .clickable(onClick = onClick),
+                            .padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
                             Text(
                                 text = title,
                                 color = palette.textPrimary,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
                             )
                             Text(
                                 text = sub,
                                 color = palette.textMuted,
                                 fontSize = 12.sp,
+                                lineHeight = 19.sp,
                             )
                         }
                         ActionButton(
                             label = if (granted) "Allowed" else "Allow",
                             primary = !granted,
+                            minHeight = 48.dp,
                             onClick = onClick,
                         )
                     }
@@ -352,4 +407,3 @@ fun PermissionsScreen(
         }
     }
 }
-

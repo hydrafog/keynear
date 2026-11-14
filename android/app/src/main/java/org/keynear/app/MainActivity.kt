@@ -1,18 +1,18 @@
 package org.keynear.app
 
-import android.Manifest
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.graphics.Color as AndroidColor
 import android.os.Build
 import android.os.Bundle
 import android.provider.DocumentsContract
-import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -54,13 +54,14 @@ import org.keynear.app.core.CoreSnapshot
 import org.keynear.app.core.CoreState
 import org.keynear.app.core.VisibilityState
 import org.keynear.app.core.evaluatePermissionsChecklist
-import org.keynear.app.lan.LocalNetworkConstants
 import org.keynear.app.lan.LocalNetworkManager
 import org.keynear.app.service.KeynearForegroundService
 import org.keynear.app.ui.components.ActionButton
 import org.keynear.app.ui.components.TactileSurface
 import org.keynear.app.ui.devices.DeviceDetailScreen
-import org.keynear.app.ui.navigation.KeynearActions
+import org.keynear.app.ui.navigation.buildKeynearActions
+import org.keynear.app.ui.navigation.enumerateTreeChildUris
+import org.keynear.app.ui.navigation.snapshotFromState
 import org.keynear.app.ui.navigation.KeynearBottomNav
 import org.keynear.app.ui.navigation.KeynearSnackbarHost
 import org.keynear.app.ui.navigation.KeynearSubScreen
@@ -73,27 +74,15 @@ import org.keynear.app.ui.settings.SettingsScreen
 import org.keynear.app.ui.theme.KeynearTheme
 import org.keynear.app.ui.theme.LocalKeynearPalette
 
-private fun launchFirstResolvableActivity(
-    context: Context,
-    candidates: List<Intent>,
-): Boolean {
-    for (candidate in candidates) {
-        val intent = Intent(candidate).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        if (intent.resolveActivity(context.packageManager) != null) {
-            runCatching {
-                context.startActivity(intent)
-                return true
-            }
-        }
-    }
-    return false
-}
-
 class MainActivity : ComponentActivity() {
     private var resumeTick by mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.auto(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT),
+        )
         val bridge = CoreClientProvider.init(applicationContext)
         setContent {
             KeynearAppRoot(bridge = bridge, resumeTick = resumeTick)
@@ -104,43 +93,6 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         resumeTick += 1
     }
-}
-
-private fun snapshotFromState(state: CoreState): CoreSnapshot? = when (state) {
-    is CoreState.Empty -> state.snapshot
-    is CoreState.Ready -> state.snapshot
-    is CoreState.Error -> state.previous
-    CoreState.Loading -> null
-}
-
-private fun enumerateTreeChildUris(context: Context, treeUri: Uri): Pair<String, List<String>> {
-    val treeDocId = DocumentsContract.getTreeDocumentId(treeUri)
-    val folderLabel = treeDocId.substringAfterLast(':').substringAfterLast('/').ifBlank { "Selected folder" }
-    val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, treeDocId)
-    val collected = mutableListOf<String>()
-    runCatching {
-        context.contentResolver.query(
-            childrenUri,
-            arrayOf(
-                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-                DocumentsContract.Document.COLUMN_MIME_TYPE,
-            ),
-            null,
-            null,
-            null,
-        )?.use { cursor ->
-            val idIdx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
-            val mimeIdx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_MIME_TYPE)
-            while (cursor.moveToNext()) {
-                val docId = if (idIdx >= 0) cursor.getString(idIdx) else null
-                val mime = if (mimeIdx >= 0) cursor.getString(mimeIdx) else null
-                if (!docId.isNullOrBlank() && mime != DocumentsContract.Document.MIME_TYPE_DIR) {
-                    collected.add(DocumentsContract.buildDocumentUriUsingTree(treeUri, docId).toString())
-                }
-            }
-        }
-    }
-    return folderLabel to collected
 }
 
 @Composable
@@ -288,232 +240,25 @@ private fun KeynearAppRoot(
     }
 
     val actions = remember(context, bridge) {
-        KeynearActions(
-            onSetVisibility = { mode ->
-                scope.launch {
-                    val updated = withContext(Dispatchers.IO) { bridge.setVisibility(mode) }
-                    val vis = snapshotFromState(updated)?.visibility ?: mode
-                    withContext(Dispatchers.IO) {
-                        KeynearBleManager.startOrSync(context, vis)
-                        KeynearForegroundService.syncIfPermitted(context)
-                    }
-                    uiState = withContext(Dispatchers.IO) { bridge.loadState() }
-                    val label = when (vis) {
-                        VisibilityState.HIDDEN -> "Hidden"
-                        VisibilityState.PAIRED_ONLY -> "Paired devices only"
-                        VisibilityState.EVERYONE_NEARBY -> "Everyone nearby (10 min)"
-                    }
-                    showSnackbar("Visibility: $label")
-                }
-            },
-            onRequestBluetoothPermissions = {
-                val missing = KeynearBleConstants.missingPermissions(context, Build.VERSION.SDK_INT)
-                if (missing.isNotEmpty()) {
-                    permissionLauncher.launch(missing.toTypedArray())
-                }
-            },
-            onOpenBluetoothSettings = {
-                launchFirstResolvableActivity(context, listOf(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)))
-            },
-            onRequestLocalNetworkPermission = {
-                if (LocalNetworkConstants.requiresLocalNetworkPermission(Build.VERSION.SDK_INT)) {
-                    permissionLauncher.launch(arrayOf(LocalNetworkConstants.PERMISSION_ACCESS_LOCAL_NETWORK))
-                }
-                scope.launch(Dispatchers.IO) {
-                    LocalNetworkManager.requestPickerDiscovery(context)
-                    uiState = bridge.loadState()
-                }
-            },
-            onRequestNearbyOnboardingPermissions = {
-                val missing = KeynearBleConstants.missingPermissions(context, Build.VERSION.SDK_INT)
-                    .toMutableList()
-                if (Build.VERSION.SDK_INT >= 33) {
-                    missing.add(Manifest.permission.NEARBY_WIFI_DEVICES)
-                }
-                if (missing.isNotEmpty()) {
-                    permissionLauncher.launch(missing.distinct().toTypedArray())
-                } else {
-                    launchFirstResolvableActivity(
-                        context,
-                        listOf(
-                            Intent(
-                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                Uri.fromParts("package", context.packageName, null),
-                            ),
-                        ),
-                    )
-                }
-            },
-            onRequestNotificationsPermission = {
-                if (Build.VERSION.SDK_INT >= 33) {
-                    permissionLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
-                } else {
-                    launchFirstResolvableActivity(
-                        context,
-                        listOf(
-                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                            },
-                            Intent(
-                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                Uri.fromParts("package", context.packageName, null),
-                            ),
-                        ),
-                    )
-                }
-            },
-            onRequestBatteryOptimization = {
-                val pkgUri = Uri.parse("package:${context.packageName}")
-                launchFirstResolvableActivity(
-                    context,
-                    listOf(
-                        Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, pkgUri),
-                        Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
-                        Intent(
-                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                            Uri.fromParts("package", context.packageName, null),
-                        ),
-                    ),
-                )
-            },
-            onOpenAppSettings = {
-                launchFirstResolvableActivity(
-                    context,
-                    listOf(
-                        Intent(
-                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                            Uri.fromParts("package", context.packageName, null),
-                        ),
-                    ),
-                )
-            },
-            onInitiatePairing = { addr ->
-                scope.launch {
-                    withContext(Dispatchers.IO) { KeynearBleManager.initiatePairing(context, addr) }
-                    uiState = withContext(Dispatchers.IO) { bridge.loadState() }
-                    showSnackbar("Pairing requested")
-                }
-            },
-            onApprovePairing = {
-                scope.launch {
-                    withContext(Dispatchers.IO) { KeynearBleManager.approveActivePairing(context) }
-                    uiState = withContext(Dispatchers.IO) { bridge.loadState() }
-                    showSnackbar("Device paired")
-                }
-            },
-            onRejectPairing = {
-                scope.launch {
-                    withContext(Dispatchers.IO) { KeynearBleManager.rejectActivePairing(context) }
-                    uiState = withContext(Dispatchers.IO) { bridge.loadState() }
-                    showSnackbar("Pairing declined")
-                }
-            },
-            onToggleAutoAccept = { deviceId, enabled ->
-                scope.launch {
-                    uiState = withContext(Dispatchers.IO) { bridge.setAutoAcceptFiles(deviceId, enabled) }
-                    showSnackbar(if (enabled) "Auto-accept enabled" else "Auto-accept disabled")
-                }
-            },
-            onRenameDevice = { deviceId, newName ->
-                scope.launch {
-                    uiState = withContext(Dispatchers.IO) { bridge.renamePairedDevice(deviceId, newName) }
-                    showSnackbar("Renamed to ${newName.trim()}")
-                }
-            },
-            onResetBleBond = { deviceId ->
-                scope.launch {
-                    uiState = withContext(Dispatchers.IO) { bridge.resetBleBond(deviceId) }
-                    showSnackbar("Bluetooth bond cleared")
-                }
-            },
-            onAcceptTransfer = { transferId ->
-                scope.launch {
-                    uiState = withContext(Dispatchers.IO) { bridge.acceptTransfer(transferId) }
-                }
-            },
-            onDeclineTransfer = { transferId ->
-                scope.launch {
-                    uiState = withContext(Dispatchers.IO) { bridge.declineTransfer(transferId) }
-                }
-            },
-            onCancelTransfer = { transferId ->
-                scope.launch {
-                    uiState = withContext(Dispatchers.IO) { bridge.cancelTransfer(transferId) }
-                }
-            },
-            onRequestUnpair = { deviceId -> confirmUnpairDeviceId = deviceId },
-            onCancelUnpair = { confirmUnpairDeviceId = null },
-            onConfirmUnpair = { deviceId ->
-                confirmUnpairDeviceId = null
-                subScreen = null
-                scope.launch {
-                    uiState = withContext(Dispatchers.IO) { bridge.unpairDevice(deviceId) }
-                    showSnackbar("Device removed")
-                }
-            },
+        buildKeynearActions(
+            context = context,
+            scope = scope,
+            bridge = bridge,
+            onStateUpdated = { uiState = it },
+            onShowSnackbar = showSnackbar,
+            onLaunchPermissions = { permissionLauncher.launch(it) },
             onPickFiles = { pickFilesLauncher.launch(arrayOf("*/*")) },
             onPickFolder = { pickFolderLauncher.launch(null) },
-            onStageClipboard = {
-                val clipboard = context.getSystemService(ClipboardManager::class.java)
-                val clipText = clipboard?.primaryClip
-                    ?.takeIf { it.itemCount > 0 }
-                    ?.getItemAt(0)
-                    ?.coerceToText(context)
-                    ?.toString()
-                    ?.trim()
-                    .orEmpty()
-                if (clipText.isEmpty()) {
-                    showSnackbar("Clipboard has no text item")
-                } else {
-                    scope.launch {
-                        uiState = withContext(Dispatchers.IO) { bridge.stageClipboardText(clipText) }
-                        showSnackbar("Clipboard snippet staged")
-                    }
-                }
-            },
-            onStageTextSnippet = { draft ->
-                scope.launch {
-                    uiState = withContext(Dispatchers.IO) { bridge.stageTextSnippet(draft) }
-                    showSnackbar("Text snippet staged")
-                }
-            },
-            onRemoveQueueItem = { itemId ->
-                scope.launch {
-                    uiState = withContext(Dispatchers.IO) { bridge.removeSendQueueItem(itemId) }
-                }
-            },
-            onClearQueue = {
-                scope.launch {
-                    uiState = withContext(Dispatchers.IO) { bridge.clearSendQueue() }
-                }
-            },
-            onSendQueueToPeer = { device ->
-                scope.launch {
-                    val res = withContext(Dispatchers.IO) { bridge.sendQueueToPeer(device.deviceId) }
-                    uiState = withContext(Dispatchers.IO) { bridge.loadState() }
-                    res.onSuccess {
-                        activeTab = KeynearTab.RECEIVE
-                        showSnackbar("Sending to ${device.displayName}")
-                    }.onFailure { err ->
-                        showSnackbar(err.message ?: "Unable to start transfer")
-                    }
-                }
-            },
-            onUpdateConfig = { transform ->
-                scope.launch {
-                    uiState = withContext(Dispatchers.IO) { bridge.updateDaemonConfig(transform) }
-                }
-            },
             onPickSaveFolder = { pickSaveFolderLauncher.launch(null) },
+            onRequestUnpair = { confirmUnpairDeviceId = it },
+            onCancelUnpair = { confirmUnpairDeviceId = null },
             onOpenPermissions = { subScreen = KeynearSubScreen.Permissions },
-            onOpenDeviceDetail = { deviceId ->
+            onOpenDeviceDetail = {
                 confirmUnpairDeviceId = null
-                subScreen = KeynearSubScreen.DeviceDetail(deviceId)
+                subScreen = KeynearSubScreen.DeviceDetail(it)
             },
-            onJumpToSendTab = {
-                subScreen = null
-                activeTab = KeynearTab.SEND
-            },
+            onNavigateTab = { activeTab = it },
+            onCloseSubScreen = { subScreen = null },
         )
     }
 
@@ -544,6 +289,7 @@ private fun KeynearAppRoot(
                 KeynearBottomNav(
                     activeTab = activeTab,
                     subScreen = subScreen,
+                    missingPermissionsCount = permissionsChecklist.missingPermissionsCount,
                     onSelectTab = { tab ->
                         subScreen = null
                         confirmUnpairDeviceId = null
@@ -608,10 +354,9 @@ private fun KeynearAppRoot(
                         null -> when (activeTab) {
                             KeynearTab.RECEIVE -> ReceiveScreen(
                                 snapshot = snapshot,
-                                permissions = permissionsChecklist,
                                 localDeviceName = localName,
                                 sheetExpanded = sheetExpanded,
-                                onToggleSheetExpanded = { sheetExpanded = !sheetExpanded },
+                                onSetSheetExpanded = { sheetExpanded = it },
                                 actions = actions,
                             )
                             KeynearTab.SEND -> SendScreen(

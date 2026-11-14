@@ -41,54 +41,6 @@ import uniffi.keynear_core.FfiPairingState
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-object KeynearBleConstants {
-    val SERVICE_UUID: UUID = UUID.fromString("0000FE6D-0000-1000-8000-00805F9B34FB")
-    val PAIRING_TX_CHAR_UUID: UUID = UUID.fromString("0000FE6E-0000-1000-8000-00805F9B34FB")
-    val PAIRING_RX_CHAR_UUID: UUID = UUID.fromString("0000FE6F-0000-1000-8000-00805F9B34FB")
-    val LAN_ENDPOINT_CHAR_UUID: UUID = UUID.fromString("0000FE70-0000-1000-8000-00805F9B34FB")
-    val CLIENT_CONFIG_DESCRIPTOR_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805F9B34FB")
-
-    const val MAX_BEACON_DATA_BYTES = 24
-    const val MAX_GATT_PAIRING_FRAME_BYTES = 512
-    const val MAX_LAN_ENDPOINT_GATT_BYTES = 65_536
-    const val ANDROID_CAPABILITY_FLAGS = 0x03u
-
-    fun requiredPermissions(sdkInt: Int): List<String> = buildList {
-        add(Manifest.permission.BLUETOOTH_SCAN)
-        add(Manifest.permission.BLUETOOTH_CONNECT)
-        add(Manifest.permission.BLUETOOTH_ADVERTISE)
-        if (sdkInt >= 33) {
-            add(Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }
-
-    fun missingPermissions(context: Context, sdkInt: Int): List<String> =
-        requiredPermissions(sdkInt).filter { perm ->
-            ContextCompat.checkSelfPermission(context, perm) != PackageManager.PERMISSION_GRANTED
-        }
-
-    fun hasScanPermission(context: Context): Boolean =
-        ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) ==
-            PackageManager.PERMISSION_GRANTED
-
-    fun hasConnectPermission(context: Context): Boolean =
-        ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) ==
-            PackageManager.PERMISSION_GRANTED
-
-    fun hasAdvertisePermission(context: Context): Boolean =
-        ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_ADVERTISE) ==
-            PackageManager.PERMISSION_GRANTED
-
-    fun buildScanFilterList(): List<ScanFilter> = listOf(
-        ScanFilter.Builder()
-            .setServiceUuid(ParcelUuid(SERVICE_UUID))
-            .build(),
-    )
-
-    fun isValidGattFrame(bytes: ByteArray): Boolean =
-        bytes.isNotEmpty() && bytes.size <= MAX_GATT_PAIRING_FRAME_BYTES
-}
-
 object KeynearBleManager {
     private const val TAG = "KeynearBleManager"
 
@@ -334,13 +286,13 @@ object KeynearBleManager {
                     .getService(KeynearBleConstants.SERVICE_UUID)
                     ?.getCharacteristic(KeynearBleConstants.PAIRING_TX_CHAR_UUID)
                 if (txChar != null) {
-                    writeCharacteristicCompat(clientGatt, txChar, export)
+                    KeynearBleGattCompat.writeCharacteristicCompat(clientGatt, txChar, export)
                 }
             }
             val responderDevice = activeDeviceForNotification
             val rxChar = rxNotifyCharacteristic
             if (responderDevice != null && rxChar != null && KeynearBleConstants.hasConnectPermission(context)) {
-                notifyCharacteristicCompat(gattServer, responderDevice, rxChar, export)
+                KeynearBleGattCompat.notifyCharacteristicCompat(gattServer, responderDevice, rxChar, export)
             }
             PairingNotificationManager.cancel(context)
         } catch (_: Throwable) {
@@ -620,7 +572,7 @@ object KeynearBleManager {
                         val step = runCatching { session.step(value) }.getOrNull() ?: return
                         step.outboundFrame?.let { m2 ->
                             rxNotifyCharacteristic?.let { rx ->
-                                notifyCharacteristicCompat(gattServer, device, rx, m2)
+                                KeynearBleGattCompat.notifyCharacteristicCompat(gattServer, device, rx, m2)
                             }
                         }
                         if (step.state == FfiPairingState.AWAITING_CONFIRMATION) {
@@ -681,11 +633,11 @@ object KeynearBleManager {
                 val txChar = service.getCharacteristic(KeynearBleConstants.PAIRING_TX_CHAR_UUID) ?: return
                 gatt.setCharacteristicNotification(rxChar, true)
                 rxChar.getDescriptor(KeynearBleConstants.CLIENT_CONFIG_DESCRIPTOR_UUID)?.let { cccd ->
-                    writeDescriptorCompat(gatt, cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+                    KeynearBleGattCompat.writeDescriptorCompat(gatt, cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
                 }
                 val session = activeSession ?: return
                 val m1 = runCatching { session.startHandshake().outboundFrame }.getOrNull() ?: return
-                writeCharacteristicCompat(gatt, txChar, m1)
+                KeynearBleGattCompat.writeCharacteristicCompat(gatt, txChar, m1)
             }
 
             override fun onCharacteristicChanged(
@@ -755,7 +707,7 @@ object KeynearBleManager {
                 val step = runCatching { session.step(value) }.getOrNull() ?: return
                 val txChar = gatt.getService(KeynearBleConstants.SERVICE_UUID)
                     ?.getCharacteristic(KeynearBleConstants.PAIRING_TX_CHAR_UUID) ?: return
-                step.outboundFrame?.let { m3 -> writeCharacteristicCompat(gatt, txChar, m3) }
+                step.outboundFrame?.let { m3 -> KeynearBleGattCompat.writeCharacteristicCompat(gatt, txChar, m3) }
                 if (step.state == FfiPairingState.AWAITING_CONFIRMATION) {
                     val code = step.verificationCode ?: return
                     val peerName = discoveredByAddress[peerAddress]?.displayName ?: peerAddress
@@ -808,61 +760,8 @@ object KeynearBleManager {
         val client = CoreClientProvider.init(context)
         val encoded = client.encodeLocalLanEndpointForPeer(peerDeviceId)
         if (encoded != null) {
-            writeCharacteristicCompat(gatt, lanChar, encoded)
+            KeynearBleGattCompat.writeCharacteristicCompat(gatt, lanChar, encoded)
         }
         runCatching { gatt.readCharacteristic(lanChar) }
     }
-
-    @SuppressLint("MissingPermission")
-    private fun writeCharacteristicCompat(
-        gatt: BluetoothGatt,
-        characteristic: BluetoothGattCharacteristic,
-        data: ByteArray,
-    ) {
-        if (android.os.Build.VERSION.SDK_INT >= 33) {
-            gatt.writeCharacteristic(characteristic, data, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
-        } else {
-            @Suppress("DEPRECATION")
-            characteristic.value = data
-            @Suppress("DEPRECATION")
-            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-            @Suppress("DEPRECATION")
-            gatt.writeCharacteristic(characteristic)
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun writeDescriptorCompat(
-        gatt: BluetoothGatt,
-        descriptor: BluetoothGattDescriptor,
-        data: ByteArray,
-    ) {
-        if (android.os.Build.VERSION.SDK_INT >= 33) {
-            gatt.writeDescriptor(descriptor, data)
-        } else {
-            @Suppress("DEPRECATION")
-            descriptor.value = data
-            @Suppress("DEPRECATION")
-            gatt.writeDescriptor(descriptor)
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun notifyCharacteristicCompat(
-        server: BluetoothGattServer?,
-        device: BluetoothDevice,
-        characteristic: BluetoothGattCharacteristic,
-        data: ByteArray,
-    ) {
-        if (server == null) return
-        if (android.os.Build.VERSION.SDK_INT >= 33) {
-            server.notifyCharacteristicChanged(device, characteristic, false, data)
-        } else {
-            @Suppress("DEPRECATION")
-            characteristic.value = data
-            @Suppress("DEPRECATION")
-            server.notifyCharacteristicChanged(device, characteristic, false)
-        }
-    }
 }
-

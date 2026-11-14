@@ -4,19 +4,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,16 +33,23 @@ import org.keynear.app.core.SendItemKind
 import org.keynear.app.core.formatBytes
 import org.keynear.app.ui.components.ActionButton
 import org.keynear.app.ui.components.RecessedInput
+import org.keynear.app.ui.components.SectionHeading
 import org.keynear.app.ui.components.SelectionTile
 import org.keynear.app.ui.components.TactileSurface
+import org.keynear.app.ui.components.TactileTone
+import org.keynear.app.ui.components.tactileCushion
 import org.keynear.app.ui.icons.IconClipboard
 import org.keynear.app.ui.icons.IconClose
 import org.keynear.app.ui.icons.IconFile
 import org.keynear.app.ui.icons.IconFolder
 import org.keynear.app.ui.icons.IconLaptop
+import org.keynear.app.ui.icons.IconPlus
+import org.keynear.app.ui.icons.IconSend
 import org.keynear.app.ui.icons.IconSmartphone
-import org.keynear.app.ui.icons.IconType
 import org.keynear.app.ui.navigation.KeynearActions
+import org.keynear.app.ui.theme.KeynearLayout
+import org.keynear.app.ui.theme.KeynearRadii
+import org.keynear.app.ui.theme.KeynearShapes
 import org.keynear.app.ui.theme.LocalKeynearPalette
 
 @Composable
@@ -57,62 +61,62 @@ fun SendScreen(
     val palette = LocalKeynearPalette.current
     var textComposerOpen by rememberSaveable { mutableStateOf(false) }
     var textDraft by rememberSaveable { mutableStateOf("") }
+    val queue = snapshot.sendQueue
+    val totalBytes = queue.sumOf { it.sizeBytes }
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(palette.canvas)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(
+                horizontal = KeynearLayout.ScreenPaddingHorizontal,
+                vertical = KeynearLayout.ScreenPaddingVertical,
+            ),
+        verticalArrangement = Arrangement.spacedBy(KeynearLayout.SectionGap),
     ) {
-        Text(
-            text = "SELECTION",
-            color = palette.textMuted,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            letterSpacing = 0.8.sp,
-            modifier = Modifier.padding(horizontal = 4.dp),
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(KeynearLayout.SectionHeadingBottom)) {
+            SectionHeading(title = "Selection")
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                SelectionTile(
-                    label = "File",
-                    onClick = actions.onPickFiles,
-                    modifier = Modifier.weight(1f),
-                ) { tint ->
-                    IconFile(modifier = Modifier.size(32.dp), tint = tint)
+            Column(verticalArrangement = Arrangement.spacedBy(KeynearLayout.GridGap)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(KeynearLayout.GridGap),
+                ) {
+                    SelectionTile(
+                        label = "File",
+                        onClick = actions.onPickFiles,
+                        modifier = Modifier.weight(1f),
+                    ) { tint ->
+                        IconFile(modifier = Modifier.size(32.dp), tint = tint)
+                    }
+                    SelectionTile(
+                        label = "Folder",
+                        onClick = actions.onPickFolder,
+                        modifier = Modifier.weight(1f),
+                    ) { tint ->
+                        IconFolder(modifier = Modifier.size(32.dp), tint = tint)
+                    }
                 }
-                SelectionTile(
-                    label = "Folder",
-                    onClick = actions.onPickFolder,
-                    modifier = Modifier.weight(1f),
-                ) { tint ->
-                    IconFolder(modifier = Modifier.size(32.dp), tint = tint)
-                }
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                SelectionTile(
-                    label = "Clipboard",
-                    onClick = actions.onStageClipboard,
-                    modifier = Modifier.weight(1f),
-                ) { tint ->
-                    IconClipboard(modifier = Modifier.size(32.dp), tint = tint)
-                }
-                SelectionTile(
-                    label = "Text",
-                    active = textComposerOpen,
-                    onClick = { textComposerOpen = !textComposerOpen },
-                    modifier = Modifier.weight(1f),
-                ) { tint ->
-                    IconType(modifier = Modifier.size(32.dp), tint = tint)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(KeynearLayout.GridGap),
+                ) {
+                    SelectionTile(
+                        label = "Clipboard",
+                        onClick = actions.onStageClipboard,
+                        modifier = Modifier.weight(1f),
+                    ) { tint ->
+                        IconClipboard(modifier = Modifier.size(32.dp), tint = tint)
+                    }
+                    SelectionTile(
+                        label = "Text",
+                        active = textComposerOpen,
+                        onClick = { textComposerOpen = !textComposerOpen },
+                        modifier = Modifier.weight(1f),
+                    ) { tint ->
+                        IconPlus(modifier = Modifier.size(32.dp), tint = tint)
+                    }
                 }
             }
         }
@@ -120,15 +124,17 @@ fun SendScreen(
         if (textComposerOpen) {
             TactileSurface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = KeynearShapes.Card,
                 containerColor = palette.surface,
+                tone = TactileTone.SURFACE,
+                cornerRadius = KeynearRadii.TwoXl,
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(12.dp),
+                        .padding(KeynearLayout.CardPadding),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     RecessedInput(
                         value = textDraft,
@@ -140,6 +146,7 @@ fun SendScreen(
                         label = "Add",
                         primary = true,
                         enabled = textDraft.isNotBlank(),
+                        minHeight = 52.dp,
                         onClick = {
                             actions.onStageTextSnippet(textDraft)
                             textDraft = ""
@@ -150,84 +157,136 @@ fun SendScreen(
             }
         }
 
-        val queue = snapshot.sendQueue
-        if (queue.isNotEmpty()) {
-            val totalBytes = queue.sumOf { it.sizeBytes }
-            TactileSurface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                containerColor = palette.surface,
+        TactileSurface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = KeynearShapes.Card,
+            containerColor = palette.surface,
+            tone = TactileTone.SURFACE,
+            cornerRadius = KeynearRadii.TwoXl,
+        ) {
+            Column(
+                modifier = Modifier.padding(KeynearLayout.CardPadding),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(38.dp)
+                        .padding(horizontal = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "${queue.size} item(s) (${formatBytes(totalBytes)})",
-                            color = palette.textPrimary,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f),
-                        )
+                    Text(
+                        text = "${queue.size} item(s) (${formatBytes(totalBytes)})",
+                        color = palette.textPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (queue.isNotEmpty()) {
                         ActionButton(
                             label = "Clear all",
                             onClick = actions.onClearQueue,
                             errorTonal = true,
+                            minHeight = 38.dp,
                         )
                     }
+                }
 
-                    queue.forEach { item ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 54.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(palette.surfaceTonal)
-                                .padding(horizontal = 10.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(palette.loadingTonal),
-                                contentAlignment = Alignment.Center,
+                if (queue.isEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .clip(KeynearShapes.Xl)
+                            .background(palette.trackWell)
+                            .tactileCushion(
+                                tone = TactileTone.INSET,
+                                isDark = palette.isDark,
+                                cornerRadius = KeynearRadii.Xl,
+                            )
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        IconFile(
+                            modifier = Modifier.size(20.dp),
+                            tint = palette.textMuted,
+                        )
+                        Text(
+                            text = "No items selected",
+                            color = palette.textMuted,
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        queue.forEach { item ->
+                            TactileSurface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = KeynearShapes.Xl,
+                                containerColor = palette.surfaceTonal,
+                                tone = TactileTone.TONAL,
+                                cornerRadius = KeynearRadii.Xl,
                             ) {
-                                when (item.kind) {
-                                    SendItemKind.FOLDER -> IconFolder(modifier = Modifier.size(18.dp), tint = palette.onLoadingTonal)
-                                    SendItemKind.CLIPBOARD -> IconClipboard(modifier = Modifier.size(18.dp), tint = palette.onLoadingTonal)
-                                    SendItemKind.TEXT -> IconType(modifier = Modifier.size(18.dp), tint = palette.onLoadingTonal)
-                                    SendItemKind.FILE -> IconFile(modifier = Modifier.size(18.dp), tint = palette.onLoadingTonal)
-                                }
-                            }
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = item.name,
-                                    color = palette.textPrimary,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Text(
-                                    text = formatBytes(item.sizeBytes),
-                                    color = palette.textMuted,
-                                    fontSize = 11.sp,
-                                )
-                            }
-                            Surface(
-                                modifier = Modifier.size(40.dp),
-                                shape = RoundedCornerShape(10.dp),
-                                color = palette.errorAction,
-                                onClick = { actions.onRemoveQueueItem(item.id) },
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    IconClose(modifier = Modifier.size(16.dp), tint = palette.onDangerAction)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(56.dp)
+                                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                ) {
+                                    when (item.kind) {
+                                        SendItemKind.FOLDER -> IconFolder(
+                                            modifier = Modifier.size(20.dp),
+                                            tint = palette.textSecondary,
+                                        )
+                                        SendItemKind.CLIPBOARD -> IconClipboard(
+                                            modifier = Modifier.size(20.dp),
+                                            tint = palette.textSecondary,
+                                        )
+                                        SendItemKind.TEXT -> IconPlus(
+                                            modifier = Modifier.size(20.dp),
+                                            tint = palette.textSecondary,
+                                        )
+                                        SendItemKind.FILE -> IconFile(
+                                            modifier = Modifier.size(20.dp),
+                                            tint = palette.textSecondary,
+                                        )
+                                    }
+                                    Text(
+                                        text = item.name,
+                                        color = palette.textPrimary,
+                                        fontSize = 14.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    Text(
+                                        text = formatBytes(item.sizeBytes),
+                                        color = palette.textMuted,
+                                        fontSize = 12.sp,
+                                    )
+                                    TactileSurface(
+                                        modifier = Modifier.size(40.dp),
+                                        shape = KeynearShapes.Xl,
+                                        containerColor = palette.errorAction,
+                                        tone = TactileTone.TONAL,
+                                        cornerRadius = KeynearRadii.Xl,
+                                        onClick = { actions.onRemoveQueueItem(item.id) },
+                                    ) {
+                                        Box(
+                                            modifier = Modifier.size(40.dp),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            IconClose(
+                                                modifier = Modifier.size(20.dp),
+                                                tint = palette.error,
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -236,81 +295,122 @@ fun SendScreen(
             }
         }
 
-        Text(
-            text = "SEND TO",
-            color = palette.textMuted,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            letterSpacing = 0.8.sp,
-            modifier = Modifier.padding(horizontal = 4.dp),
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(KeynearLayout.SectionHeadingBottom)) {
+            SectionHeading(title = "Send to")
 
-        TactileSurface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            containerColor = palette.surface,
-        ) {
-            if (snapshot.pairedDevices.isEmpty()) {
-                Text(
-                    text = "No paired devices yet. Switch Receive visibility to Everyone nearby to pair first.",
-                    color = palette.textMuted,
-                    fontSize = 13.sp,
-                    modifier = Modifier.padding(16.dp),
-                )
-            } else {
+            TactileSurface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = KeynearShapes.Card,
+                containerColor = palette.surface,
+                tone = TactileTone.SURFACE,
+                cornerRadius = KeynearRadii.TwoXl,
+            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(PaddingValues(12.dp)),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                        .padding(KeynearLayout.SectionInnerPadding),
+                    verticalArrangement = Arrangement.spacedBy(KeynearLayout.SectionRowGap),
                 ) {
-                    snapshot.pairedDevices.forEachIndexed { idx, device ->
+                    if (snapshot.pairedDevices.isEmpty()) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 68.dp)
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             Box(
                                 modifier = Modifier
                                     .size(48.dp)
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(palette.surfaceTonal),
+                                    .clip(KeynearShapes.Xl)
+                                    .background(palette.trackWell)
+                                    .tactileCushion(
+                                        tone = TactileTone.INSET,
+                                        isDark = palette.isDark,
+                                        cornerRadius = KeynearRadii.Xl,
+                                    ),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                val iconTint = if (device.isOnline) palette.loading else palette.textMuted
-                                if (device.role == DeviceRoleUi.DESKTOP) {
-                                    IconLaptop(modifier = Modifier.size(22.dp), tint = iconTint)
-                                } else {
-                                    IconSmartphone(modifier = Modifier.size(22.dp), tint = iconTint)
-                                }
-                            }
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = device.displayName,
-                                    color = palette.textPrimary,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Text(
-                                    text = "${device.role.label()} · ${if (device.isOnline) "Wi-Fi direct" else "Bluetooth wake"}",
-                                    color = palette.textMuted,
-                                    fontSize = 12.sp,
+                                IconLaptop(
+                                    modifier = Modifier.size(24.dp),
+                                    tint = palette.textMuted,
                                 )
                             }
-                            ActionButton(
-                                label = "Send",
-                                primary = idx == 0,
-                                enabled = queue.isNotEmpty(),
-                                onClick = { actions.onSendQueueToPeer(device) },
+                            Text(
+                                text = "No paired devices",
+                                color = palette.textMuted,
+                                fontSize = 14.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             )
+                        }
+                    } else {
+                        snapshot.pairedDevices.forEachIndexed { idx, device ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 68.dp)
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                TactileSurface(
+                                    modifier = Modifier.size(48.dp),
+                                    shape = KeynearShapes.Xl,
+                                    containerColor = palette.surfaceTonal,
+                                    tone = TactileTone.TONAL,
+                                    cornerRadius = KeynearRadii.Xl,
+                                ) {
+                                    Box(
+                                        modifier = Modifier.size(48.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        val iconTint = palette.textSecondary
+                                        if (device.role == DeviceRoleUi.DESKTOP) {
+                                            IconLaptop(modifier = Modifier.size(24.dp), tint = iconTint)
+                                        } else {
+                                            IconSmartphone(modifier = Modifier.size(24.dp), tint = iconTint)
+                                        }
+                                    }
+                                }
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                                ) {
+                                    Text(
+                                        text = device.displayName,
+                                        color = palette.textPrimary,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Text(
+                                        text = if (device.isOnline) "Connected via Wi-Fi" else "Bluetooth standby",
+                                        color = palette.textMuted,
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                                ActionButton(
+                                    label = "Send",
+                                    primary = idx == 0,
+                                    enabled = queue.isNotEmpty(),
+                                    minHeight = 48.dp,
+                                    leadingIcon = { tint ->
+                                        IconSend(modifier = Modifier.size(16.dp), tint = tint)
+                                    },
+                                    onClick = { actions.onSendQueueToPeer(device) },
+                                )
+                            }
                         }
                     }
                 }
             }
         }
-        Spacer(modifier = Modifier.size(8.dp))
+
+        Spacer(modifier = Modifier.height(8.dp))
     }
 }
-
