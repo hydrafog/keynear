@@ -2,6 +2,9 @@ mod app;
 #[allow(dead_code)]
 #[path = "../../keynear-linux/src/ipc.rs"]
 mod ipc;
+mod portal;
+mod state;
+mod views;
 
 use std::path::PathBuf;
 use std::process;
