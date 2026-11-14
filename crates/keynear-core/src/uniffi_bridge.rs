@@ -1,22 +1,32 @@
 use std::fmt;
+use std::fs::File;
+use std::net::SocketAddr;
+#[cfg(unix)]
+use std::os::fd::{FromRawFd, OwnedFd};
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+
+use zeroize::Zeroizing;
 
 use crate::error::KeynearError;
 use crate::keyring::StaticKeypairRecord;
 use crate::model::{
-    DaemonConfig, DeviceRole, PairedDevice, PairedDeviceStore, VisibilityMode,
-    EVERYONE_NEARBY_TIMEOUT_SECS, PAIRING_TIMEOUT_SECS,
+    DaemonConfig, DeviceRole, PairedDevice, PairedDeviceStore, TransferDirection, TransferItem,
+    TransferSession, TransferState, VisibilityMode, EVERYONE_NEARBY_TIMEOUT_SECS,
+    PAIRING_TIMEOUT_SECS,
 };
 use crate::pairing::{
     NoisePairingSession, PairingCompleted, PairingPeerMetadata, PairingRole, PairingState,
 };
 use crate::presence::{
-    derive_presence_token, EveryoneNearbyBeacon, PairedBeacon, PairedBeaconState,
-    KEYNEAR_BLE_SERVICE_UUID, KEYNEAR_BLE_SERVICE_UUID16,
+    derive_presence_token, EveryoneNearbyBeacon, LanEndpointCodec, PairedBeacon, PairedBeaconState,
+    KEYNEAR_BLE_SERVICE_UUID, KEYNEAR_BLE_SERVICE_UUID16, LAN_ENDPOINT_CHAR_UUID,
+    LAN_ENDPOINT_CHAR_UUID16,
 };
-use crate::proto::{control_frame_to_envelope, decode_control_frame, MAX_CONTROL_FRAME_BYTES};
+use crate::proto::{control_frame_to_envelope, decode_control_frame, v1, MAX_CONTROL_FRAME_BYTES};
+use crate::quic::{parse_endpoint_id_bytes, OrionNodeConfig, OrionQuicNode};
+use crate::transfer::TransferEngine;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
 pub enum FfiVisibilityMode {
@@ -187,6 +197,7 @@ pub struct FfiPairedDevice {
     pub static_x25519_pubkey: String,
     pub last_ble_address: String,
     pub last_lan_address: String,
+    pub last_endpoint_id: String,
     pub capability_flags: u32,
     pub auto_accept_files: bool,
     pub paired_at: String,
@@ -201,6 +212,7 @@ impl From<PairedDevice> for FfiPairedDevice {
             static_x25519_pubkey: value.static_x25519_pubkey,
             last_ble_address: value.last_ble_address,
             last_lan_address: value.last_lan_address,
+            last_endpoint_id: value.last_endpoint_id,
             capability_flags: value.capability_flags,
             auto_accept_files: value.auto_accept_files,
             paired_at: value.paired_at,
@@ -217,10 +229,129 @@ impl From<FfiPairedDevice> for PairedDevice {
             static_x25519_pubkey: value.static_x25519_pubkey,
             last_ble_address: value.last_ble_address,
             last_lan_address: value.last_lan_address,
-            last_endpoint_id: String::new(),
+            last_endpoint_id: value.last_endpoint_id,
             capability_flags: value.capability_flags,
             auto_accept_files: value.auto_accept_files,
             paired_at: value.paired_at,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum FfiTransferDirection {
+    Send,
+    Receive,
+}
+
+impl From<TransferDirection> for FfiTransferDirection {
+    fn from(value: TransferDirection) -> Self {
+        match value {
+            TransferDirection::Send => Self::Send,
+            TransferDirection::Receive => Self::Receive,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum FfiTransferState {
+    PendingConsent,
+    Active,
+    Completed,
+    Cancelled,
+    Failed,
+}
+
+impl From<TransferState> for FfiTransferState {
+    fn from(value: TransferState) -> Self {
+        match value {
+            TransferState::PendingConsent => Self::PendingConsent,
+            TransferState::Active => Self::Active,
+            TransferState::Completed => Self::Completed,
+            TransferState::Cancelled => Self::Cancelled,
+            TransferState::Failed => Self::Failed,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct FfiTransferItem {
+    pub name: String,
+    pub mime_type: String,
+    pub size_bytes: u64,
+    pub is_directory: bool,
+    pub target_path: Option<String>,
+    pub checksum: Option<String>,
+}
+
+impl From<TransferItem> for FfiTransferItem {
+    fn from(value: TransferItem) -> Self {
+        Self {
+            name: value.name,
+            mime_type: value.mime_type,
+            size_bytes: value.size_bytes,
+            is_directory: value.is_directory,
+            target_path: value.target_path,
+            checksum: value.checksum,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct FfiTransferSession {
+    pub transfer_id: String,
+    pub peer_device_id: String,
+    pub direction: FfiTransferDirection,
+    pub items: Vec<FfiTransferItem>,
+    pub total_bytes: u64,
+    pub transferred_bytes: u64,
+    pub state: FfiTransferState,
+    pub started_at: String,
+}
+
+impl From<TransferSession> for FfiTransferSession {
+    fn from(value: TransferSession) -> Self {
+        Self {
+            transfer_id: value.transfer_id,
+            peer_device_id: value.peer_device_id,
+            direction: FfiTransferDirection::from(value.direction),
+            items: value.items.into_iter().map(FfiTransferItem::from).collect(),
+            total_bytes: value.total_bytes,
+            transferred_bytes: value.transferred_bytes,
+            state: FfiTransferState::from(value.state),
+            started_at: value.started_at,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct FfiLanEndpoint {
+    pub device_id: String,
+    pub endpoint_id: Vec<u8>,
+    pub socket_addrs: Vec<String>,
+    pub capability_flags: u32,
+    pub issued_at_ms: i64,
+}
+
+impl From<v1::LanEndpoint> for FfiLanEndpoint {
+    fn from(value: v1::LanEndpoint) -> Self {
+        Self {
+            device_id: value.device_id,
+            endpoint_id: value.endpoint_id,
+            socket_addrs: value.socket_addrs,
+            capability_flags: value.capability_flags,
+            issued_at_ms: value.issued_at_ms,
+        }
+    }
+}
+
+impl From<FfiLanEndpoint> for v1::LanEndpoint {
+    fn from(value: FfiLanEndpoint) -> Self {
+        Self {
+            device_id: value.device_id,
+            endpoint_id: value.endpoint_id,
+            socket_addrs: value.socket_addrs,
+            capability_flags: value.capability_flags,
+            issued_at_ms: value.issued_at_ms,
         }
     }
 }
@@ -683,6 +814,275 @@ impl CoreHandle {
         let store = PairedDeviceStore::new(PathBuf::from(devices_toml_path));
         store.remove(&device_id).map_err(FfiError::from)
     }
+
+    pub fn set_auto_accept_files(
+        &self,
+        devices_toml_path: String,
+        device_id: String,
+        enabled: bool,
+    ) -> Result<FfiPairedDevice, FfiError> {
+        let store = PairedDeviceStore::new(PathBuf::from(devices_toml_path));
+        let updated = store.set_auto_accept_files(&device_id, enabled)?;
+        Ok(FfiPairedDevice::from(updated))
+    }
+
+    pub fn encode_lan_endpoint(
+        &self,
+        endpoint: FfiLanEndpoint,
+        reconnect_key: Vec<u8>,
+    ) -> Result<Vec<u8>, FfiError> {
+        let key = to_key_32(&reconnect_key, "reconnectKey")?;
+        let proto_ep = v1::LanEndpoint::from(endpoint);
+        LanEndpointCodec::encode(&proto_ep, &key).map_err(FfiError::from)
+    }
+
+    pub fn decode_lan_endpoint(
+        &self,
+        encoded: Vec<u8>,
+        expected_device_id: String,
+        reconnect_key: Vec<u8>,
+    ) -> Result<FfiLanEndpoint, FfiError> {
+        let key = to_key_32(&reconnect_key, "reconnectKey")?;
+        let decoded = LanEndpointCodec::decode(&encoded, &expected_device_id, &key)?;
+        Ok(FfiLanEndpoint::from(decoded))
+    }
+}
+
+#[cfg(unix)]
+fn wrap_raw_fd(raw_fd: i32) -> Result<OwnedFd, KeynearError> {
+    if raw_fd < 0 {
+        return Err(KeynearError::Validation {
+            field: "rawFd",
+            message: "file descriptor must be non-negative".to_string(),
+        });
+    }
+    Ok(unsafe { OwnedFd::from_raw_fd(raw_fd) })
+}
+
+#[derive(uniffi::Object)]
+pub struct OrionNodeHandle {
+    runtime: Arc<tokio::runtime::Runtime>,
+    node: OrionQuicNode,
+    engine: Arc<TransferEngine>,
+    accept_task: Mutex<Option<tokio::task::JoinHandle<()>>>,
+}
+
+struct OrionNodeInit {
+    device_id: String,
+    display_name: String,
+    capability_flags: u32,
+    quic_secret_key: Vec<u8>,
+    incoming_directory: String,
+    auto_accept_from_paired: bool,
+    require_explicit_fd_for_single_file: bool,
+    bind_addr: Option<SocketAddr>,
+}
+
+impl OrionNodeHandle {
+    fn build_with_init(init: OrionNodeInit) -> Result<Self, FfiError> {
+        let key_bytes = to_key_32(&init.quic_secret_key, "quicSecretKey")?;
+        let runtime = Arc::new(
+            tokio::runtime::Builder::new_multi_thread()
+                .worker_threads(2)
+                .enable_all()
+                .build()
+                .map_err(|err| KeynearError::Transport(format!("tokio runtime failed: {err}")))?,
+        );
+        let config = OrionNodeConfig {
+            device_id: init.device_id,
+            display_name: init.display_name,
+            capability_flags: init.capability_flags,
+            quic_secret_key: Zeroizing::new(key_bytes),
+        };
+        let node = runtime.block_on(OrionQuicNode::bind(config, init.bind_addr))?;
+        let engine = Arc::new(TransferEngine::new(
+            PathBuf::from(init.incoming_directory),
+            init.auto_accept_from_paired,
+        ));
+        engine.set_require_explicit_fd_for_single_file(init.require_explicit_fd_for_single_file);
+
+        let accept_node = node.clone();
+        let accept_engine = Arc::clone(&engine);
+        let handle = runtime.spawn(async move {
+            loop {
+                match accept_node.accept_authenticated().await {
+                    Ok(Some((peer_id, conn))) => {
+                        let eng = Arc::clone(&accept_engine);
+                        tokio::spawn(async move {
+                            let _ = eng.handle_incoming_connection(peer_id, conn).await;
+                        });
+                    }
+                    Ok(None) => break,
+                    Err(_) => continue,
+                }
+            }
+        });
+
+        Ok(Self {
+            runtime,
+            node,
+            engine,
+            accept_task: Mutex::new(Some(handle)),
+        })
+    }
+}
+
+#[uniffi::export]
+impl OrionNodeHandle {
+    #[uniffi::constructor]
+    pub fn new(
+        device_id: String,
+        display_name: String,
+        capability_flags: u32,
+        quic_secret_key: Vec<u8>,
+        incoming_directory: String,
+        auto_accept_from_paired: bool,
+        require_explicit_fd_for_single_file: bool,
+    ) -> Result<Self, FfiError> {
+        Self::build_with_init(OrionNodeInit {
+            device_id,
+            display_name,
+            capability_flags,
+            quic_secret_key,
+            incoming_directory,
+            auto_accept_from_paired,
+            require_explicit_fd_for_single_file,
+            bind_addr: None,
+        })
+    }
+
+    pub fn local_lan_endpoint(&self) -> FfiLanEndpoint {
+        FfiLanEndpoint::from(self.node.local_lan_endpoint())
+    }
+
+    pub fn sync_peer(
+        &self,
+        device_id: String,
+        endpoint_id: Vec<u8>,
+        socket_addrs: Vec<String>,
+        reconnect_secret: Vec<u8>,
+        auto_accept_files: bool,
+    ) -> Result<(), FfiError> {
+        let eid = parse_endpoint_id_bytes(&endpoint_id)?;
+        let secret = to_key_32(&reconnect_secret, "reconnectSecret")?;
+        let parsed_addrs: Vec<SocketAddr> = socket_addrs
+            .iter()
+            .filter_map(|s| s.trim().parse::<SocketAddr>().ok())
+            .collect();
+        self.node
+            .register_peer(&device_id, eid, parsed_addrs, secret)?;
+        self.engine
+            .set_peer_auto_accept(&device_id, auto_accept_files)?;
+        Ok(())
+    }
+
+    pub fn remove_peer(&self, device_id: String) -> Result<(), FfiError> {
+        self.node.remove_peer(&device_id)?;
+        self.engine.remove_peer_policy(&device_id);
+        Ok(())
+    }
+
+    pub fn set_auto_accept_from_paired(&self, enabled: bool) {
+        self.engine.set_auto_accept_from_paired(enabled);
+    }
+
+    pub fn set_incoming_directory(&self, dir: String) -> Result<(), FfiError> {
+        self.engine
+            .set_incoming_directory(PathBuf::from(dir))
+            .map_err(FfiError::from)
+    }
+
+    pub fn list_transfers(&self) -> Vec<FfiTransferSession> {
+        self.engine
+            .list_transfers()
+            .into_iter()
+            .map(FfiTransferSession::from)
+            .collect()
+    }
+
+    pub fn respond_consent(
+        &self,
+        transfer_id: String,
+        accepted: bool,
+    ) -> Result<FfiTransferSession, FfiError> {
+        let session = self.engine.respond_consent(&transfer_id, accepted)?;
+        Ok(FfiTransferSession::from(session))
+    }
+
+    pub fn cancel_transfer(&self, transfer_id: String) -> Result<FfiTransferSession, FfiError> {
+        let session = self.engine.cancel_transfer(&transfer_id)?;
+        Ok(FfiTransferSession::from(session))
+    }
+
+    pub fn send_paths(
+        &self,
+        peer_device_id: String,
+        paths: Vec<String>,
+    ) -> Result<FfiTransferSession, FfiError> {
+        let path_bufs: Vec<PathBuf> = paths.into_iter().map(PathBuf::from).collect();
+        let session = self.runtime.block_on(self.engine.send_paths(
+            &self.node,
+            &peer_device_id,
+            &path_bufs,
+        ))?;
+        Ok(FfiTransferSession::from(session))
+    }
+
+    #[cfg(unix)]
+    pub fn send_fd(
+        &self,
+        peer_device_id: String,
+        file_name: String,
+        mime_type: String,
+        size_bytes: u64,
+        raw_fd: i32,
+    ) -> Result<FfiTransferSession, FfiError> {
+        let owned = wrap_raw_fd(raw_fd)?;
+        let file = File::from(owned);
+        let session = self.runtime.block_on(self.engine.send_file_handle(
+            &self.node,
+            &peer_device_id,
+            file_name,
+            mime_type,
+            size_bytes,
+            file,
+        ))?;
+        Ok(FfiTransferSession::from(session))
+    }
+
+    #[cfg(unix)]
+    pub fn provide_receive_fd(&self, transfer_id: String, raw_fd: i32) -> Result<(), FfiError> {
+        let owned = wrap_raw_fd(raw_fd)?;
+        let file = File::from(owned);
+        self.engine
+            .provide_receive_fd(&transfer_id, file)
+            .map_err(FfiError::from)
+    }
+
+    pub fn shutdown(&self) {
+        if let Some(task) = self
+            .accept_task
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .take()
+        {
+            task.abort();
+        }
+        self.runtime.block_on(self.node.close());
+    }
+}
+
+impl Drop for OrionNodeHandle {
+    fn drop(&mut self) {
+        if let Some(task) = self
+            .accept_task
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .take()
+        {
+            task.abort();
+        }
+    }
 }
 
 #[uniffi::export]
@@ -711,6 +1111,16 @@ pub fn ble_service_uuid_string() -> String {
 #[uniffi::export]
 pub fn ble_service_uuid16() -> u16 {
     KEYNEAR_BLE_SERVICE_UUID16
+}
+
+#[uniffi::export]
+pub fn lan_endpoint_char_uuid_string() -> String {
+    LAN_ENDPOINT_CHAR_UUID.to_string()
+}
+
+#[uniffi::export]
+pub fn lan_endpoint_char_uuid16() -> u16 {
+    LAN_ENDPOINT_CHAR_UUID16
 }
 
 #[uniffi::export]
@@ -885,6 +1295,7 @@ mod tests {
                     static_x25519_pubkey: "ab".repeat(32),
                     last_ble_address: "AA:BB:CC:DD:EE:FF".to_string(),
                     last_lan_address: String::new(),
+                    last_endpoint_id: String::new(),
                     capability_flags: 0x03,
                     auto_accept_files: false,
                     paired_at: "2026-11-13T20:00:00Z".to_string(),
@@ -965,5 +1376,157 @@ mod tests {
             handle.validate_control_frame(bad_bytes),
             Err(FfiError::Protocol { .. })
         ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn owned_fd_closes_once_on_drop() {
+        use std::os::fd::IntoRawFd;
+
+        assert!(matches!(
+            wrap_raw_fd(-1),
+            Err(KeynearError::Validation { field: "rawFd", .. })
+        ));
+
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!("keynear-fd-test-{nonce}.bin"));
+        let file = fs::File::create(&path).expect("create temp file");
+        let raw_fd = file.into_raw_fd();
+
+        {
+            let _owned = wrap_raw_fd(raw_fd).expect("wrap valid raw fd");
+        }
+
+        // Borrowing raw_fd after OwnedFd dropped must fail with EBADF (closed exactly once).
+        let reopened = unsafe { fs::File::from_raw_fd(raw_fd) };
+        let err = reopened.sync_all().expect_err("fd must already be closed");
+        std::mem::forget(reopened);
+        assert_eq!(err.raw_os_error(), Some(9));
+        let _ = fs::remove_file(&path);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn orion_node_handle_transfers_via_fd_and_cleans_up() {
+        use std::io::Write;
+        use std::net::{IpAddr, Ipv4Addr};
+        use std::os::fd::IntoRawFd;
+
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("keynear-orion-ffi-{nonce}"));
+        let recv_dir = dir.join("recv");
+        fs::create_dir_all(&recv_dir).expect("mkdir");
+
+        let loopback = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0);
+        let receiver = OrionNodeHandle::build_with_init(OrionNodeInit {
+            device_id: "rx-node".to_string(),
+            display_name: "Receiver".to_string(),
+            capability_flags: 1,
+            quic_secret_key: vec![0x71; 32],
+            incoming_directory: recv_dir.to_string_lossy().to_string(),
+            auto_accept_from_paired: false,
+            require_explicit_fd_for_single_file: true,
+            bind_addr: Some(loopback),
+        })
+        .expect("bind receiver");
+
+        let sender = OrionNodeHandle::build_with_init(OrionNodeInit {
+            device_id: "tx-node".to_string(),
+            display_name: "Sender".to_string(),
+            capability_flags: 1,
+            quic_secret_key: vec![0x72; 32],
+            incoming_directory: dir.to_string_lossy().to_string(),
+            auto_accept_from_paired: false,
+            require_explicit_fd_for_single_file: false,
+            bind_addr: Some(loopback),
+        })
+        .expect("bind sender");
+
+        let secret = vec![0x9A; 32];
+        let rx_ep = receiver.local_lan_endpoint();
+        let tx_ep = sender.local_lan_endpoint();
+
+        receiver
+            .sync_peer(
+                "tx-node".to_string(),
+                tx_ep.endpoint_id,
+                tx_ep.socket_addrs,
+                secret.clone(),
+                true,
+            )
+            .expect("rx sync");
+        sender
+            .sync_peer(
+                "rx-node".to_string(),
+                rx_ep.endpoint_id,
+                rx_ep.socket_addrs,
+                secret,
+                false,
+            )
+            .expect("tx sync");
+
+        let src_path = dir.join("send.txt");
+        let out_path = recv_dir.join("received.txt");
+        let payload = b"zero-copy OwnedFd UniFFI stream";
+        {
+            let mut f = fs::File::create(&src_path).expect("create src");
+            f.write_all(payload).expect("write src");
+        }
+        let send_file = fs::File::open(&src_path).expect("open src");
+        let send_raw_fd = send_file.into_raw_fd();
+
+        let tx_thread = thread::spawn(move || {
+            let res = sender.send_fd(
+                "rx-node".to_string(),
+                "send.txt".to_string(),
+                "text/plain".to_string(),
+                payload.len() as u64,
+                send_raw_fd,
+            );
+            sender.shutdown();
+            res
+        });
+
+        let transfer_id = loop {
+            if let Some(session) = receiver
+                .list_transfers()
+                .into_iter()
+                .find(|s| s.state == FfiTransferState::Active)
+            {
+                break session.transfer_id;
+            }
+            thread::sleep(Duration::from_millis(10));
+        };
+
+        let out_file = fs::File::create(&out_path).expect("create out");
+        receiver
+            .provide_receive_fd(transfer_id.clone(), out_file.into_raw_fd())
+            .expect("provide fd");
+
+        let sent = tx_thread.join().expect("join tx").expect("send_fd ok");
+        assert_eq!(sent.state, FfiTransferState::Completed);
+
+        loop {
+            if let Some(session) = receiver
+                .list_transfers()
+                .into_iter()
+                .find(|s| s.transfer_id == transfer_id)
+            {
+                if session.state == FfiTransferState::Completed {
+                    break;
+                }
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+
+        assert_eq!(fs::read(&out_path).expect("read received"), payload);
+        receiver.shutdown();
+        let _ = fs::remove_dir_all(&dir);
     }
 }

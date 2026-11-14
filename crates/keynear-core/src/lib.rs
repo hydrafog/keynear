@@ -8,6 +8,7 @@ pub mod pairing;
 pub mod presence;
 pub mod proto;
 pub mod quic;
+pub mod transfer;
 pub mod uniffi_bridge;
 
 uniffi::setup_scaffolding!();
@@ -46,6 +47,11 @@ pub use quic::{
     build_orion_crypto_provider, compute_handshake_auth_proof, parse_endpoint_id_bytes,
     parse_endpoint_id_hex, verify_handshake_auth_proof, OrionNodeConfig, OrionQuicNode,
 };
+pub use transfer::{
+    sanitize_relative_path, TransferEngine, TransferRegistry, MAX_ACTIVE_TRANSFERS,
+};
 pub use uniffi_bridge::{
-    default_config_summary, get_core_status, CoreHandle, CoreStatus, FfiError, FfiVisibilityMode,
+    default_config_summary, get_core_status, CoreHandle, CoreStatus, FfiError, FfiLanEndpoint,
+    FfiTransferDirection, FfiTransferItem, FfiTransferSession, FfiTransferState, FfiVisibilityMode,
+    OrionNodeHandle,
 };
