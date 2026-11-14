@@ -17,12 +17,12 @@ use zip::{CompressionMethod, ZipArchive, ZipWriter};
 
 use crate::error::KeynearError;
 use crate::model::{
-    TransferDirection, TransferItem, TransferSession, TransferState, sanitize_device_id,
+    sanitize_device_id, TransferDirection, TransferItem, TransferSession, TransferState,
     STREAM_CHUNK_BYTES, ZIP_IO_BUFFER_BYTES,
 };
 use crate::proto::{
-    QuicStreamKind, read_control_envelope, read_stream_kind, v1, write_control_envelope,
-    write_stream_kind,
+    read_control_envelope, read_stream_kind, v1, write_control_envelope, write_stream_kind,
+    QuicStreamKind,
 };
 use crate::quic::OrionQuicNode;
 
@@ -63,7 +63,11 @@ impl TransferRegistry {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         let mut list: Vec<TransferSession> = guard.values().map(|e| e.session.clone()).collect();
-        list.sort_by(|a, b| b.started_at.cmp(&a.started_at).then_with(|| a.transfer_id.cmp(&b.transfer_id)));
+        list.sort_by(|a, b| {
+            b.started_at
+                .cmp(&a.started_at)
+                .then_with(|| a.transfer_id.cmp(&b.transfer_id))
+        });
         list
     }
 
@@ -204,9 +208,9 @@ impl TransferRegistry {
             .entries
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let entry = guard.get_mut(transfer_id).ok_or_else(|| {
-            KeynearError::Transfer(format!("transfer '{transfer_id}' not found"))
-        })?;
+        let entry = guard
+            .get_mut(transfer_id)
+            .ok_or_else(|| KeynearError::Transfer(format!("transfer '{transfer_id}' not found")))?;
         if entry.session.state != TransferState::PendingConsent {
             return Err(KeynearError::Transfer(format!(
                 "transfer '{transfer_id}' is not awaiting consent"
@@ -230,9 +234,9 @@ impl TransferRegistry {
             .entries
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let entry = guard.get_mut(transfer_id).ok_or_else(|| {
-            KeynearError::Transfer(format!("transfer '{transfer_id}' not found"))
-        })?;
+        let entry = guard
+            .get_mut(transfer_id)
+            .ok_or_else(|| KeynearError::Transfer(format!("transfer '{transfer_id}' not found")))?;
         if matches!(
             entry.session.state,
             TransferState::Cancelled | TransferState::Failed | TransferState::Completed
@@ -258,9 +262,9 @@ impl TransferRegistry {
             .entries
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let entry = guard.get_mut(transfer_id).ok_or_else(|| {
-            KeynearError::Transfer(format!("transfer '{transfer_id}' not found"))
-        })?;
+        let entry = guard
+            .get_mut(transfer_id)
+            .ok_or_else(|| KeynearError::Transfer(format!("transfer '{transfer_id}' not found")))?;
         entry.cancel_flag.store(true, Ordering::Release);
         if matches!(
             entry.session.state,
@@ -512,8 +516,15 @@ impl TransferEngine {
         file: File,
     ) -> Result<TransferSession, KeynearError> {
         let conn = node.connect_peer(peer_device_id).await?;
-        self.send_file_handle_on_connection(&conn, peer_device_id, file_name, mime_type, size_bytes, file)
-            .await
+        self.send_file_handle_on_connection(
+            &conn,
+            peer_device_id,
+            file_name,
+            mime_type,
+            size_bytes,
+            file,
+        )
+        .await
     }
 
     pub async fn send_file_handle_on_connection(
@@ -575,20 +586,13 @@ impl TransferEngine {
                     None,
                     Some(&digest_hex),
                 );
-                self.registry
-                    .get_session(transfer_id)
-                    .ok_or_else(|| {
-                        KeynearError::Transfer("completed transfer session missing".to_string())
-                    })
+                self.registry.get_session(transfer_id).ok_or_else(|| {
+                    KeynearError::Transfer("completed transfer session missing".to_string())
+                })
             }
             Err(KeynearError::TransferCancelled(reason)) => {
-                self.registry.finish_transfer(
-                    transfer_id,
-                    TransferState::Cancelled,
-                    0,
-                    None,
-                    None,
-                );
+                self.registry
+                    .finish_transfer(transfer_id, TransferState::Cancelled, 0, None, None);
                 Err(KeynearError::TransferCancelled(reason))
             }
             Err(err) => {
@@ -606,10 +610,9 @@ impl TransferEngine {
         file: File,
         cancel_flag: &Arc<AtomicBool>,
     ) -> Result<String, KeynearError> {
-        let (mut send, mut recv) = conn
-            .open_bi()
-            .await
-            .map_err(|err| KeynearError::Transport(format!("open transfer stream failed: {err}")))?;
+        let (mut send, mut recv) = conn.open_bi().await.map_err(|err| {
+            KeynearError::Transport(format!("open transfer stream failed: {err}"))
+        })?;
 
         write_stream_kind(&mut send, QuicStreamKind::RawFileChunk).await?;
         let offer_env = wrap_payload(v1::envelope::Payload::TransferOffer(offer.clone()));
@@ -617,7 +620,8 @@ impl TransferEngine {
 
         await_transfer_consent(&mut recv, &offer.transfer_id).await?;
 
-        let (chunk_tx, mut chunk_rx) = mpsc::channel::<Result<Vec<u8>, KeynearError>>(PIPE_CHANNEL_SLOTS);
+        let (chunk_tx, mut chunk_rx) =
+            mpsc::channel::<Result<Vec<u8>, KeynearError>>(PIPE_CHANNEL_SLOTS);
         let cancel_reader = Arc::clone(cancel_flag);
         let reader_task = tokio::task::spawn_blocking(move || {
             let mut reader = BufReader::with_capacity(ZIP_IO_BUFFER_BYTES, file);
@@ -648,7 +652,8 @@ impl TransferEngine {
         let mut bytes_sent: u64 = 0;
         while let Some(item) = chunk_rx.recv().await {
             if cancel_flag.load(Ordering::Acquire) {
-                let _ = send_cancel_frame(&mut send, &offer.transfer_id, "cancelled_by_sender").await;
+                let _ =
+                    send_cancel_frame(&mut send, &offer.transfer_id, "cancelled_by_sender").await;
                 return Err(KeynearError::TransferCancelled(
                     "cancelled by sender".to_string(),
                 ));
@@ -657,7 +662,8 @@ impl TransferEngine {
             hasher.update(&chunk);
             write_data_chunk(&mut send, &chunk).await?;
             bytes_sent = bytes_sent.saturating_add(chunk.len() as u64);
-            self.registry.update_progress(&offer.transfer_id, bytes_sent);
+            self.registry
+                .update_progress(&offer.transfer_id, bytes_sent);
         }
 
         reader_task
@@ -665,8 +671,14 @@ impl TransferEngine {
             .map_err(|err| KeynearError::Transfer(format!("file reader task failed: {err}")))?;
 
         let digest: [u8; 32] = hasher.finalize().into();
-        send_completion_and_wait_ack(&mut send, &mut recv, &offer.transfer_id, bytes_sent, &digest)
-            .await?;
+        send_completion_and_wait_ack(
+            &mut send,
+            &mut recv,
+            &offer.transfer_id,
+            bytes_sent,
+            &digest,
+        )
+        .await?;
 
         Ok(hex::encode(digest))
     }
@@ -689,13 +701,15 @@ impl TransferEngine {
 
         await_transfer_consent(&mut recv, &offer.transfer_id).await?;
 
-        let (chunk_tx, mut chunk_rx) = mpsc::channel::<Result<Vec<u8>, KeynearError>>(PIPE_CHANNEL_SLOTS);
+        let (chunk_tx, mut chunk_rx) =
+            mpsc::channel::<Result<Vec<u8>, KeynearError>>(PIPE_CHANNEL_SLOTS);
         let cancel_writer = Arc::clone(cancel_flag);
         let writer_task = tokio::task::spawn_blocking(move || -> Result<(), KeynearError> {
             let channel_writer = ChannelChunkWriter::new(chunk_tx.clone(), cancel_writer);
             let buffered = BufWriter::with_capacity(ZIP_IO_BUFFER_BYTES, channel_writer);
             let mut zip = ZipWriter::new_stream(buffered);
-            let options = SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
+            let options =
+                SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
 
             for entry in entries {
                 if entry.is_dir {
@@ -714,7 +728,8 @@ impl TransferEngine {
                 if meta.file_type().is_symlink() || !meta.is_file() {
                     continue;
                 }
-                zip.start_file(&entry.archive_path, options).map_err(zip_err)?;
+                zip.start_file(&entry.archive_path, options)
+                    .map_err(zip_err)?;
                 let file = File::open(&src_path)?;
                 let mut reader = BufReader::with_capacity(ZIP_IO_BUFFER_BYTES, file);
                 let mut copy_buf = vec![0u8; STREAM_CHUNK_BYTES];
@@ -737,7 +752,8 @@ impl TransferEngine {
         let mut bytes_sent: u64 = 0;
         while let Some(item) = chunk_rx.recv().await {
             if cancel_flag.load(Ordering::Acquire) {
-                let _ = send_cancel_frame(&mut send, &offer.transfer_id, "cancelled_by_sender").await;
+                let _ =
+                    send_cancel_frame(&mut send, &offer.transfer_id, "cancelled_by_sender").await;
                 return Err(KeynearError::TransferCancelled(
                     "cancelled by sender".to_string(),
                 ));
@@ -746,7 +762,8 @@ impl TransferEngine {
             hasher.update(&chunk);
             write_data_chunk(&mut send, &chunk).await?;
             bytes_sent = bytes_sent.saturating_add(chunk.len() as u64);
-            self.registry.update_progress(&offer.transfer_id, bytes_sent);
+            self.registry
+                .update_progress(&offer.transfer_id, bytes_sent);
         }
 
         let writer_res = writer_task
@@ -755,8 +772,14 @@ impl TransferEngine {
         writer_res?;
 
         let digest: [u8; 32] = hasher.finalize().into();
-        send_completion_and_wait_ack(&mut send, &mut recv, &offer.transfer_id, bytes_sent, &digest)
-            .await?;
+        send_completion_and_wait_ack(
+            &mut send,
+            &mut recv,
+            &offer.transfer_id,
+            bytes_sent,
+            &digest,
+        )
+        .await?;
 
         Ok(hex::encode(digest))
     }
@@ -809,7 +832,9 @@ impl TransferEngine {
 
         let auto_accept = self.is_auto_accept_allowed(peer_device_id);
         let require_fd = kind == QuicStreamKind::RawFileChunk
-            && self.require_explicit_fd_for_single_file.load(Ordering::Acquire);
+            && self
+                .require_explicit_fd_for_single_file
+                .load(Ordering::Acquire);
 
         let reg = self.registry.register_inbound(
             peer_device_id.to_string(),
@@ -819,16 +844,14 @@ impl TransferEngine {
         )?;
 
         if let Some(consent_rx) = reg.consent_rx {
-            let accepted = match tokio::time::timeout(
-                Duration::from_secs(CONSENT_TIMEOUT_SECS),
-                consent_rx,
-            )
-            .await
-            {
-                Ok(Ok(true)) => true,
-                Ok(Ok(false)) => false,
-                Ok(Err(_)) | Err(_) => false,
-            };
+            let accepted =
+                match tokio::time::timeout(Duration::from_secs(CONSENT_TIMEOUT_SECS), consent_rx)
+                    .await
+                {
+                    Ok(Ok(true)) => true,
+                    Ok(Ok(false)) => false,
+                    Ok(Err(_)) | Err(_) => false,
+                };
             if !accepted {
                 self.registry.finish_transfer(
                     &offer.transfer_id,
@@ -856,8 +879,9 @@ impl TransferEngine {
                         None,
                         None,
                     );
-                    let _ = send_consent_frame(&mut send, &offer.transfer_id, false, "no_output_fd")
-                        .await;
+                    let _ =
+                        send_consent_frame(&mut send, &offer.transfer_id, false, "no_output_fd")
+                            .await;
                     let _ = send.finish();
                     return Err(KeynearError::TransferCancelled(
                         "no output file descriptor supplied".to_string(),
@@ -872,13 +896,8 @@ impl TransferEngine {
 
         let result = match kind {
             QuicStreamKind::RawFileChunk => {
-                self.receive_raw_file_stream(
-                    &offer,
-                    &mut recv,
-                    explicit_file,
-                    &reg.cancel_flag,
-                )
-                .await
+                self.receive_raw_file_stream(&offer, &mut recv, explicit_file, &reg.cancel_flag)
+                    .await
             }
             QuicStreamKind::StoredZipArchive => {
                 self.receive_zip_stream(&offer, &mut recv, &reg.cancel_flag)
@@ -929,8 +948,13 @@ impl TransferEngine {
             Err(err) => {
                 let _ = send_cancel_frame(&mut send, &offer.transfer_id, &err.to_string()).await;
                 let _ = send.finish();
-                self.registry
-                    .finish_transfer(&offer.transfer_id, TransferState::Failed, 0, None, None);
+                self.registry.finish_transfer(
+                    &offer.transfer_id,
+                    TransferState::Failed,
+                    0,
+                    None,
+                    None,
+                );
                 Err(err)
             }
         }
@@ -998,7 +1022,8 @@ impl TransferEngine {
                     ));
                 }
                 total_received = next_total;
-                self.registry.update_progress(&offer.transfer_id, total_received);
+                self.registry
+                    .update_progress(&offer.transfer_id, total_received);
             }
 
             drop(chunk_tx);
@@ -1228,13 +1253,12 @@ fn prepare_send_plan(paths: &[PathBuf]) -> Result<SendPlan, KeynearError> {
             ));
         }
         if meta.is_file() {
-            let file_name = path
-                .file_name()
-                .and_then(|s| s.to_str())
-                .ok_or_else(|| KeynearError::Validation {
+            let file_name = path.file_name().and_then(|s| s.to_str()).ok_or_else(|| {
+                KeynearError::Validation {
                     field: "path",
                     message: "source file has invalid filename".to_string(),
-                })?;
+                }
+            })?;
             let clean_name = sanitize_relative_path(file_name)?;
             let size = meta.len();
             let item = TransferItem {
@@ -1262,13 +1286,13 @@ fn prepare_send_plan(paths: &[PathBuf]) -> Result<SendPlan, KeynearError> {
         if meta.file_type().is_symlink() {
             continue;
         }
-        let base_name = path
-            .file_name()
-            .and_then(|s| s.to_str())
-            .ok_or_else(|| KeynearError::Validation {
-                field: "path",
-                message: "source path has invalid filename".to_string(),
-            })?;
+        let base_name =
+            path.file_name()
+                .and_then(|s| s.to_str())
+                .ok_or_else(|| KeynearError::Validation {
+                    field: "path",
+                    message: "source path has invalid filename".to_string(),
+                })?;
         let base_rel = sanitize_relative_path(base_name)?;
 
         if meta.is_dir() {
@@ -1474,9 +1498,8 @@ fn ensure_capacity(entries: &mut HashMap<String, TransferEntry>) -> Result<(), K
 }
 
 async fn write_data_chunk(send: &mut SendStream, chunk: &[u8]) -> Result<(), KeynearError> {
-    let len = u32::try_from(chunk.len()).map_err(|_| {
-        KeynearError::Transfer("data chunk exceeds u32 length".to_string())
-    })?;
+    let len = u32::try_from(chunk.len())
+        .map_err(|_| KeynearError::Transfer("data chunk exceeds u32 length".to_string()))?;
     if len == 0 || (len as usize) > STREAM_CHUNK_BYTES {
         return Err(KeynearError::Transfer(
             "data chunk length out of bounds".to_string(),
@@ -1649,10 +1672,7 @@ struct ChannelChunkWriter {
 }
 
 impl ChannelChunkWriter {
-    fn new(
-        tx: mpsc::Sender<Result<Vec<u8>, KeynearError>>,
-        cancel_flag: Arc<AtomicBool>,
-    ) -> Self {
+    fn new(tx: mpsc::Sender<Result<Vec<u8>, KeynearError>>, cancel_flag: Arc<AtomicBool>) -> Self {
         Self { tx, cancel_flag }
     }
 }
@@ -1669,9 +1689,9 @@ impl Write for ChannelChunkWriter {
             return Ok(0);
         }
         for slice in buf.chunks(STREAM_CHUNK_BYTES) {
-            self.tx
-                .blocking_send(Ok(slice.to_vec()))
-                .map_err(|_| std::io::Error::new(std::io::ErrorKind::BrokenPipe, "receiver closed"))?;
+            self.tx.blocking_send(Ok(slice.to_vec())).map_err(|_| {
+                std::io::Error::new(std::io::ErrorKind::BrokenPipe, "receiver closed")
+            })?;
         }
         Ok(buf.len())
     }
@@ -1862,7 +1882,10 @@ pub mod tests {
             .await
             .expect("send single file");
         assert_eq!(send_file_session.state, TransferState::Completed);
-        assert_eq!(send_file_session.transferred_bytes, single_bytes.len() as u64);
+        assert_eq!(
+            send_file_session.transferred_bytes,
+            single_bytes.len() as u64
+        );
 
         let send_dir_session = sender_engine
             .send_paths_on_connection(&client_conn, "server-1", std::slice::from_ref(&src_dir))
@@ -1924,7 +1947,10 @@ pub mod tests {
 
         let pending_id = loop {
             let list = receiver_engine.list_transfers();
-            if let Some(s) = list.into_iter().find(|s| s.state == TransferState::PendingConsent) {
+            if let Some(s) = list
+                .into_iter()
+                .find(|s| s.state == TransferState::PendingConsent)
+            {
                 break s.transfer_id;
             }
             tokio::time::sleep(Duration::from_millis(10)).await;
@@ -2020,9 +2046,12 @@ pub mod tests {
             }],
             total_bytes: 4,
         };
-        write_control_envelope(&mut send, &wrap_payload(v1::envelope::Payload::TransferOffer(offer)))
-            .await
-            .unwrap();
+        write_control_envelope(
+            &mut send,
+            &wrap_payload(v1::envelope::Payload::TransferOffer(offer)),
+        )
+        .await
+        .unwrap();
         await_transfer_consent(&mut recv, "tx-zipslip")
             .await
             .unwrap();
@@ -2030,7 +2059,14 @@ pub mod tests {
         let mut hasher = Sha256::new();
         hasher.update(&zip_bytes);
         let digest: [u8; 32] = hasher.finalize().into();
-        let _ = send_completion_and_wait_ack(&mut send, &mut recv, "tx-zipslip", zip_bytes.len() as u64, &digest).await;
+        let _ = send_completion_and_wait_ack(
+            &mut send,
+            &mut recv,
+            "tx-zipslip",
+            zip_bytes.len() as u64,
+            &digest,
+        )
+        .await;
 
         let res = recv_task.await.expect("join");
         assert!(matches!(res, Err(KeynearError::Transfer(_))));
@@ -2056,9 +2092,12 @@ pub mod tests {
             }],
             total_bytes: 4,
         };
-        write_control_envelope(&mut send2, &wrap_payload(v1::envelope::Payload::TransferOffer(offer2)))
-            .await
-            .unwrap();
+        write_control_envelope(
+            &mut send2,
+            &wrap_payload(v1::envelope::Payload::TransferOffer(offer2)),
+        )
+        .await
+        .unwrap();
         await_transfer_consent(&mut recv2, "tx-overflow")
             .await
             .unwrap();
@@ -2074,4 +2113,3 @@ pub mod tests {
         let _ = fs::remove_dir_all(&dir);
     }
 }
-
