@@ -1,15 +1,18 @@
 use aes_gcm::{
-    aead::{AeadInOut, Key, KeyInit},
+    aead::{Aead, AeadInOut, Key, KeyInit, Payload},
     aes::{cipher::consts::U12, Aes256},
-    AesGcm, Nonce, Tag,
+    Aes256Gcm, AesGcm, Nonce, Tag,
 };
 use hmac::{Hmac, KeyInit as HmacKeyInit, Mac};
+use prost::Message;
+use rand::Rng;
 use sha2::Sha256;
 use subtle::ConstantTimeEq;
 use uuid::Uuid;
 
 use crate::error::KeynearError;
 use crate::model::{sanitize_device_id, DeviceRole};
+use crate::proto::{v1, MAX_CONTROL_FRAME_BYTES};
 
 type HmacSha256 = Hmac<Sha256>;
 type BleAes256Gcm = AesGcm<Aes256, U12, U12>;
@@ -17,6 +20,8 @@ type BleAes256Gcm = AesGcm<Aes256, U12, U12>;
 pub const KEYNEAR_BLE_SERVICE_UUID16: u16 = 0xFE6D;
 pub const KEYNEAR_BLE_SERVICE_UUID: Uuid =
     Uuid::from_u128(0x0000_FE6D_0000_1000_8000_0080_5F9B_34FB);
+pub const LAN_ENDPOINT_CHAR_UUID16: u16 = 0xFE70;
+pub const LAN_ENDPOINT_CHAR_UUID: Uuid = Uuid::from_u128(0x0000_FE70_0000_1000_8000_0080_5F9B_34FB);
 pub const MAX_BLE_SERVICE_DATA_BYTES: usize = 24;
 pub const MAX_LEGACY_ADV_BYTES: usize = 31;
 pub const LEGACY_ADV_OVERHEAD_BYTES: usize = 7;
@@ -36,6 +41,12 @@ const MAX_BATTERY_PERCENT: u8 = 100;
 const PRESENCE_DOMAIN: &[u8] = b"keynear-presence-v1";
 const NONCE_PREFIX: [u8; 8] = *b"KN_BLE1_";
 const AAD_PREFIX: [u8; 3] = *b"KN1";
+const LAN_ENDPOINT_VERSION: u8 = 0x01;
+const LAN_ENDPOINT_AAD_PREFIX: &[u8] = b"KN_LAN1";
+const LAN_ENDPOINT_NONCE_BYTES: usize = 12;
+const LAN_ENDPOINT_TAG_BYTES: usize = 16;
+const LAN_ENDPOINT_MIN_LEN: usize = 1 + LAN_ENDPOINT_NONCE_BYTES + LAN_ENDPOINT_TAG_BYTES;
+const ED25519_PUBKEY_BYTES: usize = 32;
 
 const _: () = assert!(PAIRED_BEACON_LEN == MAX_BLE_SERVICE_DATA_BYTES);
 const _: () =
@@ -307,6 +318,131 @@ impl EveryoneNearbyBeacon {
     }
 }
 
+pub struct LanEndpointCodec;
+
+impl LanEndpointCodec {
+    pub fn encode(
+        endpoint: &v1::LanEndpoint,
+        reconnect_key: &[u8; 32],
+    ) -> Result<Vec<u8>, KeynearError> {
+        let clean_id = sanitize_device_id(&endpoint.device_id)?;
+        if endpoint.endpoint_id.len() != ED25519_PUBKEY_BYTES {
+            return Err(KeynearError::Validation {
+                field: "endpointId",
+                message: "endpoint_id must be 32 bytes".to_string(),
+            });
+        }
+        let mut normalized = endpoint.clone();
+        normalized.device_id = clean_id.clone();
+
+        let plaintext = normalized.encode_to_vec();
+        if plaintext.len() > MAX_CONTROL_FRAME_BYTES {
+            return Err(KeynearError::FrameTooLarge {
+                size: plaintext.len(),
+                max: MAX_CONTROL_FRAME_BYTES,
+            });
+        }
+
+        let mut nonce_bytes = [0u8; LAN_ENDPOINT_NONCE_BYTES];
+        rand::rng().fill_bytes(&mut nonce_bytes);
+
+        let mut aad = Vec::with_capacity(LAN_ENDPOINT_AAD_PREFIX.len() + clean_id.len());
+        aad.extend_from_slice(LAN_ENDPOINT_AAD_PREFIX);
+        aad.extend_from_slice(clean_id.as_bytes());
+
+        let cipher = Aes256Gcm::new(&Key::<Aes256Gcm>::from(*reconnect_key));
+        let ciphertext = cipher
+            .encrypt(
+                &Nonce::from(nonce_bytes),
+                Payload {
+                    msg: &plaintext,
+                    aad: &aad,
+                },
+            )
+            .map_err(|_| KeynearError::Crypto("lan endpoint encryption failed".to_string()))?;
+
+        let mut out = Vec::with_capacity(1 + LAN_ENDPOINT_NONCE_BYTES + ciphertext.len());
+        out.push(LAN_ENDPOINT_VERSION);
+        out.extend_from_slice(&nonce_bytes);
+        out.extend_from_slice(&ciphertext);
+        Ok(out)
+    }
+
+    pub fn decode(
+        encoded: &[u8],
+        expected_device_id: &str,
+        reconnect_key: &[u8; 32],
+    ) -> Result<v1::LanEndpoint, KeynearError> {
+        let clean_id = sanitize_device_id(expected_device_id)?;
+        if encoded.len() < LAN_ENDPOINT_MIN_LEN {
+            return Err(KeynearError::Validation {
+                field: "lanEndpoint",
+                message: "encrypted lan endpoint payload too short".to_string(),
+            });
+        }
+        if encoded.len() > MAX_CONTROL_FRAME_BYTES {
+            return Err(KeynearError::FrameTooLarge {
+                size: encoded.len(),
+                max: MAX_CONTROL_FRAME_BYTES,
+            });
+        }
+        if encoded[0] != LAN_ENDPOINT_VERSION {
+            return Err(KeynearError::Protocol(format!(
+                "unsupported lan endpoint codec version {}",
+                encoded[0]
+            )));
+        }
+
+        let mut nonce_bytes = [0u8; LAN_ENDPOINT_NONCE_BYTES];
+        nonce_bytes.copy_from_slice(&encoded[1..1 + LAN_ENDPOINT_NONCE_BYTES]);
+        let ciphertext = &encoded[1 + LAN_ENDPOINT_NONCE_BYTES..];
+
+        let mut aad = Vec::with_capacity(LAN_ENDPOINT_AAD_PREFIX.len() + clean_id.len());
+        aad.extend_from_slice(LAN_ENDPOINT_AAD_PREFIX);
+        aad.extend_from_slice(clean_id.as_bytes());
+
+        let cipher = Aes256Gcm::new(&Key::<Aes256Gcm>::from(*reconnect_key));
+        let plaintext = cipher
+            .decrypt(
+                &Nonce::from(nonce_bytes),
+                Payload {
+                    msg: ciphertext,
+                    aad: &aad,
+                },
+            )
+            .map_err(|_| KeynearError::Crypto("lan endpoint authentication failed".to_string()))?;
+
+        let decoded = v1::LanEndpoint::decode(plaintext.as_slice())
+            .map_err(|err| KeynearError::Protocol(err.to_string()))?;
+        if decoded.device_id != clean_id {
+            return Err(KeynearError::Crypto(
+                "lan endpoint device_id mismatch".to_string(),
+            ));
+        }
+        if decoded.endpoint_id.len() != ED25519_PUBKEY_BYTES {
+            return Err(KeynearError::Validation {
+                field: "endpointId",
+                message: "decoded endpoint_id must be 32 bytes".to_string(),
+            });
+        }
+        Ok(decoded)
+    }
+
+    pub fn decode_any<'a, I>(encoded: &[u8], candidates: I) -> Result<v1::LanEndpoint, KeynearError>
+    where
+        I: IntoIterator<Item = (&'a str, &'a [u8; 32])>,
+    {
+        for (device_id, reconnect_key) in candidates {
+            if let Ok(decoded) = Self::decode(encoded, device_id, reconnect_key) {
+                return Ok(decoded);
+            }
+        }
+        Err(KeynearError::UnauthorizedPeer(
+            "no paired peer authenticated encrypted lan endpoint".to_string(),
+        ))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -398,5 +534,53 @@ mod tests {
             PairedBeacon::decode_and_verify(&tampered_tag, "thinkpad-x1", 10, None, &key),
             Err(KeynearError::Crypto(_))
         ));
+    }
+
+    #[test]
+    fn lan_endpoint_codec_roundtrips_and_rejects_tampering() {
+        let key = [0x77; 32];
+        let payload = v1::LanEndpoint {
+            device_id: "pixel-9".to_string(),
+            endpoint_id: vec![0x33; 32],
+            socket_addrs: vec!["192.168.1.50:49000".to_string()],
+            capability_flags: 1,
+            issued_at_ms: 1_763_000_000_123,
+        };
+
+        let encoded = LanEndpointCodec::encode(&payload, &key).expect("encode lan endpoint");
+        let encoded_2 = LanEndpointCodec::encode(&payload, &key).expect("encode again");
+        assert_ne!(
+            encoded[1..13],
+            encoded_2[1..13],
+            "fresh random nonce must be used per encryption"
+        );
+
+        let decoded = LanEndpointCodec::decode(&encoded, "pixel-9", &key).expect("decode");
+        assert_eq!(decoded, payload);
+
+        let wrong_key = [0x88; 32];
+        assert!(matches!(
+            LanEndpointCodec::decode(&encoded, "pixel-9", &wrong_key),
+            Err(KeynearError::Crypto(_))
+        ));
+        assert!(matches!(
+            LanEndpointCodec::decode(&encoded, "other-device", &key),
+            Err(KeynearError::Crypto(_))
+        ));
+
+        let mut tampered = encoded.clone();
+        let last = tampered.len() - 1;
+        tampered[last] ^= 0x01;
+        assert!(matches!(
+            LanEndpointCodec::decode(&tampered, "pixel-9", &key),
+            Err(KeynearError::Crypto(_))
+        ));
+
+        let matched = LanEndpointCodec::decode_any(
+            &encoded,
+            [("other-device", &wrong_key), ("pixel-9", &key)],
+        )
+        .expect("decode_any matches pixel-9");
+        assert_eq!(matched, payload);
     }
 }

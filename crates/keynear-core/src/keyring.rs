@@ -2,8 +2,9 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::Mutex;
 
+use rand::Rng;
 use x25519_dalek::{PublicKey, StaticSecret};
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 use crate::error::KeynearError;
 use crate::model::{sanitize_device_id, PairedDevice, PairedDeviceStore};
@@ -61,6 +62,7 @@ impl fmt::Debug for PeerSecrets {
 
 pub trait SecretStore: Send + Sync {
     fn get_or_create_static_keypair(&self) -> Result<StaticKeypairRecord, KeynearError>;
+    fn get_or_create_quic_secret_key(&self) -> Result<Zeroizing<[u8; 32]>, KeynearError>;
     fn get_peer_secrets(&self, device_id: &str) -> Result<Option<PeerSecrets>, KeynearError>;
     fn put_peer_secrets(&self, device_id: &str, secrets: &PeerSecrets) -> Result<(), KeynearError>;
     fn delete_peer_secrets(&self, device_id: &str) -> Result<(), KeynearError>;
@@ -71,6 +73,7 @@ pub trait SecretStore: Send + Sync {
 #[derive(Default)]
 struct InMemoryState {
     static_keypair: Option<StaticKeypairRecord>,
+    quic_secret_key: Option<Zeroizing<[u8; 32]>>,
     peers: BTreeMap<String, PeerSecrets>,
     counter: u32,
 }
@@ -97,6 +100,20 @@ impl SecretStore for InMemorySecretStore {
         }
         let created = StaticKeypairRecord::generate();
         guard.static_keypair = Some(created.clone());
+        Ok(created)
+    }
+
+    fn get_or_create_quic_secret_key(&self) -> Result<Zeroizing<[u8; 32]>, KeynearError> {
+        let mut guard = self
+            .state
+            .lock()
+            .map_err(|_| KeynearError::Keyring("in-memory keyring mutex poisoned".to_string()))?;
+        if let Some(ref existing) = guard.quic_secret_key {
+            return Ok(existing.clone());
+        }
+        let mut created = Zeroizing::new([0u8; 32]);
+        rand::rng().fill_bytes(&mut created[..]);
+        guard.quic_secret_key = Some(created.clone());
         Ok(created)
     }
 
@@ -225,6 +242,7 @@ mod tests {
             static_x25519_pubkey: "abcd".to_string(),
             last_ble_address: "11:22:33:44:55:66".to_string(),
             last_lan_address: String::new(),
+            last_endpoint_id: String::new(),
             capability_flags: 1,
             auto_accept_files: false,
             paired_at: "2026-11-13T00:00:00Z".to_string(),
@@ -275,5 +293,14 @@ mod tests {
         assert!(!ps_dbg.contains(&hex::encode(ps.irk)));
         assert!(!ps_dbg.contains(&hex::encode(ps.reconnect_secret)));
         assert!(ps_dbg.contains("[REDACTED]"));
+    }
+
+    #[test]
+    fn in_memory_quic_secret_key_is_stable() {
+        let store = InMemorySecretStore::new();
+        let first = store.get_or_create_quic_secret_key().expect("create key");
+        let second = store.get_or_create_quic_secret_key().expect("reload key");
+        assert_eq!(*first, *second);
+        assert_ne!(*first, [0u8; 32]);
     }
 }

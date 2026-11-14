@@ -21,6 +21,7 @@ const KIND_ATTR_KEY: &str = "kind";
 const DEVICE_ATTR_KEY: &str = "device_id";
 
 const KIND_STATIC_KEYPAIR: &str = "static_x25519";
+const KIND_QUIC_SECRET_KEY: &str = "quic_ed25519";
 const KIND_PEER_SECRETS: &str = "peer_secrets";
 const KIND_PRESENCE_COUNTER: &str = "presence_counter";
 
@@ -266,6 +267,30 @@ impl SecretStore for Oo7SecretStore {
         })
     }
 
+    fn get_or_create_quic_secret_key(&self) -> Result<Zeroizing<[u8; 32]>, KeynearError> {
+        let backend = self.backend.clone();
+        self.exec(async move {
+            let attrs = [
+                (APP_ATTR_KEY, APP_ATTR_VAL),
+                (KIND_ATTR_KEY, KIND_QUIC_SECRET_KEY),
+            ];
+            if let Some(bytes) = get_secret_bytes(&backend, &attrs).await? {
+                if bytes.len() == 32 {
+                    let mut key = Zeroizing::new([0u8; 32]);
+                    key.copy_from_slice(&bytes);
+                    return Ok(key);
+                }
+                return Err(KeynearError::Keyring(
+                    "stored QUIC Ed25519 key has invalid length".to_string(),
+                ));
+            }
+            let mut created = Zeroizing::new([0u8; 32]);
+            rand::rng().fill_bytes(&mut created[..]);
+            put_secret_bytes(&backend, "Keynear QUIC Identity", &attrs, &created[..]).await?;
+            Ok(created)
+        })
+    }
+
     fn get_peer_secrets(&self, device_id: &str) -> Result<Option<PeerSecrets>, KeynearError> {
         let clean_id = sanitize_device_id(device_id)?;
         let backend = self.backend.clone();
@@ -427,6 +452,15 @@ mod tests {
         assert_eq!(kp1.public_key, kp2.public_key);
         assert_eq!(kp1.private_key, kp2.private_key);
 
+        let qk1 = store
+            .get_or_create_quic_secret_key()
+            .expect("create quic key");
+        let qk2 = store
+            .get_or_create_quic_secret_key()
+            .expect("reload quic key");
+        assert_eq!(*qk1, *qk2);
+        assert_ne!(*qk1, [0u8; 32]);
+
         let secrets = PeerSecrets {
             irk: [0x33; 32],
             reconnect_secret: [0x44; 32],
@@ -448,6 +482,12 @@ mod tests {
         drop(store);
 
         let reopened = Oo7SecretStore::open_file_only(&dir).expect("reopen file keyring");
+        assert_eq!(
+            *reopened
+                .get_or_create_quic_secret_key()
+                .expect("persisted quic key"),
+            *qk1
+        );
         assert_eq!(
             reopened.get_peer_secrets("pixel-9").expect("persisted"),
             Some(secrets)

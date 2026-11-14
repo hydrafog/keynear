@@ -32,6 +32,18 @@ pub enum KeynearError {
     #[error("bluetooth error: {0}")]
     Bluetooth(String),
 
+    #[error("transport error: {0}")]
+    Transport(String),
+
+    #[error("transfer error: {0}")]
+    Transfer(String),
+
+    #[error("transfer cancelled: {0}")]
+    TransferCancelled(String),
+
+    #[error("unauthorized peer: {0}")]
+    UnauthorizedPeer(String),
+
     #[error("i/o error: {0}")]
     Io(#[from] std::io::Error),
 }

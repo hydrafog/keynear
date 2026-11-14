@@ -131,6 +131,14 @@ pub enum FfiError {
     Keyring { detail: String },
     #[error("bluetooth error: {detail}")]
     Bluetooth { detail: String },
+    #[error("transport error: {detail}")]
+    Transport { detail: String },
+    #[error("transfer error: {detail}")]
+    Transfer { detail: String },
+    #[error("transfer cancelled: {detail}")]
+    TransferCancelled { detail: String },
+    #[error("unauthorized peer: {detail}")]
+    UnauthorizedPeer { detail: String },
     #[error("i/o error: {detail}")]
     Io { detail: String },
 }
@@ -153,6 +161,10 @@ impl From<KeynearError> for FfiError {
             KeynearError::PairingRejected => Self::PairingRejected,
             KeynearError::Keyring(detail) => Self::Keyring { detail },
             KeynearError::Bluetooth(detail) => Self::Bluetooth { detail },
+            KeynearError::Transport(detail) => Self::Transport { detail },
+            KeynearError::Transfer(detail) => Self::Transfer { detail },
+            KeynearError::TransferCancelled(detail) => Self::TransferCancelled { detail },
+            KeynearError::UnauthorizedPeer(detail) => Self::UnauthorizedPeer { detail },
             KeynearError::Io(io_err) => Self::Io {
                 detail: io_err.to_string(),
             },
@@ -205,6 +217,7 @@ impl From<FfiPairedDevice> for PairedDevice {
             static_x25519_pubkey: value.static_x25519_pubkey,
             last_ble_address: value.last_ble_address,
             last_lan_address: value.last_lan_address,
+            last_endpoint_id: String::new(),
             capability_flags: value.capability_flags,
             auto_accept_files: value.auto_accept_files,
             paired_at: value.paired_at,

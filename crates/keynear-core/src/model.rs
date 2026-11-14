@@ -10,6 +10,9 @@ use crate::error::KeynearError;
 
 pub const EVERYONE_NEARBY_TIMEOUT_SECS: u64 = 600;
 pub const PAIRING_TIMEOUT_SECS: u64 = 120;
+pub const STREAM_CHUNK_BYTES: usize = 61_440;
+pub const ZIP_IO_BUFFER_BYTES: usize = 1_048_576;
+pub const QUIC_ALPN: &[u8] = b"keynear/orion/1";
 const MAX_DEVICE_ID_BYTES: usize = 64;
 static TEMP_WRITE_SEQ: AtomicU64 = AtomicU64::new(0);
 
@@ -55,6 +58,8 @@ pub struct PairedDevice {
     pub static_x25519_pubkey: String,
     pub last_ble_address: String,
     pub last_lan_address: String,
+    #[serde(default)]
+    pub last_endpoint_id: String,
     pub capability_flags: u32,
     pub auto_accept_files: bool,
     pub paired_at: String,
@@ -354,6 +359,56 @@ impl PairedDeviceStore {
         let devices = self.load()?;
         Ok(devices.into_iter().find(|d| d.device_id == clean_id))
     }
+
+    pub fn set_auto_accept_files(
+        &self,
+        device_id: &str,
+        enabled: bool,
+    ) -> Result<PairedDevice, KeynearError> {
+        let clean_id = sanitize_device_id(device_id)?;
+        let mut devices = self.load()?;
+        let updated = {
+            let device = devices
+                .iter_mut()
+                .find(|d| d.device_id == clean_id)
+                .ok_or_else(|| KeynearError::Validation {
+                    field: "deviceId",
+                    message: format!("paired device '{clean_id}' not found"),
+                })?;
+            device.auto_accept_files = enabled;
+            device.clone()
+        };
+        self.save(&devices)?;
+        Ok(updated)
+    }
+
+    pub fn update_lan_endpoint(
+        &self,
+        device_id: &str,
+        endpoint_id: &str,
+        lan_address: &str,
+    ) -> Result<PairedDevice, KeynearError> {
+        let clean_id = sanitize_device_id(device_id)?;
+        let mut devices = self.load()?;
+        let updated = {
+            let device = devices
+                .iter_mut()
+                .find(|d| d.device_id == clean_id)
+                .ok_or_else(|| KeynearError::Validation {
+                    field: "deviceId",
+                    message: format!("paired device '{clean_id}' not found"),
+                })?;
+            if !endpoint_id.trim().is_empty() {
+                device.last_endpoint_id = endpoint_id.trim().to_string();
+            }
+            if !lan_address.trim().is_empty() {
+                device.last_lan_address = lan_address.trim().to_string();
+            }
+            device.clone()
+        };
+        self.save(&devices)?;
+        Ok(updated)
+    }
 }
 
 #[cfg(test)]
@@ -377,6 +432,7 @@ mod tests {
             static_x25519_pubkey: "pubkey-hex".to_string(),
             last_ble_address: "AA:BB:CC:DD:EE:FF".to_string(),
             last_lan_address: "192.168.1.10:5000".to_string(),
+            last_endpoint_id: String::new(),
             capability_flags: 1,
             auto_accept_files: true,
             paired_at: "2026-11-13T00:00:00Z".to_string(),
@@ -422,6 +478,29 @@ mod tests {
         assert!(!encoded.contains("reconnectSecret"));
         assert!(!encoded.contains("reconnect_secret"));
         assert!(!encoded.contains("private_key"));
+        assert!(!encoded.contains("quic_secret"));
+    }
+
+    #[test]
+    fn paired_device_store_updates_auto_accept_and_lan_endpoint() {
+        let path = unique_temp_path("orion-updates");
+        let store = PairedDeviceStore::new(&path);
+        let mut dev = sample_device("dev-orion", "Pixel");
+        dev.auto_accept_files = false;
+        store.upsert(dev).expect("upsert");
+
+        let updated = store
+            .set_auto_accept_files("dev-orion", true)
+            .expect("set auto accept");
+        assert!(updated.auto_accept_files);
+
+        let updated = store
+            .update_lan_endpoint("dev-orion", "0123abcd", "192.168.1.44:54321")
+            .expect("update lan endpoint");
+        assert_eq!(updated.last_endpoint_id, "0123abcd");
+        assert_eq!(updated.last_lan_address, "192.168.1.44:54321");
+
+        let _ = fs::remove_file(&path);
     }
 
     #[test]
