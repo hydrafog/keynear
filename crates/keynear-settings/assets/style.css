@@ -203,3 +203,16 @@ progressbar.keynear-progress > trough > progress {
   border-radius: 8px;
   min-height: 8px;
 }
+
+entry.keynear-entry {
+  min-height: 44px;
+  border-radius: 12px;
+  padding: 6px 12px;
+  background-color: #FAFBFD;
+  color: #07132B;
+}
+
+window.keynear-window.dark entry.keynear-entry {
+  background-color: #161821;
+  color: #F7F6F7;
+}

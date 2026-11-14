@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+paths=()
+
+if [ -n "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS:-}" ]; then
+  while IFS= read -r line; do
+    if [ -n "$line" ]; then
+      paths+=("$line")
+    fi
+  done <<< "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS"
+elif [ "$#" -gt 0 ]; then
+  paths=("$@")
+fi
+
+if [ "${#paths[@]}" -eq 0 ]; then
+  exit 0
+fi
+
+exec keynear-settings --share -- "${paths[@]}"
+

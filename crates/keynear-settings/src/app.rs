@@ -1,20 +1,107 @@
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use gtk4::gdk::Display;
 use gtk4::glib;
 use gtk4::pango::EllipsizeMode;
 use gtk4::prelude::*;
 use keynear_core::{
-    remove_paired_device, DaemonConfig, DeviceRole, NearbyPeer, PairedDevice, PairedDeviceStore,
-    SecretStore, TransferDirection, TransferSession, TransferState, VisibilityMode,
-    EVERYONE_NEARBY_TIMEOUT_SECS, PAIRING_TIMEOUT_SECS,
+    remove_paired_device, validate_display_name, DaemonConfig, DeviceRole, KeynearError,
+    NearbyPeer, PairedDevice, PairedDeviceStore, SecretStore, TransferDirection, TransferSession,
+    TransferState, VisibilityMode, EVERYONE_NEARBY_TIMEOUT_SECS, PAIRING_TIMEOUT_SECS,
 };
 use relm4::{ComponentParts, ComponentSender, RelmApp, SimpleComponent};
 
 use crate::ipc::{self, IpcRequest, IpcResponse};
 
 pub const STYLE_CSS: &str = include_str!("../assets/style.css");
+
+static PORTAL_TOKIO_RT: OnceLock<Result<tokio::runtime::Runtime, String>> = OnceLock::new();
+
+fn portal_runtime() -> Result<&'static tokio::runtime::Runtime, String> {
+    let entry = PORTAL_TOKIO_RT.get_or_init(|| {
+        tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .thread_name("keynear-portal")
+            .enable_all()
+            .build()
+            .map_err(|e| format!("failed to initialize portal runtime: {e}"))
+    });
+    match entry {
+        Ok(rt) => Ok(rt),
+        Err(err) => Err(err.clone()),
+    }
+}
+
+pub fn file_uri_to_path(uri: &str) -> Result<PathBuf, KeynearError> {
+    let after_scheme = uri.strip_prefix("file://").ok_or_else(|| KeynearError::Validation {
+        field: "uri",
+        message: format!("expected file:// URI, got '{uri}'"),
+    })?;
+    let raw_path = if let Some(rest) = after_scheme.strip_prefix("localhost/") {
+        format!("/{rest}")
+    } else if after_scheme.starts_with('/') {
+        after_scheme.to_string()
+    } else {
+        return Err(KeynearError::Validation {
+            field: "uri",
+            message: format!("unsupported non-local file URI '{uri}'"),
+        });
+    };
+
+    let bytes = raw_path.as_bytes();
+    let mut decoded = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' {
+            if i + 2 >= bytes.len() {
+                return Err(KeynearError::Validation {
+                    field: "uri",
+                    message: "truncated percent-encoding in file URI".to_string(),
+                });
+            }
+            let hi = (bytes[i + 1] as char).to_digit(16);
+            let lo = (bytes[i + 2] as char).to_digit(16);
+            match (hi, lo) {
+                (Some(h), Some(l)) => {
+                    decoded.push(((h << 4) | l) as u8);
+                    i += 3;
+                }
+                _ => {
+                    return Err(KeynearError::Validation {
+                        field: "uri",
+                        message: "invalid hex escape in file URI".to_string(),
+                    });
+                }
+            }
+        } else {
+            decoded.push(bytes[i]);
+            i += 1;
+        }
+    }
+
+    if decoded.is_empty() || decoded.contains(&0) {
+        return Err(KeynearError::Validation {
+            field: "uri",
+            message: "file URI resolves to an empty or NUL path".to_string(),
+        });
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::ffi::OsStringExt;
+        Ok(PathBuf::from(std::ffi::OsString::from_vec(decoded)))
+    }
+    #[cfg(not(unix))]
+    {
+        String::from_utf8(decoded)
+            .map(PathBuf::from)
+            .map_err(|_| KeynearError::Validation {
+                field: "uri",
+                message: "file URI is not valid UTF-8".to_string(),
+            })
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PendingPairingView {
@@ -27,45 +114,77 @@ pub struct PendingPairingView {
 #[derive(Clone)]
 pub struct SettingsInit {
     pub config: DaemonConfig,
+    pub config_path: Option<PathBuf>,
+    pub everyone_remaining_secs: Option<u64>,
     pub error_message: Option<String>,
     pub warning_message: Option<String>,
+    pub transfer_error: Option<String>,
     pub paired_devices: Vec<PairedDevice>,
     pub nearby_peers: Vec<NearbyPeer>,
     pub transfers: Vec<TransferSession>,
+    pub send_paths: Vec<PathBuf>,
+    pub selected_send_device_id: Option<String>,
+    pub send_picker_active: bool,
     pub device_store: PairedDeviceStore,
     pub secret_store: Option<Arc<dyn SecretStore>>,
     pub ipc_socket_path: Option<PathBuf>,
 }
 
 pub struct SettingsModel {
+    config: DaemonConfig,
+    config_path: Option<PathBuf>,
     visibility_mode: VisibilityMode,
     everyone_remaining_secs: u64,
     incoming_directory: String,
     error_message: Option<String>,
     warning_message: Option<String>,
     transfer_error: Option<String>,
+    send_error: Option<String>,
     nearby_peers: Vec<NearbyPeer>,
     paired_devices: Vec<PairedDevice>,
     transfers: Vec<TransferSession>,
+    send_paths: Vec<PathBuf>,
+    selected_send_device_id: Option<String>,
+    send_picker_active: bool,
+    sending_in_flight: bool,
+    renaming_device_id: Option<String>,
+    rename_draft: String,
     pending_pairing: Option<PendingPairingView>,
     pending_unpair_id: Option<String>,
     device_store: PairedDeviceStore,
     secret_store: Option<Arc<dyn SecretStore>>,
     ipc_socket_path: Option<PathBuf>,
+    root_window: Option<gtk4::Window>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SettingsMsg {
-    CycleVisibility,
+    SetVisibility(VisibilityMode),
     Tick,
     RefreshPeers,
+    RetryDaemon,
     BeginPair(String),
     ConfirmPairing,
     CancelPairing,
     RequestUnpair(String),
     ConfirmUnpair(String),
     CancelUnpair,
+    StartRename(String),
+    UpdateRenameDraft(String),
+    SubmitRename { device_id: String, display_name: String },
+    CancelRename,
     SetAutoAcceptFiles { device_id: String, enabled: bool },
+    SetGlobalAutoAccept(bool),
+    PickSendFiles,
+    PickSendFolder,
+    StageSendPaths(Vec<PathBuf>),
+    ClearSendPaths,
+    SelectSendDevice(String),
+    SendStagedFiles,
+    SendCompleted(Result<TransferSession, String>),
+    PickIncomingDirectory,
+    SetIncomingDirectory(String),
+    PortalError(String),
     AcceptTransfer(String),
     DeclineTransfer(String),
     CancelTransfer(String),
@@ -73,17 +192,29 @@ pub enum SettingsMsg {
 
 pub struct SettingsWidgets {
     visibility_value: gtk4::Label,
+    vis_hidden_btn: gtk4::Button,
+    vis_paired_btn: gtk4::Button,
+    vis_everyone_btn: gtk4::Button,
     status_banner: gtk4::Box,
     status_banner_label: gtk4::Label,
     pairing_card: gtk4::Box,
     pairing_peer_label: gtk4::Label,
     pairing_code_label: gtk4::Label,
     pairing_timer_label: gtk4::Label,
+    send_card: gtk4::Box,
+    send_paths_label: gtk4::Label,
+    send_targets_box: gtk4::Box,
+    send_clear_btn: gtk4::Button,
+    send_submit_btn: gtk4::Button,
+    send_error_banner: gtk4::Box,
+    send_error_label: gtk4::Label,
     transfers_error_banner: gtk4::Box,
     transfers_error_label: gtk4::Label,
     transfers_list_box: gtk4::Box,
     nearby_list_box: gtk4::Box,
     paired_list_box: gtk4::Box,
+    global_auto_accept_switch: gtk4::Switch,
+    dir_value: gtk4::Label,
 }
 
 pub fn format_visibility_label(mode: VisibilityMode, remaining_secs: u64) -> String {
@@ -95,14 +226,6 @@ pub fn format_visibility_label(mode: VisibilityMode, remaining_secs: u64) -> Str
             let secs = remaining_secs % 60;
             format!("Everyone ({mins:02}:{secs:02})")
         }
-    }
-}
-
-fn next_visibility(mode: VisibilityMode) -> VisibilityMode {
-    match mode {
-        VisibilityMode::Hidden => VisibilityMode::PairedOnly,
-        VisibilityMode::PairedOnly => VisibilityMode::EveryoneNearby,
-        VisibilityMode::EveryoneNearby => VisibilityMode::Hidden,
     }
 }
 
@@ -122,25 +245,43 @@ fn clear_box_children(container: &gtk4::Box) {
 impl SettingsModel {
     pub fn from_init(init: SettingsInit) -> Self {
         let remaining = if init.config.visibility_mode == VisibilityMode::EveryoneNearby {
-            EVERYONE_NEARBY_TIMEOUT_SECS
+            init.everyone_remaining_secs
+                .unwrap_or(EVERYONE_NEARBY_TIMEOUT_SECS)
         } else {
             0
         };
+        let selected_send_device_id = init.selected_send_device_id.or_else(|| {
+            if init.paired_devices.len() == 1 {
+                Some(init.paired_devices[0].device_id.clone())
+            } else {
+                None
+            }
+        });
         Self {
             visibility_mode: init.config.visibility_mode,
             everyone_remaining_secs: remaining,
-            incoming_directory: init.config.incoming_directory,
+            incoming_directory: init.config.incoming_directory.clone(),
+            config: init.config,
+            config_path: init.config_path,
             error_message: init.error_message,
             warning_message: init.warning_message,
-            transfer_error: None,
+            transfer_error: init.transfer_error,
+            send_error: None,
             nearby_peers: init.nearby_peers,
             paired_devices: init.paired_devices,
             transfers: init.transfers,
+            send_paths: init.send_paths,
+            selected_send_device_id,
+            send_picker_active: init.send_picker_active,
+            sending_in_flight: false,
+            renaming_device_id: None,
+            rename_draft: String::new(),
             pending_pairing: None,
             pending_unpair_id: None,
             device_store: init.device_store,
             secret_store: init.secret_store,
             ipc_socket_path: init.ipc_socket_path,
+            root_window: None,
         }
     }
 
@@ -169,6 +310,31 @@ impl SettingsModel {
     }
 
     #[cfg(test)]
+    pub fn send_paths(&self) -> &[PathBuf] {
+        &self.send_paths
+    }
+
+    #[cfg(test)]
+    pub fn selected_send_device_id(&self) -> Option<&str> {
+        self.selected_send_device_id.as_deref()
+    }
+
+    #[cfg(test)]
+    pub fn send_error(&self) -> Option<&str> {
+        self.send_error.as_deref()
+    }
+
+    #[cfg(test)]
+    pub fn auto_accept_from_paired(&self) -> bool {
+        self.config.auto_accept_from_paired
+    }
+
+    #[cfg(test)]
+    pub fn incoming_directory(&self) -> &str {
+        &self.incoming_directory
+    }
+
+    #[cfg(test)]
     pub fn pending_pairing(&self) -> Option<&PendingPairingView> {
         self.pending_pairing.as_ref()
     }
@@ -187,10 +353,102 @@ impl SettingsModel {
         self.pending_pairing = Some(prompt);
     }
 
-    fn refresh_transfers_from_ipc(&mut self) {
+    fn persist_config(&mut self) {
+        if let Some(ref path) = self.config_path {
+            if let Err(err) = self.config.save_to_path(path) {
+                self.error_message = Some(err.to_string());
+                return;
+            }
+        }
+        if let Some(ref sock_path) = self.ipc_socket_path {
+            match ipc::send_request_to(
+                sock_path,
+                &IpcRequest::UpdateConfig {
+                    config: self.config.clone(),
+                },
+            ) {
+                Ok(IpcResponse::Config(updated)) => {
+                    self.incoming_directory = updated.incoming_directory.clone();
+                    self.config = updated;
+                    self.transfer_error = None;
+                }
+                Ok(IpcResponse::Error { message }) => {
+                    self.error_message = Some(message);
+                }
+                Ok(_) => {}
+                Err(_) => {
+                    // Daemon may be offline while editing config locally.
+                }
+            }
+        }
+    }
+
+    fn apply_visibility_mode(&mut self, mode: VisibilityMode) {
+        self.visibility_mode = mode;
+        self.config.visibility_mode = mode;
+        self.everyone_remaining_secs = if mode == VisibilityMode::EveryoneNearby {
+            EVERYONE_NEARBY_TIMEOUT_SECS
+        } else {
+            0
+        };
+        if let Some(ref path) = self.config_path {
+            if let Err(err) = self.config.save_to_path(path) {
+                self.error_message = Some(err.to_string());
+            }
+        }
+        if let Some(ref sock_path) = self.ipc_socket_path {
+            match ipc::send_request_to(sock_path, &IpcRequest::SetVisibility { mode }) {
+                Ok(IpcResponse::Status(status)) => {
+                    self.visibility_mode = status.visibility_mode;
+                    self.config.visibility_mode = status.visibility_mode;
+                    self.everyone_remaining_secs = status.everyone_remaining_secs.unwrap_or(0);
+                    self.transfer_error = None;
+                }
+                Ok(IpcResponse::Error { message }) => {
+                    self.error_message = Some(message);
+                }
+                Ok(_) => {}
+                Err(_) => {
+                    // Daemon may be offline while configuring settings locally.
+                }
+            }
+        }
+    }
+
+    fn refresh_from_daemon(&mut self, surface_error: bool) {
         let Some(ref sock_path) = self.ipc_socket_path else {
+            if surface_error {
+                self.transfer_error = Some("Daemon IPC socket is not configured.".to_string());
+            }
             return;
         };
+        match ipc::send_request_to(sock_path, &IpcRequest::Status) {
+            Ok(IpcResponse::Status(status)) => {
+                self.visibility_mode = status.visibility_mode;
+                self.config.visibility_mode = status.visibility_mode;
+                self.everyone_remaining_secs = status.everyone_remaining_secs.unwrap_or(0);
+                self.config.auto_accept_from_paired = status.auto_accept_from_paired;
+                self.incoming_directory = status.incoming_directory.clone();
+                self.config.incoming_directory = status.incoming_directory;
+                self.transfer_error = None;
+            }
+            Ok(IpcResponse::Error { message }) => {
+                self.transfer_error = Some(message);
+                return;
+            }
+            Ok(_) => {
+                self.transfer_error = Some("Unexpected daemon IPC response.".to_string());
+                return;
+            }
+            Err(err) => {
+                if surface_error {
+                    self.transfer_error = Some(format!(
+                        "Keynear daemon unavailable ({err}); start keynear-linux and retry."
+                    ));
+                }
+                return;
+            }
+        }
         match ipc::send_request_to(sock_path, &IpcRequest::ListTransfers) {
             Ok(IpcResponse::Transfers(list)) => {
                 self.transfers = list;
@@ -202,10 +460,16 @@ impl SettingsModel {
             Ok(_) => {
                 self.transfer_error = Some("Unexpected daemon IPC response.".to_string());
             }
-            Err(_) => {
-                // Daemon may not be running while configuring settings offline.
+            Err(err) => {
+                if surface_error {
+                    self.transfer_error = Some(err.to_string());
+                }
             }
         }
+    }
+
+    fn refresh_transfers_from_ipc(&mut self) {
+        self.refresh_from_daemon(false);
     }
 
     fn send_transfer_action(&mut self, request: IpcRequest) {
@@ -240,14 +504,8 @@ impl SettingsModel {
 
     pub fn apply_msg(&mut self, msg: SettingsMsg) {
         match msg {
-            SettingsMsg::CycleVisibility => {
-                self.visibility_mode = next_visibility(self.visibility_mode);
-                self.everyone_remaining_secs =
-                    if self.visibility_mode == VisibilityMode::EveryoneNearby {
-                        EVERYONE_NEARBY_TIMEOUT_SECS
-                    } else {
-                        0
-                    };
+            SettingsMsg::SetVisibility(mode) => {
+                self.apply_visibility_mode(mode);
             }
             SettingsMsg::Tick => {
                 if self.visibility_mode == VisibilityMode::EveryoneNearby {
@@ -279,7 +537,13 @@ impl SettingsModel {
                         self.error_message = Some(err.to_string());
                     }
                 }
-                self.refresh_transfers_from_ipc();
+                self.refresh_from_daemon(false);
+            }
+            SettingsMsg::RetryDaemon => {
+                if let Ok(devices) = self.device_store.load() {
+                    self.paired_devices = devices;
+                }
+                self.refresh_from_daemon(true);
             }
             SettingsMsg::BeginPair(peer_token) => {
                 if let Some(peer) = self
@@ -329,7 +593,97 @@ impl SettingsModel {
                     return;
                 }
                 self.paired_devices.retain(|d| d.device_id != device_id);
+                if self.selected_send_device_id.as_deref() == Some(device_id.as_str()) {
+                    self.selected_send_device_id = None;
+                }
+                if self.renaming_device_id.as_deref() == Some(device_id.as_str()) {
+                    self.renaming_device_id = None;
+                    self.rename_draft.clear();
+                }
                 self.pending_unpair_id = None;
+                self.error_message = None;
+            }
+            SettingsMsg::StartRename(device_id) => {
+                if let Some(dev) = self
+                    .paired_devices
+                    .iter()
+                    .find(|d| d.device_id == device_id)
+                {
+                    self.renaming_device_id = Some(dev.device_id.clone());
+                    self.rename_draft = dev.display_name.clone();
+                    self.error_message = None;
+                }
+            }
+            SettingsMsg::UpdateRenameDraft(text) => {
+                self.rename_draft = text;
+            }
+            SettingsMsg::CancelRename => {
+                self.renaming_device_id = None;
+                self.rename_draft.clear();
+            }
+            SettingsMsg::SubmitRename {
+                device_id,
+                display_name,
+            } => {
+                let clean = match validate_display_name(&display_name) {
+                    Ok(clean) => clean,
+                    Err(err) => {
+                        self.error_message = Some(err.to_string());
+                        return;
+                    }
+                };
+                let mut renamed = match self.device_store.rename(&device_id, &clean) {
+                    Ok(device) => Some(device),
+                    Err(KeynearError::Validation {
+                        field: "deviceId",
+                        ..
+                    }) => self
+                        .paired_devices
+                        .iter()
+                        .find(|d| d.device_id == device_id)
+                        .cloned()
+                        .map(|mut dev| {
+                            dev.display_name = clean.clone();
+                            dev
+                        }),
+                    Err(err) => {
+                        self.error_message = Some(err.to_string());
+                        return;
+                    }
+                };
+                if let Some(ref sock_path) = self.ipc_socket_path {
+                    match ipc::send_request_to(
+                        sock_path,
+                        &IpcRequest::RenameDevice {
+                            device_id: device_id.clone(),
+                            display_name: clean.clone(),
+                        },
+                    ) {
+                        Ok(IpcResponse::Device(dev)) => renamed = Some(dev),
+                        Ok(IpcResponse::Error { message }) => {
+                            self.error_message = Some(message);
+                            return;
+                        }
+                        Ok(_) => {}
+                        Err(_) => {}
+                    }
+                }
+                if let Ok(devices) = self.device_store.load() {
+                    if !devices.is_empty() {
+                        self.paired_devices = devices;
+                    }
+                }
+                if let Some(dev) = renamed {
+                    if let Some(slot) = self
+                        .paired_devices
+                        .iter_mut()
+                        .find(|d| d.device_id == dev.device_id)
+                    {
+                        *slot = dev;
+                    }
+                }
+                self.renaming_device_id = None;
+                self.rename_draft.clear();
                 self.error_message = None;
             }
             SettingsMsg::SetAutoAcceptFiles { device_id, enabled } => {
@@ -357,9 +711,81 @@ impl SettingsModel {
                     }
                     Err(err) => {
                         self.error_message = Some(err.to_string());
+                        return;
+                    }
+                }
+                if let Some(ref sock_path) = self.ipc_socket_path {
+                    let _ = ipc::send_request_to(
+                        sock_path,
+                        &IpcRequest::SetDeviceAutoAccept { device_id, enabled },
+                    );
+                }
+            }
+            SettingsMsg::SetGlobalAutoAccept(enabled) => {
+                if self.config.auto_accept_from_paired == enabled {
+                    return;
+                }
+                self.config.auto_accept_from_paired = enabled;
+                self.error_message = None;
+                self.persist_config();
+            }
+            SettingsMsg::StageSendPaths(paths) => {
+                for path in paths {
+                    if !self.send_paths.contains(&path) {
+                        self.send_paths.push(path);
+                    }
+                }
+                self.send_error = None;
+            }
+            SettingsMsg::ClearSendPaths => {
+                self.send_paths.clear();
+                self.send_error = None;
+            }
+            SettingsMsg::SelectSendDevice(device_id) => {
+                self.selected_send_device_id = Some(device_id);
+                self.send_error = None;
+            }
+            SettingsMsg::SendCompleted(result) => {
+                self.sending_in_flight = false;
+                match result {
+                    Ok(session) => {
+                        if let Some(existing) = self
+                            .transfers
+                            .iter_mut()
+                            .find(|t| t.transfer_id == session.transfer_id)
+                        {
+                            *existing = session;
+                        } else {
+                            self.transfers.insert(0, session);
+                        }
+                        self.send_paths.clear();
+                        self.send_error = None;
+                        self.transfer_error = None;
+                    }
+                    Err(err) => {
+                        self.send_error = Some(err);
                     }
                 }
             }
+            SettingsMsg::SetIncomingDirectory(dir) => {
+                let clean = dir.trim().to_string();
+                if clean.is_empty() {
+                    self.error_message =
+                        Some("Incoming directory must not be empty.".to_string());
+                    return;
+                }
+                self.incoming_directory = clean.clone();
+                self.config.incoming_directory = clean;
+                self.error_message = None;
+                self.persist_config();
+            }
+            SettingsMsg::PortalError(err) => {
+                self.error_message = Some(err);
+            }
+            SettingsMsg::PickSendFiles
+            | SettingsMsg::PickSendFolder
+            | SettingsMsg::SendStagedFiles
+            | SettingsMsg::PickIncomingDirectory => {}
             SettingsMsg::AcceptTransfer(transfer_id) => {
                 self.send_transfer_action(IpcRequest::AcceptTransfer { transfer_id });
             }
@@ -461,12 +887,36 @@ fn rebuild_nearby_rows(
     }
 }
 
+fn paired_rows_signature(
+    devices: &[PairedDevice],
+    pending_unpair_id: Option<&str>,
+    renaming_device_id: Option<&str>,
+) -> String {
+    let mut parts = Vec::with_capacity(devices.len() + 2);
+    parts.push(pending_unpair_id.unwrap_or("-").to_string());
+    parts.push(renaming_device_id.unwrap_or("-").to_string());
+    for dev in devices {
+        parts.push(format!(
+            "{}:{}:{}",
+            dev.device_id, dev.display_name, dev.auto_accept_files
+        ));
+    }
+    parts.join("|")
+}
+
 fn rebuild_paired_rows(
     container: &gtk4::Box,
     devices: &[PairedDevice],
     pending_unpair_id: Option<&str>,
+    renaming_device_id: Option<&str>,
+    rename_draft: &str,
     sender: &ComponentSender<SettingsModel>,
 ) {
+    let sig = paired_rows_signature(devices, pending_unpair_id, renaming_device_id);
+    if container.widget_name() == sig {
+        return;
+    }
+    container.set_widget_name(&sig);
     clear_box_children(container);
     if devices.is_empty() {
         let empty_card = gtk4::Box::builder()
@@ -556,6 +1006,14 @@ fn rebuild_paired_rows(
             row.append(&confirm_btn);
             row.append(&cancel_btn);
         } else {
+            let rename_btn = gtk4::Button::builder().label("Rename").build();
+            rename_btn.add_css_class("keynear-secondary");
+            let id_rename = device.device_id.clone();
+            let s_rename = sender.clone();
+            rename_btn.connect_clicked(move |_| {
+                s_rename.input(SettingsMsg::StartRename(id_rename.clone()));
+            });
+
             let unpair_btn = gtk4::Button::builder().label("Unpair").build();
             unpair_btn.add_css_class("keynear-secondary");
             let id_req = device.device_id.clone();
@@ -563,10 +1021,69 @@ fn rebuild_paired_rows(
             unpair_btn.connect_clicked(move |_| {
                 s_req.input(SettingsMsg::RequestUnpair(id_req.clone()));
             });
+
+            row.append(&rename_btn);
             row.append(&unpair_btn);
         }
 
         outer.append(&row);
+
+        if renaming_device_id == Some(device.device_id.as_str()) {
+            let rename_row = gtk4::Box::builder()
+                .orientation(gtk4::Orientation::Horizontal)
+                .spacing(8)
+                .build();
+            let entry = gtk4::Entry::builder()
+                .text(rename_draft)
+                .placeholder_text("Device name")
+                .hexpand(true)
+                .build();
+            entry.add_css_class("keynear-entry");
+            {
+                let s_draft = sender.clone();
+                entry.connect_changed(move |e| {
+                    s_draft.input(SettingsMsg::UpdateRenameDraft(e.text().to_string()));
+                });
+            }
+            {
+                let id_enter = device.device_id.clone();
+                let s_enter = sender.clone();
+                entry.connect_activate(move |e| {
+                    s_enter.input(SettingsMsg::SubmitRename {
+                        device_id: id_enter.clone(),
+                        display_name: e.text().to_string(),
+                    });
+                });
+            }
+
+            let save_btn = gtk4::Button::builder().label("Save").build();
+            save_btn.add_css_class("keynear-primary");
+            {
+                let id_save = device.device_id.clone();
+                let s_save = sender.clone();
+                let entry_ref = entry.clone();
+                save_btn.connect_clicked(move |_| {
+                    s_save.input(SettingsMsg::SubmitRename {
+                        device_id: id_save.clone(),
+                        display_name: entry_ref.text().to_string(),
+                    });
+                });
+            }
+
+            let cancel_btn = gtk4::Button::builder().label("Cancel").build();
+            cancel_btn.add_css_class("keynear-secondary");
+            {
+                let s_cancel = sender.clone();
+                cancel_btn.connect_clicked(move |_| {
+                    s_cancel.input(SettingsMsg::CancelRename);
+                });
+            }
+
+            rename_row.append(&entry);
+            rename_row.append(&save_btn);
+            rename_row.append(&cancel_btn);
+            outer.append(&rename_row);
+        }
 
         let auto_accept_row = gtk4::Box::builder()
             .orientation(gtk4::Orientation::Horizontal)
@@ -612,6 +1129,143 @@ fn rebuild_paired_rows(
 
         container.append(&outer);
     }
+}
+
+fn rebuild_send_targets(
+    container: &gtk4::Box,
+    devices: &[PairedDevice],
+    selected_id: Option<&str>,
+    sender: &ComponentSender<SettingsModel>,
+) {
+    clear_box_children(container);
+    if devices.is_empty() {
+        let empty = gtk4::Label::builder()
+            .label("Pair a device first to send files.")
+            .xalign(0.0)
+            .wrap(true)
+            .build();
+        empty.add_css_class("keynear-caption");
+        container.append(&empty);
+        return;
+    }
+
+    for dev in devices {
+        let selected = selected_id == Some(dev.device_id.as_str());
+        let btn = gtk4::Button::builder().label(&dev.display_name).build();
+        btn.add_css_class(if selected {
+            "keynear-primary"
+        } else {
+            "keynear-secondary"
+        });
+        let id = dev.device_id.clone();
+        let s = sender.clone();
+        btn.connect_clicked(move |_| {
+            s.input(SettingsMsg::SelectSendDevice(id.clone()));
+        });
+        container.append(&btn);
+    }
+}
+
+fn summarize_send_paths(paths: &[PathBuf]) -> String {
+    if paths.is_empty() {
+        return "No files or folders staged.".to_string();
+    }
+    let names: Vec<String> = paths
+        .iter()
+        .take(3)
+        .map(|p| {
+            p.file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_else(|| p.display().to_string())
+        })
+        .collect();
+    if paths.len() <= 3 {
+        format!("{} item(s): {}", paths.len(), names.join(", "))
+    } else {
+        format!(
+            "{} items: {}, +{} more",
+            paths.len(),
+            names.join(", "),
+            paths.len() - 3
+        )
+    }
+}
+
+async fn pick_paths_via_portal(
+    window: &gtk4::Window,
+    title: &'static str,
+    multiple: bool,
+    directory: bool,
+) -> Result<Vec<PathBuf>, String> {
+    let keep_alive = match window.native() {
+        Some(native) => ashpd::WindowIdentifier::from_native(&native).await,
+        None => None,
+    };
+    let portal_id = keep_alive
+        .as_ref()
+        .and_then(|id| {
+            id.to_string()
+                .parse::<ashpd::WindowIdentifierType>()
+                .ok()
+        })
+        .map(ashpd::WindowIdentifier::from);
+    let rt = portal_runtime()?;
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    rt.spawn(async move {
+        let res = async {
+            let req = ashpd::desktop::file_chooser::SelectedFiles::open_file()
+                .title(title)
+                .modal(true)
+                .multiple(multiple)
+                .directory(directory)
+                .identifier(portal_id);
+            let selected = req.send().await.map_err(|e| e.to_string())?;
+            match selected.response() {
+                Ok(response) => response
+                    .uris()
+                    .iter()
+                    .map(|uri| file_uri_to_path(uri.as_str()).map_err(|e| e.to_string()))
+                    .collect::<Result<Vec<PathBuf>, String>>(),
+                Err(ashpd::Error::Response(ashpd::desktop::ResponseError::Cancelled)) => {
+                    Ok(Vec::new())
+                }
+                Err(err) => Err(err.to_string()),
+            }
+        }
+        .await;
+        let _ = tx.send(res);
+    });
+    let result = rx
+        .await
+        .map_err(|_| "File chooser portal task did not complete.".to_string())?;
+    drop(keep_alive);
+    result
+}
+
+fn spawn_portal_picker<F>(
+    window: Option<&gtk4::Window>,
+    sender: &ComponentSender<SettingsModel>,
+    title: &'static str,
+    multiple: bool,
+    directory: bool,
+    on_paths: F,
+) where
+    F: Fn(Vec<PathBuf>) -> SettingsMsg + 'static,
+{
+    let Some(win) = window.cloned() else {
+        sender.input(SettingsMsg::PortalError(
+            "Settings window is not available for file chooser.".to_string(),
+        ));
+        return;
+    };
+    let s = sender.clone();
+    glib::spawn_future_local(async move {
+        match pick_paths_via_portal(&win, title, multiple, directory).await {
+            Ok(paths) if !paths.is_empty() => s.input(on_paths(paths)),
+            Ok(_) => {}
+            Err(err) => s.input(SettingsMsg::PortalError(err)),
+        }
+    });
 }
 
 fn transfer_fraction(session: &TransferSession) -> f64 {
@@ -775,7 +1429,8 @@ impl SimpleComponent for SettingsModel {
         root.add_css_class("keynear-window");
         install_css(&root);
 
-        let model = Self::from_init(init);
+        let mut model = Self::from_init(init);
+        model.root_window = Some(root.clone());
 
         let scroll = gtk4::ScrolledWindow::builder()
             .hscrollbar_policy(gtk4::PolicyType::Never)
@@ -852,15 +1507,27 @@ impl SimpleComponent for SettingsModel {
             .spacing(8)
             .build();
 
-        let cycle_btn = gtk4::Button::builder()
-            .label("Cycle visibility mode")
-            .halign(gtk4::Align::Start)
-            .build();
-        cycle_btn.add_css_class("keynear-primary");
+        let vis_hidden_btn = gtk4::Button::builder().label("Hidden").build();
         {
             let sender = sender.clone();
-            cycle_btn.connect_clicked(move |_| {
-                sender.input(SettingsMsg::CycleVisibility);
+            vis_hidden_btn.connect_clicked(move |_| {
+                sender.input(SettingsMsg::SetVisibility(VisibilityMode::Hidden));
+            });
+        }
+
+        let vis_paired_btn = gtk4::Button::builder().label("Paired only").build();
+        {
+            let sender = sender.clone();
+            vis_paired_btn.connect_clicked(move |_| {
+                sender.input(SettingsMsg::SetVisibility(VisibilityMode::PairedOnly));
+            });
+        }
+
+        let vis_everyone_btn = gtk4::Button::builder().label("Everyone nearby").build();
+        {
+            let sender = sender.clone();
+            vis_everyone_btn.connect_clicked(move |_| {
+                sender.input(SettingsMsg::SetVisibility(VisibilityMode::EveryoneNearby));
             });
         }
 
@@ -876,13 +1543,110 @@ impl SimpleComponent for SettingsModel {
             });
         }
 
-        vis_actions.append(&cycle_btn);
+        vis_actions.append(&vis_hidden_btn);
+        vis_actions.append(&vis_paired_btn);
+        vis_actions.append(&vis_everyone_btn);
         vis_actions.append(&refresh_btn);
 
         visibility_card.append(&vis_heading);
         visibility_card.append(&visibility_value);
         visibility_card.append(&vis_actions);
-        container.append(&visibility_card);
+
+        let send_card = gtk4::Box::builder()
+            .orientation(gtk4::Orientation::Vertical)
+            .spacing(12)
+            .build();
+        send_card.add_css_class("keynear-card");
+
+        let send_heading = gtk4::Label::builder()
+            .label("Send files or folders")
+            .xalign(0.0)
+            .build();
+        send_heading.add_css_class("keynear-heading");
+
+        let send_error_banner = gtk4::Box::builder()
+            .orientation(gtk4::Orientation::Vertical)
+            .spacing(4)
+            .visible(false)
+            .build();
+        send_error_banner.add_css_class("keynear-error");
+        let send_error_label = gtk4::Label::builder().xalign(0.0).wrap(true).build();
+        send_error_banner.append(&send_error_label);
+
+        let send_paths_label = gtk4::Label::builder()
+            .label(summarize_send_paths(&model.send_paths))
+            .xalign(0.0)
+            .wrap(true)
+            .ellipsize(EllipsizeMode::End)
+            .build();
+        send_paths_label.add_css_class("keynear-description");
+
+        let send_pick_row = gtk4::Box::builder()
+            .orientation(gtk4::Orientation::Horizontal)
+            .spacing(8)
+            .build();
+        let pick_files_btn = gtk4::Button::builder().label("Choose files...").build();
+        pick_files_btn.add_css_class("keynear-secondary");
+        {
+            let s = sender.clone();
+            pick_files_btn.connect_clicked(move |_| {
+                s.input(SettingsMsg::PickSendFiles);
+            });
+        }
+
+        let pick_folder_btn = gtk4::Button::builder().label("Choose folder...").build();
+        pick_folder_btn.add_css_class("keynear-secondary");
+        {
+            let s = sender.clone();
+            pick_folder_btn.connect_clicked(move |_| {
+                s.input(SettingsMsg::PickSendFolder);
+            });
+        }
+
+        let send_clear_btn = gtk4::Button::builder().label("Clear").build();
+        send_clear_btn.add_css_class("keynear-secondary");
+        {
+            let s = sender.clone();
+            send_clear_btn.connect_clicked(move |_| {
+                s.input(SettingsMsg::ClearSendPaths);
+            });
+        }
+
+        send_pick_row.append(&pick_files_btn);
+        send_pick_row.append(&pick_folder_btn);
+        send_pick_row.append(&send_clear_btn);
+
+        let send_targets_box = gtk4::Box::builder()
+            .orientation(gtk4::Orientation::Horizontal)
+            .spacing(8)
+            .build();
+
+        let send_submit_btn = gtk4::Button::builder()
+            .label("Send to selected device")
+            .halign(gtk4::Align::Start)
+            .build();
+        send_submit_btn.add_css_class("keynear-primary");
+        {
+            let s = sender.clone();
+            send_submit_btn.connect_clicked(move |_| {
+                s.input(SettingsMsg::SendStagedFiles);
+            });
+        }
+
+        send_card.append(&send_heading);
+        send_card.append(&send_error_banner);
+        send_card.append(&send_paths_label);
+        send_card.append(&send_pick_row);
+        send_card.append(&send_targets_box);
+        send_card.append(&send_submit_btn);
+
+        if model.send_picker_active {
+            container.append(&send_card);
+            container.append(&visibility_card);
+        } else {
+            container.append(&visibility_card);
+            container.append(&send_card);
+        }
 
         let pairing_card = gtk4::Box::builder()
             .orientation(gtk4::Orientation::Vertical)
@@ -957,13 +1721,26 @@ impl SimpleComponent for SettingsModel {
         transfers_heading.add_css_class("keynear-heading");
 
         let transfers_error_banner = gtk4::Box::builder()
-            .orientation(gtk4::Orientation::Vertical)
-            .spacing(4)
+            .orientation(gtk4::Orientation::Horizontal)
+            .spacing(12)
             .visible(false)
             .build();
         transfers_error_banner.add_css_class("keynear-error");
-        let transfers_error_label = gtk4::Label::builder().xalign(0.0).wrap(true).build();
+        let transfers_error_label = gtk4::Label::builder()
+            .xalign(0.0)
+            .wrap(true)
+            .hexpand(true)
+            .build();
+        let transfers_retry_btn = gtk4::Button::builder().label("Retry").build();
+        transfers_retry_btn.add_css_class("keynear-secondary");
+        {
+            let s = sender.clone();
+            transfers_retry_btn.connect_clicked(move |_| {
+                s.input(SettingsMsg::RetryDaemon);
+            });
+        }
         transfers_error_banner.append(&transfers_error_label);
+        transfers_error_banner.append(&transfers_retry_btn);
 
         let transfers_list_box = gtk4::Box::builder()
             .orientation(gtk4::Orientation::Vertical)
@@ -1019,9 +1796,37 @@ impl SimpleComponent for SettingsModel {
 
         let config_card = gtk4::Box::builder()
             .orientation(gtk4::Orientation::Vertical)
-            .spacing(8)
+            .spacing(12)
             .build();
         config_card.add_css_class("keynear-card");
+
+        let global_auto_row = gtk4::Box::builder()
+            .orientation(gtk4::Orientation::Horizontal)
+            .spacing(12)
+            .build();
+        let global_auto_label = gtk4::Label::builder()
+            .label("Auto-accept from paired devices")
+            .xalign(0.0)
+            .wrap(true)
+            .hexpand(true)
+            .build();
+        global_auto_label.add_css_class("keynear-description");
+
+        let global_auto_accept_switch = gtk4::Switch::builder()
+            .active(model.config.auto_accept_from_paired)
+            .valign(gtk4::Align::Center)
+            .build();
+        global_auto_accept_switch.add_css_class("keynear-switch");
+        {
+            let s = sender.clone();
+            global_auto_accept_switch.connect_state_set(move |_, enabled| {
+                s.input(SettingsMsg::SetGlobalAutoAccept(enabled));
+                gtk4::glib::Propagation::Proceed
+            });
+        }
+        global_auto_row.append(&global_auto_label);
+        global_auto_row.append(&global_auto_accept_switch);
+        config_card.append(&global_auto_row);
 
         let dir_heading = gtk4::Label::builder()
             .label("Incoming folder")
@@ -1029,6 +1834,10 @@ impl SimpleComponent for SettingsModel {
             .build();
         dir_heading.add_css_class("keynear-caption");
 
+        let dir_row = gtk4::Box::builder()
+            .orientation(gtk4::Orientation::Horizontal)
+            .spacing(12)
+            .build();
         let dir_value = gtk4::Label::builder()
             .label(&model.incoming_directory)
             .xalign(0.0)
@@ -1038,8 +1847,20 @@ impl SimpleComponent for SettingsModel {
             .build();
         dir_value.add_css_class("keynear-description");
 
+        let pick_dir_btn = gtk4::Button::builder().label("Change folder...").build();
+        pick_dir_btn.add_css_class("keynear-secondary");
+        {
+            let s = sender.clone();
+            pick_dir_btn.connect_clicked(move |_| {
+                s.input(SettingsMsg::PickIncomingDirectory);
+            });
+        }
+
+        dir_row.append(&dir_value);
+        dir_row.append(&pick_dir_btn);
+
         config_card.append(&dir_heading);
-        config_card.append(&dir_value);
+        config_card.append(&dir_row);
         container.append(&config_card);
 
         let close_btn = gtk4::Button::builder()
@@ -1068,30 +1889,165 @@ impl SimpleComponent for SettingsModel {
 
         let mut widgets = SettingsWidgets {
             visibility_value,
+            vis_hidden_btn,
+            vis_paired_btn,
+            vis_everyone_btn,
             status_banner,
             status_banner_label,
             pairing_card,
             pairing_peer_label,
             pairing_code_label,
             pairing_timer_label,
+            send_card,
+            send_paths_label,
+            send_targets_box,
+            send_clear_btn,
+            send_submit_btn,
+            send_error_banner,
+            send_error_label,
             transfers_error_banner,
             transfers_error_label,
             transfers_list_box,
             nearby_list_box,
             paired_list_box,
+            global_auto_accept_switch,
+            dir_value,
         };
         model.update_view(&mut widgets, sender);
         ComponentParts { model, widgets }
     }
 
-    fn update(&mut self, msg: Self::Input, _sender: ComponentSender<Self>) {
-        self.apply_msg(msg);
+    fn update(&mut self, msg: Self::Input, sender: ComponentSender<Self>) {
+        match msg {
+            SettingsMsg::PickSendFiles => {
+                spawn_portal_picker(
+                    self.root_window.as_ref(),
+                    &sender,
+                    "Select files to send via Keynear",
+                    true,
+                    false,
+                    SettingsMsg::StageSendPaths,
+                );
+            }
+            SettingsMsg::PickSendFolder => {
+                spawn_portal_picker(
+                    self.root_window.as_ref(),
+                    &sender,
+                    "Select folder to send via Keynear",
+                    false,
+                    true,
+                    SettingsMsg::StageSendPaths,
+                );
+            }
+            SettingsMsg::PickIncomingDirectory => {
+                spawn_portal_picker(
+                    self.root_window.as_ref(),
+                    &sender,
+                    "Select Keynear incoming folder",
+                    false,
+                    true,
+                    |paths| {
+                        let first = paths
+                            .into_iter()
+                            .next()
+                            .map(|p| p.display().to_string())
+                            .unwrap_or_default();
+                        SettingsMsg::SetIncomingDirectory(first)
+                    },
+                );
+            }
+            SettingsMsg::SendStagedFiles => {
+                if self.sending_in_flight {
+                    return;
+                }
+                if self.send_paths.is_empty() {
+                    self.send_error = Some("Select at least one file or folder first.".to_string());
+                    return;
+                }
+                let Some(device_id) = self.selected_send_device_id.clone() else {
+                    self.send_error = Some("Select a paired target device first.".to_string());
+                    return;
+                };
+                let Some(sock_path) = self.ipc_socket_path.clone() else {
+                    self.send_error = Some("Daemon IPC socket is not configured.".to_string());
+                    return;
+                };
+                let paths = self.send_paths.clone();
+                self.sending_in_flight = true;
+                self.send_error = None;
+                let s = sender.clone();
+                std::thread::spawn(move || {
+                    let result = match ipc::send_request_to(
+                        &sock_path,
+                        &IpcRequest::SendFiles { device_id, paths },
+                    ) {
+                        Ok(IpcResponse::Transfer(session)) => Ok(session),
+                        Ok(IpcResponse::Error { message }) => Err(message),
+                        Ok(_) => Err("Unexpected daemon IPC response.".to_string()),
+                        Err(err) => Err(format!(
+                            "Keynear daemon unavailable ({err}); start keynear-linux and retry."
+                        )),
+                    };
+                    s.input(SettingsMsg::SendCompleted(result));
+                });
+            }
+            other => self.apply_msg(other),
+        }
     }
 
     fn update_view(&self, widgets: &mut Self::Widgets, sender: ComponentSender<Self>) {
         widgets
             .visibility_value
             .set_label(&self.visibility_status_text());
+
+        let vis_buttons = [
+            (&widgets.vis_hidden_btn, VisibilityMode::Hidden),
+            (&widgets.vis_paired_btn, VisibilityMode::PairedOnly),
+            (&widgets.vis_everyone_btn, VisibilityMode::EveryoneNearby),
+        ];
+        for (btn, mode) in vis_buttons {
+            btn.remove_css_class("keynear-primary");
+            btn.remove_css_class("keynear-secondary");
+            btn.add_css_class(if self.visibility_mode == mode {
+                "keynear-primary"
+            } else {
+                "keynear-secondary"
+            });
+        }
+
+        widgets
+            .send_card
+            .set_visible(self.send_picker_active || !self.paired_devices.is_empty() || !self.send_paths.is_empty());
+        widgets
+            .send_paths_label
+            .set_label(&summarize_send_paths(&self.send_paths));
+        widgets
+            .send_clear_btn
+            .set_sensitive(!self.send_paths.is_empty() && !self.sending_in_flight);
+        widgets.send_submit_btn.set_sensitive(
+            !self.send_paths.is_empty()
+                && self.selected_send_device_id.is_some()
+                && !self.sending_in_flight,
+        );
+        if let Some(ref err) = self.send_error {
+            widgets.send_error_label.set_label(err);
+            widgets.send_error_banner.set_visible(true);
+        } else {
+            widgets.send_error_banner.set_visible(false);
+        }
+        rebuild_send_targets(
+            &widgets.send_targets_box,
+            &self.paired_devices,
+            self.selected_send_device_id.as_deref(),
+            &sender,
+        );
+
+        if widgets.global_auto_accept_switch.is_active() != self.config.auto_accept_from_paired {
+            widgets
+                .global_auto_accept_switch
+                .set_active(self.config.auto_accept_from_paired);
+        }
+        widgets.dir_value.set_label(&self.incoming_directory);
 
         if let Some(ref err) = self.error_message {
             widgets.status_banner.remove_css_class("keynear-warning");
@@ -1135,6 +2091,8 @@ impl SimpleComponent for SettingsModel {
             &widgets.paired_list_box,
             &self.paired_devices,
             self.pending_unpair_id(),
+            self.renaming_device_id.as_deref(),
+            &self.rename_draft,
             &sender,
         );
     }

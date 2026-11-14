@@ -8,7 +8,8 @@ use std::process;
 use std::sync::Arc;
 
 use keynear_core::{
-    default_config_path, DaemonConfig, KeynearError, Oo7SecretStore, PairedDeviceStore, SecretStore,
+    default_config_path, sanitize_device_id, DaemonConfig, KeynearError, Oo7SecretStore,
+    PairedDeviceStore, SecretStore,
 };
 use tracing::info;
 use tracing_subscriber::EnvFilter;
@@ -17,8 +18,21 @@ use tracing_subscriber::EnvFilter;
 pub enum SettingsCliAction {
     Version,
     Help,
-    Validate { config_path: Option<PathBuf> },
-    Run { config_path: Option<PathBuf> },
+    Validate {
+        config_path: Option<PathBuf>,
+    },
+    Run {
+        config_path: Option<PathBuf>,
+    },
+    SendPicker {
+        config_path: Option<PathBuf>,
+        device_id: Option<String>,
+    },
+    Share {
+        config_path: Option<PathBuf>,
+        device_id: Option<String>,
+        paths: Vec<PathBuf>,
+    },
 }
 
 pub fn parse_settings_args<I, S>(args: I) -> Result<SettingsCliAction, KeynearError>
@@ -29,12 +43,39 @@ where
     let mut iter = args.into_iter().map(Into::into);
     let mut config_path: Option<PathBuf> = None;
     let mut validate_only = false;
+    let mut send_picker = false;
+    let mut share_mode = false;
+    let mut device_id: Option<String> = None;
+    let mut share_paths: Vec<PathBuf> = Vec::new();
+    let mut literal_paths = false;
 
     while let Some(arg) = iter.next() {
+        if literal_paths {
+            if arg.trim().is_empty() {
+                return Err(KeynearError::Validation {
+                    field: "paths",
+                    message: "--share paths must not be empty".to_string(),
+                });
+            }
+            share_paths.push(PathBuf::from(arg));
+            continue;
+        }
         match arg.as_str() {
             "--version" | "-V" => return Ok(SettingsCliAction::Version),
             "--help" | "-h" => return Ok(SettingsCliAction::Help),
             "--validate" => validate_only = true,
+            "--send-picker" => send_picker = true,
+            "--share" => share_mode = true,
+            "--" if share_mode => {
+                literal_paths = true;
+            }
+            "--device" => {
+                let raw = iter.next().ok_or_else(|| KeynearError::Validation {
+                    field: "deviceId",
+                    message: "--device requires a device_id".to_string(),
+                })?;
+                device_id = Some(sanitize_device_id(&raw)?);
+            }
             "--config" => {
                 let value = iter.next().ok_or_else(|| KeynearError::Validation {
                     field: "config",
@@ -48,6 +89,15 @@ where
                 }
                 config_path = Some(PathBuf::from(value));
             }
+            other if share_mode && !other.starts_with('-') => {
+                if other.trim().is_empty() {
+                    return Err(KeynearError::Validation {
+                        field: "paths",
+                        message: "--share paths must not be empty".to_string(),
+                    });
+                }
+                share_paths.push(PathBuf::from(other));
+            }
             other => {
                 return Err(KeynearError::Validation {
                     field: "args",
@@ -57,8 +107,40 @@ where
         }
     }
 
+    if (validate_only && (send_picker || share_mode || device_id.is_some()))
+        || (send_picker && share_mode)
+    {
+        return Err(KeynearError::Validation {
+            field: "args",
+            message: "conflicting CLI mode flags".to_string(),
+        });
+    }
+    if device_id.is_some() && !send_picker && !share_mode {
+        return Err(KeynearError::Validation {
+            field: "deviceId",
+            message: "--device requires --send-picker or --share".to_string(),
+        });
+    }
+
     if validate_only {
         Ok(SettingsCliAction::Validate { config_path })
+    } else if send_picker {
+        Ok(SettingsCliAction::SendPicker {
+            config_path,
+            device_id,
+        })
+    } else if share_mode {
+        if share_paths.is_empty() {
+            return Err(KeynearError::Validation {
+                field: "paths",
+                message: "--share requires at least one file or directory path".to_string(),
+            });
+        }
+        Ok(SettingsCliAction::Share {
+            config_path,
+            device_id,
+            paths: share_paths,
+        })
     } else {
         Ok(SettingsCliAction::Run { config_path })
     }
@@ -151,6 +233,85 @@ fn load_stores() -> LoadedStores {
     }
 }
 
+fn launch_settings_gui(
+    config_path: Option<PathBuf>,
+    send_picker_active: bool,
+    selected_send_device_id: Option<String>,
+    send_paths: Vec<PathBuf>,
+) {
+    if let Err(err) = validate_css_tokens() {
+        eprintln!("error: {err}");
+        process::exit(1);
+    }
+    let resolved_config_path = config_path.clone().unwrap_or_else(default_config_path);
+    let (mut config, error_message) = match load_settings_config(config_path.as_ref()) {
+        Ok(config) => (config, None),
+        Err(err) => (DaemonConfig::default(), Some(err.to_string())),
+    };
+    let stores = load_stores();
+    let mut paired_devices = stores.paired_devices;
+    let mut everyone_remaining_secs = None;
+    let mut transfer_error = None;
+
+    match ipc::send_request(&ipc::IpcRequest::Status) {
+        Ok(ipc::IpcResponse::Status(status)) => {
+            config.visibility_mode = status.visibility_mode;
+            config.auto_accept_from_paired = status.auto_accept_from_paired;
+            config.incoming_directory = status.incoming_directory;
+            everyone_remaining_secs = status.everyone_remaining_secs;
+        }
+        Ok(_) => {}
+        Err(err) if send_picker_active => {
+            transfer_error = Some(format!(
+                "Keynear daemon unavailable ({err}); start keynear-linux and retry."
+            ));
+        }
+        Err(_) => {}
+    }
+
+    if let Ok(ipc::IpcResponse::Config(daemon_cfg)) =
+        ipc::send_request(&ipc::IpcRequest::GetConfig)
+    {
+        config = daemon_cfg;
+    }
+    if let Ok(ipc::IpcResponse::Devices(devices)) =
+        ipc::send_request(&ipc::IpcRequest::ListDevices)
+    {
+        paired_devices = devices;
+    }
+    let initial_transfers = match ipc::send_request(&ipc::IpcRequest::ListTransfers) {
+        Ok(ipc::IpcResponse::Transfers(transfers)) => transfers,
+        _ => Vec::new(),
+    };
+
+    info!(
+        event = "settings_launching",
+        visibility = ?config.visibility_mode,
+        paired_count = paired_devices.len(),
+        send_picker_active,
+        staged_send_count = send_paths.len(),
+        has_error = error_message.is_some()
+    );
+
+    app::run_gui(app::SettingsInit {
+        config,
+        config_path: Some(resolved_config_path),
+        everyone_remaining_secs,
+        error_message,
+        warning_message: stores.warning_message,
+        transfer_error,
+        paired_devices,
+        nearby_peers: Vec::new(),
+        transfers: initial_transfers,
+        send_paths,
+        selected_send_device_id,
+        send_picker_active,
+        device_store: stores.device_store,
+        secret_store: stores.secret_store,
+        ipc_socket_path: Some(ipc::daemon_socket_path()),
+    });
+}
+
 fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
@@ -169,7 +330,9 @@ fn main() {
             println!("keynear-settings {}", env!("CARGO_PKG_VERSION"));
         }
         SettingsCliAction::Help => {
-            println!("Usage: keynear-settings [--config <path>] [--validate] [--version] [--help]");
+            println!(
+                "Usage: keynear-settings [--config <path>] [--validate] [--version] [--help]\n       keynear-settings --send-picker [--device <device_id>] [--config <path>]\n       keynear-settings --share [--device <device_id>] -- <path>..."
+            );
         }
         SettingsCliAction::Validate { config_path } => {
             if let Err(err) = validate_css_tokens() {
@@ -190,36 +353,20 @@ fn main() {
             );
         }
         SettingsCliAction::Run { config_path } => {
-            if let Err(err) = validate_css_tokens() {
-                eprintln!("error: {err}");
-                process::exit(1);
-            }
-            let (config, error_message) = match load_settings_config(config_path.as_ref()) {
-                Ok(config) => (config, None),
-                Err(err) => (DaemonConfig::default(), Some(err.to_string())),
-            };
-            let stores = load_stores();
-            info!(
-                event = "settings_launching",
-                visibility = ?config.visibility_mode,
-                paired_count = stores.paired_devices.len(),
-                has_error = error_message.is_some()
-            );
-            let initial_transfers = match ipc::send_request(&ipc::IpcRequest::ListTransfers) {
-                Ok(ipc::IpcResponse::Transfers(transfers)) => transfers,
-                _ => Vec::new(),
-            };
-            app::run_gui(app::SettingsInit {
-                config,
-                error_message,
-                warning_message: stores.warning_message,
-                paired_devices: stores.paired_devices,
-                nearby_peers: Vec::new(),
-                transfers: initial_transfers,
-                device_store: stores.device_store,
-                secret_store: stores.secret_store,
-                ipc_socket_path: Some(ipc::daemon_socket_path()),
-            });
+            launch_settings_gui(config_path, false, None, Vec::new());
+        }
+        SettingsCliAction::SendPicker {
+            config_path,
+            device_id,
+        } => {
+            launch_settings_gui(config_path, true, device_id, Vec::new());
+        }
+        SettingsCliAction::Share {
+            config_path,
+            device_id,
+            paths,
+        } => {
+            launch_settings_gui(config_path, true, device_id, paths);
         }
     }
 }
@@ -311,18 +458,26 @@ mod tests {
         let (dir, device_store) = temp_store("timer");
         let mut model = app::SettingsModel::from_init(app::SettingsInit {
             config: DaemonConfig::default(),
+            config_path: None,
+            everyone_remaining_secs: None,
             error_message: None,
             warning_message: None,
+            transfer_error: None,
             paired_devices: Vec::new(),
             nearby_peers: Vec::new(),
             transfers: Vec::new(),
+            send_paths: Vec::new(),
+            selected_send_device_id: None,
+            send_picker_active: false,
             device_store,
             secret_store: None,
             ipc_socket_path: None,
         });
 
         assert_eq!(model.visibility_mode(), VisibilityMode::PairedOnly);
-        model.apply_msg(app::SettingsMsg::CycleVisibility);
+        model.apply_msg(app::SettingsMsg::SetVisibility(
+            VisibilityMode::EveryoneNearby,
+        ));
         assert_eq!(model.visibility_mode(), VisibilityMode::EveryoneNearby);
         assert_eq!(model.visibility_status_text(), "Everyone (10:00)");
 
@@ -366,11 +521,17 @@ mod tests {
 
         let mut model = app::SettingsModel::from_init(app::SettingsInit {
             config: DaemonConfig::default(),
+            config_path: None,
+            everyone_remaining_secs: None,
             error_message: None,
             warning_message: None,
+            transfer_error: None,
             paired_devices: vec![dev],
             nearby_peers: Vec::new(),
             transfers: Vec::new(),
+            send_paths: Vec::new(),
+            selected_send_device_id: None,
+            send_picker_active: false,
             device_store: device_store.clone(),
             secret_store: Some(Arc::clone(&secret_store) as Arc<dyn SecretStore>),
             ipc_socket_path: None,
@@ -423,11 +584,17 @@ mod tests {
 
         let mut model = app::SettingsModel::from_init(app::SettingsInit {
             config: DaemonConfig::default(),
+            config_path: None,
+            everyone_remaining_secs: None,
             error_message: None,
             warning_message: None,
+            transfer_error: None,
             paired_devices: vec![dev],
             nearby_peers: Vec::new(),
             transfers: Vec::new(),
+            send_paths: Vec::new(),
+            selected_send_device_id: None,
+            send_picker_active: false,
             device_store: device_store.clone(),
             secret_store: None,
             ipc_socket_path: None,
@@ -575,11 +742,17 @@ mod tests {
 
         let mut model = app::SettingsModel::from_init(app::SettingsInit {
             config: DaemonConfig::default(),
+            config_path: None,
+            everyone_remaining_secs: None,
             error_message: None,
             warning_message: None,
+            transfer_error: None,
             paired_devices: Vec::new(),
             nearby_peers: Vec::new(),
             transfers: initial_sessions,
+            send_paths: Vec::new(),
+            selected_send_device_id: None,
+            send_picker_active: false,
             device_store,
             secret_store: None,
             ipc_socket_path: Some(sock_path),
@@ -598,6 +771,140 @@ mod tests {
         assert_eq!(model.transfers()[1].state, TransferState::Cancelled);
 
         handle.join().expect("ipc server thread");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn cli_parses_send_picker_and_share_with_dash_filenames() {
+        assert_eq!(
+            parse_settings_args(["--send-picker", "--device", "pixel-9"]).unwrap(),
+            SettingsCliAction::SendPicker {
+                config_path: None,
+                device_id: Some("pixel-9".to_string()),
+            }
+        );
+        assert_eq!(
+            parse_settings_args(["--share", "--", "-report.pdf", "/tmp/my dir"]).unwrap(),
+            SettingsCliAction::Share {
+                config_path: None,
+                device_id: None,
+                paths: vec![PathBuf::from("-report.pdf"), PathBuf::from("/tmp/my dir")],
+            }
+        );
+        assert!(matches!(
+            parse_settings_args(["--share"]),
+            Err(KeynearError::Validation { field: "paths", .. })
+        ));
+        assert!(matches!(
+            parse_settings_args(["--share", "-unknown-flag"]),
+            Err(KeynearError::Validation { field: "args", .. })
+        ));
+    }
+
+    #[test]
+    fn file_uri_to_path_decodes_escapes_and_rejects_non_file() {
+        assert_eq!(
+            app::file_uri_to_path("file:///tmp/my%20file%25.txt").unwrap(),
+            PathBuf::from("/tmp/my file%.txt")
+        );
+        assert_eq!(
+            app::file_uri_to_path("file://localhost/tmp/-leading.pdf").unwrap(),
+            PathBuf::from("/tmp/-leading.pdf")
+        );
+        assert!(app::file_uri_to_path("https://example.com/a").is_err());
+        assert!(app::file_uri_to_path("file:///tmp/bad%2").is_err());
+    }
+
+    #[test]
+    fn inline_rename_and_global_config_persist_and_sync() {
+        let (dir, device_store) = temp_store("rename-config");
+        let cfg_path = dir.join("config.toml");
+        let incoming = dir.join("incoming");
+        fs::create_dir_all(&incoming).expect("incoming");
+        let initial_cfg = DaemonConfig {
+            incoming_directory: incoming.display().to_string(),
+            ..Default::default()
+        };
+        initial_cfg.save_to_path(&cfg_path).expect("save cfg");
+
+        let dev = PairedDevice {
+            device_id: "pixel-9".to_string(),
+            display_name: "Pixel 9".to_string(),
+            device_role: DeviceRole::Mobile,
+            static_x25519_pubkey: "ab".repeat(32),
+            last_ble_address: String::new(),
+            last_lan_address: String::new(),
+            last_endpoint_id: String::new(),
+            capability_flags: 0x03,
+            auto_accept_files: false,
+            paired_at: "1".to_string(),
+        };
+        device_store.upsert(dev.clone()).expect("seed device");
+
+        let mut model = app::SettingsModel::from_init(app::SettingsInit {
+            config: initial_cfg,
+            config_path: Some(cfg_path.clone()),
+            everyone_remaining_secs: None,
+            error_message: None,
+            warning_message: None,
+            transfer_error: None,
+            paired_devices: vec![dev],
+            nearby_peers: Vec::new(),
+            transfers: Vec::new(),
+            send_paths: Vec::new(),
+            selected_send_device_id: None,
+            send_picker_active: false,
+            device_store: device_store.clone(),
+            secret_store: None,
+            ipc_socket_path: Some(dir.join("missing-daemon.sock")),
+        });
+
+        model.apply_msg(app::SettingsMsg::StartRename("pixel-9".to_string()));
+        model.apply_msg(app::SettingsMsg::SubmitRename {
+            device_id: "pixel-9".to_string(),
+            display_name: "   ".to_string(),
+        });
+        assert!(model.error_message().is_some());
+
+        model.apply_msg(app::SettingsMsg::SubmitRename {
+            device_id: "pixel-9".to_string(),
+            display_name: "Pixel Desk".to_string(),
+        });
+        assert!(model.error_message().is_none());
+        assert_eq!(model.paired_devices()[0].display_name, "Pixel Desk");
+        assert_eq!(
+            device_store.load().expect("reload")[0].display_name,
+            "Pixel Desk"
+        );
+
+        let updated_incoming = dir.join("received");
+        model.apply_msg(app::SettingsMsg::SetGlobalAutoAccept(true));
+        model.apply_msg(app::SettingsMsg::SetIncomingDirectory(
+            updated_incoming.display().to_string(),
+        ));
+        assert!(model.auto_accept_from_paired());
+        assert_eq!(model.incoming_directory(), updated_incoming.to_string_lossy());
+        let saved = DaemonConfig::load_or_default(&cfg_path).expect("reload saved cfg");
+        assert!(saved.auto_accept_from_paired);
+        assert_eq!(saved.incoming_directory, updated_incoming.to_string_lossy());
+
+        model.apply_msg(app::SettingsMsg::StageSendPaths(vec![PathBuf::from(
+            "/tmp/a.txt",
+        )]));
+        model.apply_msg(app::SettingsMsg::SelectSendDevice("pixel-9".to_string()));
+        assert_eq!(model.send_paths(), &[PathBuf::from("/tmp/a.txt")]);
+        assert_eq!(model.selected_send_device_id(), Some("pixel-9"));
+        model.apply_msg(app::SettingsMsg::SendCompleted(Err(
+            "daemon offline".to_string(),
+        )));
+        assert_eq!(model.send_error(), Some("daemon offline"));
+
+        model.apply_msg(app::SettingsMsg::RetryDaemon);
+        assert!(model
+            .transfer_error()
+            .unwrap_or_default()
+            .contains("unavailable"));
+
         let _ = fs::remove_dir_all(&dir);
     }
 }
