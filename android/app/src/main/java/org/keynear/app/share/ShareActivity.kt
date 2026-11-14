@@ -6,8 +6,11 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -39,9 +43,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.content.IntentCompat
 import kotlinx.coroutines.Dispatchers
@@ -69,6 +75,10 @@ class ShareActivity : ComponentActivity() {
         val action = incoming?.action
         val streamUris = extractStreamUris(incoming, action)
         val sharedText = incoming?.getStringExtra(Intent.EXTRA_TEXT)
+        val preselectedDeviceId = DirectShareManager.extractDeviceId(
+            shortcutId = incoming?.getStringExtra(Intent.EXTRA_SHORTCUT_ID),
+            explicitDeviceId = incoming?.getStringExtra(DirectShareManager.EXTRA_TARGET_DEVICE_ID),
+        )
         val validation = validateShareIntent(action, streamUris, sharedText)
 
         when (validation) {
@@ -90,13 +100,16 @@ class ShareActivity : ComponentActivity() {
                     validation = validation,
                     streamUris = streamUris,
                     sharedText = sharedText,
+                    preselectedDeviceId = preselectedDeviceId,
                     onLoadDevices = {
-                        when (val state = client.loadState()) {
+                        val devices = when (val state = client.loadState()) {
                             is CoreState.Empty -> state.snapshot.pairedDevices
                             is CoreState.Ready -> state.snapshot.pairedDevices
                             is CoreState.Error -> state.previous?.pairedDevices.orEmpty()
                             CoreState.Loading -> emptyList()
                         }
+                        DirectShareManager.syncShortcuts(applicationContext, devices)
+                        devices
                     },
                     onSendToPeer = { deviceId ->
                         client.sendContentUris(deviceId, streamUris, sharedText)
@@ -140,6 +153,7 @@ private fun SharePickerScreen(
     validation: ShareValidationResult,
     streamUris: List<String>,
     sharedText: String?,
+    preselectedDeviceId: String?,
     onLoadDevices: suspend () -> List<PairedDeviceUi>,
     onSendToPeer: suspend (String) -> Result<TransferUi>,
     onOpenMain: () -> Unit,
@@ -148,30 +162,51 @@ private fun SharePickerScreen(
     val palette = LocalKeynearPalette.current
     val scope = rememberCoroutineScope()
     var pairedDevices by remember { mutableStateOf<List<PairedDeviceUi>?>(null) }
-    var selectedDeviceId by remember { mutableStateOf<String?>(null) }
+    var selectedDeviceId by remember(preselectedDeviceId) { mutableStateOf<String?>(null) }
     var sending by remember { mutableStateOf(false) }
     var sendError by remember { mutableStateOf<String?>(null) }
     var sentTransfer by remember { mutableStateOf<TransferUi?>(null) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(preselectedDeviceId) {
         val loaded = withContext(Dispatchers.IO) { onLoadDevices() }
         pairedDevices = loaded
         if (selectedDeviceId == null && loaded.isNotEmpty()) {
-            selectedDeviceId = loaded.first().deviceId
+            selectedDeviceId = loaded.firstOrNull { it.deviceId == preselectedDeviceId }?.deviceId
+                ?: loaded.first().deviceId
         }
     }
 
-    Surface(
+    Box(
         modifier = Modifier.fillMaxSize(),
-        color = palette.canvas,
+        contentAlignment = Alignment.BottomCenter,
     ) {
-        Column(
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(KeynearSpacing.Lg),
-            verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Md),
+                .matchParentSize()
+                .background(Color.Black.copy(alpha = 0.45f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onClose,
+                ),
+        )
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 560.dp),
+            shape = RoundedCornerShape(
+                topStart = KeynearRadii.ThreeXl,
+                topEnd = KeynearRadii.ThreeXl,
+            ),
+            color = palette.canvas,
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(KeynearSpacing.Lg),
+                verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Md),
+            ) {
             Text(
                 text = stringResource(R.string.share_title),
                 style = MaterialTheme.typography.headlineSmall,
@@ -451,6 +486,7 @@ private fun SharePickerScreen(
                     }
                 }
             }
+        }
         }
     }
 }

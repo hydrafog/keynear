@@ -715,6 +715,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_keynear_core_checksum_method_corehandle_remove_paired_device(
     ): Int
+    external fun uniffi_keynear_core_checksum_method_corehandle_rename_paired_device(
+    ): Int
     external fun uniffi_keynear_core_checksum_method_corehandle_save_paired_device(
     ): Int
     external fun uniffi_keynear_core_checksum_method_corehandle_set_auto_accept_files(
@@ -827,6 +829,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_corehandle_remove_paired_device(`ptr`: Long,`devicesTomlPath`: RustBuffer.ByValue,`deviceId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
+    external fun uniffi_keynear_core_fn_method_corehandle_rename_paired_device(`ptr`: Long,`devicesTomlPath`: RustBuffer.ByValue,`deviceId`: RustBuffer.ByValue,`newDisplayName`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_corehandle_save_paired_device(`ptr`: Long,`devicesTomlPath`: RustBuffer.ByValue,`device`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_keynear_core_fn_method_corehandle_set_auto_accept_files(`ptr`: Long,`devicesTomlPath`: RustBuffer.ByValue,`deviceId`: RustBuffer.ByValue,`enabled`: Byte,uniffi_out_err: UniffiRustCallStatus, 
@@ -1088,6 +1092,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_keynear_core_checksum_method_corehandle_remove_paired_device() and 0xFFFF) != 65174) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_corehandle_rename_paired_device() and 0xFFFF) != 25763) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_keynear_core_checksum_method_corehandle_save_paired_device() and 0xFFFF) != 54120) {
@@ -1707,6 +1714,8 @@ public interface CoreHandleInterface {
     
     fun `removePairedDevice`(`devicesTomlPath`: kotlin.String, `deviceId`: kotlin.String): kotlin.Boolean
     
+    fun `renamePairedDevice`(`devicesTomlPath`: kotlin.String, `deviceId`: kotlin.String, `newDisplayName`: kotlin.String): FfiPairedDevice
+    
     fun `savePairedDevice`(`devicesTomlPath`: kotlin.String, `device`: FfiPairedDevice)
     
     fun `setAutoAcceptFiles`(`devicesTomlPath`: kotlin.String, `deviceId`: kotlin.String, `enabled`: kotlin.Boolean): FfiPairedDevice
@@ -2017,6 +2026,23 @@ open class CoreHandle: Disposable, AutoCloseable, CoreHandleInterface
         
         FfiConverterString.lower(`devicesTomlPath`),
         FfiConverterString.lower(`deviceId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `renamePairedDevice`(`devicesTomlPath`: kotlin.String, `deviceId`: kotlin.String, `newDisplayName`: kotlin.String): FfiPairedDevice {
+            return FfiConverterTypeFfiPairedDevice.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_corehandle_rename_paired_device(
+        it,
+        
+        FfiConverterString.lower(`devicesTomlPath`),
+        FfiConverterString.lower(`deviceId`),
+        FfiConverterString.lower(`newDisplayName`),_status)
 }
     }
     )

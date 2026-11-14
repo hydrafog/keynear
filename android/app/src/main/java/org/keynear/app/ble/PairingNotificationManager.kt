@@ -1,29 +1,41 @@
 package org.keynear.app.ble
 
 import android.Manifest
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import org.keynear.app.MainActivity
 import org.keynear.app.R
+import org.keynear.app.core.TransferDirectionUi
+import org.keynear.app.core.TransferProgressModel
+import org.keynear.app.core.TransferProgressStage
+import org.keynear.app.core.TransferUi
+import org.keynear.app.core.computeTransferProgressModel
+import org.keynear.app.core.formatByteCount
 import org.keynear.app.service.KeynearForegroundService
+import org.keynear.app.ui.theme.KeynearTokenHex
 
 object PairingNotificationManager {
     const val CHANNEL_ID = "keynear_pairing"
     const val TRANSFER_CHANNEL_ID = "keynear_transfers"
+    const val TRANSFER_PROGRESS_CHANNEL_ID = "keynear_transfer_progress"
     const val NOTIFICATION_ID = 1002
     const val TRANSFER_COMPLETE_ID = 1003
     const val TRANSFER_ERROR_ID = 1004
     const val LNP_BLOCKED_ID = 1005
     const val TRANSFER_CONSENT_BASE_ID = 2000
+    const val TRANSFER_PROGRESS_BASE_ID = 3000
     const val PAIRING_TIMEOUT_MS = 120_000L
 
     fun formatCode(rawSixDigits: String): String {
@@ -59,6 +71,149 @@ object PairingNotificationManager {
             description = context.getString(R.string.transfer_channel_description)
         }
         manager.createNotificationChannel(channel)
+    }
+
+    fun ensureTransferProgressChannel(context: Context) {
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        val channel = NotificationChannel(
+            TRANSFER_PROGRESS_CHANNEL_ID,
+            context.getString(R.string.transfer_progress_channel_name),
+            NotificationManager.IMPORTANCE_LOW,
+        ).apply {
+            description = context.getString(R.string.transfer_progress_channel_description)
+            setSound(null, null)
+            enableVibration(false)
+        }
+        manager.createNotificationChannel(channel)
+    }
+
+    fun transferNotificationKey(transferId: String): Int = transferId.hashCode() and 0x0FFF
+
+    fun progressNotificationId(transferId: String): Int =
+        TRANSFER_PROGRESS_BASE_ID + transferNotificationKey(transferId)
+
+    fun buildTransferProgressNotification(
+        context: Context,
+        transfer: TransferUi,
+        sdkInt: Int = Build.VERSION.SDK_INT,
+    ): Notification {
+        ensureTransferProgressChannel(context)
+        val model = computeTransferProgressModel(
+            state = transfer.state,
+            transferredBytes = transfer.transferredBytes,
+            totalBytes = transfer.totalBytes,
+            sdkInt = sdkInt,
+        )
+        val key = transferNotificationKey(transfer.transferId)
+        val openPending = PendingIntent.getActivity(
+            context,
+            310 + key,
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val cancelIntent = Intent(context, KeynearForegroundService::class.java).apply {
+            action = KeynearForegroundService.ACTION_TRANSFER_CANCEL
+            putExtra(KeynearForegroundService.EXTRA_TRANSFER_ID, transfer.transferId)
+        }
+        val cancelPending = PendingIntent.getService(
+            context,
+            5000 + key,
+            cancelIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val stageTitle = when (model.stage) {
+            TransferProgressStage.PREPARE -> context.getString(R.string.transfer_stage_prepare)
+            TransferProgressStage.TRANSFER -> context.getString(R.string.transfer_stage_transfer)
+            TransferProgressStage.COMPLETE -> context.getString(R.string.transfer_stage_complete)
+        }
+        val progressBody = if (transfer.totalBytes > 0L) {
+            "${transfer.summaryName} (${formatByteCount(transfer.transferredBytes)} / ${formatByteCount(transfer.totalBytes)} · ${model.overallPercent}%)"
+        } else {
+            transfer.summaryName
+        }
+        val smallIcon = if (transfer.direction == TransferDirectionUi.SEND) {
+            android.R.drawable.stat_sys_upload
+        } else {
+            android.R.drawable.stat_sys_download
+        }
+
+        return if (model.usesProgressStyleApi36 && Build.VERSION.SDK_INT >= 36) {
+            buildApi36ProgressNotification(
+                context = context,
+                smallIcon = smallIcon,
+                title = "$stageTitle · ${transfer.peerDisplayName}",
+                body = progressBody,
+                model = model,
+                openPending = openPending,
+                cancelPending = cancelPending,
+            )
+        } else {
+            NotificationCompat.Builder(context, TRANSFER_PROGRESS_CHANNEL_ID)
+                .setSmallIcon(smallIcon)
+                .setContentTitle("$stageTitle · ${transfer.peerDisplayName}")
+                .setContentText(progressBody)
+                .setProgress(100, model.overallPercent, model.stage == TransferProgressStage.PREPARE)
+                .setOngoing(model.stage != TransferProgressStage.COMPLETE)
+                .setOnlyAlertOnce(true)
+                .setSilent(true)
+                .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+                .setContentIntent(openPending)
+                .addAction(0, context.getString(R.string.action_cancel), cancelPending)
+                .build()
+        }
+    }
+
+    @RequiresApi(36)
+    private fun buildApi36ProgressNotification(
+        context: Context,
+        smallIcon: Int,
+        title: String,
+        body: String,
+        model: TransferProgressModel,
+        openPending: PendingIntent,
+        cancelPending: PendingIntent,
+    ): Notification {
+        val accentColor = (KeynearTokenHex.ACCENT_BLUE_600 and 0xFFFFFFFFL).toInt()
+        val focusColor = (KeynearTokenHex.FOCUS_BLUE_500 and 0xFFFFFFFFL).toInt()
+        val prepareEnd = model.segmentWeights[0]
+        val transferEnd = prepareEnd + model.segmentWeights[1]
+        val progressStyle = Notification.ProgressStyle()
+            .setStyledByProgress(true)
+            .setProgress(model.segmentedProgress)
+            .addProgressSegment(Notification.ProgressStyle.Segment(model.segmentWeights[0]).setColor(accentColor))
+            .addProgressSegment(Notification.ProgressStyle.Segment(model.segmentWeights[1]).setColor(focusColor))
+            .addProgressSegment(Notification.ProgressStyle.Segment(model.segmentWeights[2]).setColor(accentColor))
+            .addProgressPoint(Notification.ProgressStyle.Point(prepareEnd).setColor(accentColor))
+            .addProgressPoint(Notification.ProgressStyle.Point(transferEnd).setColor(focusColor))
+        val cancelAction = Notification.Action.Builder(
+            Icon.createWithResource(context, android.R.drawable.ic_menu_close_clear_cancel),
+            context.getString(R.string.action_cancel),
+            cancelPending,
+        ).build()
+
+        return Notification.Builder(context, TRANSFER_PROGRESS_CHANNEL_ID)
+            .setSmallIcon(smallIcon)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setOngoing(model.stage != TransferProgressStage.COMPLETE)
+            .setOnlyAlertOnce(true)
+            .setCategory(Notification.CATEGORY_PROGRESS)
+            .setContentIntent(openPending)
+            .setStyle(progressStyle)
+            .addAction(cancelAction)
+            .build()
+    }
+
+    fun showOrUpdateTransferProgress(
+        context: Context,
+        transfer: TransferUi,
+    ) {
+        if (!hasPostNotificationsPermission(context)) return
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        val notification = buildTransferProgressNotification(context, transfer, Build.VERSION.SDK_INT)
+        manager.notify(progressNotificationId(transfer.transferId), notification)
     }
 
     fun showVerificationPrompt(
@@ -180,8 +335,9 @@ object PairingNotificationManager {
 
     fun cancelTransferNotification(context: Context, transferId: String) {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
-        val key = transferId.hashCode() and 0x0FFF
+        val key = transferNotificationKey(transferId)
         manager.cancel(TRANSFER_CONSENT_BASE_ID + key)
+        manager.cancel(TRANSFER_PROGRESS_BASE_ID + key)
     }
 
     fun showTransferCompleted(

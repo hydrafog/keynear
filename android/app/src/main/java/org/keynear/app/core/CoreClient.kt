@@ -1,15 +1,24 @@
 package org.keynear.app.core
 
+import android.Manifest
+import android.companion.CompanionDeviceManager
 import android.content.ContentValues
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Environment
 import android.os.ParcelFileDescriptor
+import android.os.PowerManager
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.util.Log
+import androidx.core.content.ContextCompat
 import org.keynear.app.ble.KeynearBleConstants
 import org.keynear.app.ble.PairingNotificationManager
+import org.keynear.app.lan.LocalNetworkConstants
+import org.keynear.app.service.KeynearTransferJobService
+import org.keynear.app.share.DirectShareManager
 import uniffi.keynear_core.CoreHandle
 import uniffi.keynear_core.FfiDeviceRole
 import uniffi.keynear_core.FfiLanEndpoint
@@ -212,9 +221,153 @@ sealed interface ShareValidationResult {
     data class Invalid(val reason: String) : ShareValidationResult
 }
 
+enum class TransferProgressStage {
+    PREPARE,
+    TRANSFER,
+    COMPLETE,
+}
+
+data class TransferProgressModel(
+    val stage: TransferProgressStage,
+    val overallPercent: Int,
+    val segmentedProgress: Int,
+    val usesProgressStyleApi36: Boolean,
+    val segmentWeights: List<Int> = TRANSFER_SEGMENT_WEIGHTS,
+)
+
+private val TRANSFER_SEGMENT_WEIGHTS = listOf(20, 65, 15)
+
+fun computeTransferProgressModel(
+    state: TransferStateUi,
+    transferredBytes: Long,
+    totalBytes: Long,
+    sdkInt: Int = Build.VERSION.SDK_INT,
+): TransferProgressModel {
+    val usesApi36 = sdkInt >= 36
+    return when (state) {
+        TransferStateUi.COMPLETED -> TransferProgressModel(
+            stage = TransferProgressStage.COMPLETE,
+            overallPercent = 100,
+            segmentedProgress = 100,
+            usesProgressStyleApi36 = usesApi36,
+        )
+        TransferStateUi.PENDING_CONSENT -> TransferProgressModel(
+            stage = TransferProgressStage.PREPARE,
+            overallPercent = 10,
+            segmentedProgress = 10,
+            usesProgressStyleApi36 = usesApi36,
+        )
+        TransferStateUi.ACTIVE -> {
+            if (transferredBytes <= 0L) {
+                TransferProgressModel(
+                    stage = TransferProgressStage.PREPARE,
+                    overallPercent = 15,
+                    segmentedProgress = 15,
+                    usesProgressStyleApi36 = usesApi36,
+                )
+            } else if (totalBytes > 0L) {
+                val ratio = (transferredBytes.toDouble() / totalBytes.toDouble()).coerceIn(0.0, 1.0)
+                TransferProgressModel(
+                    stage = TransferProgressStage.TRANSFER,
+                    overallPercent = (ratio * 100.0).toInt().coerceIn(0, 100),
+                    segmentedProgress = 20 + (ratio * 65.0).toInt().coerceIn(0, 65),
+                    usesProgressStyleApi36 = usesApi36,
+                )
+            } else {
+                TransferProgressModel(
+                    stage = TransferProgressStage.TRANSFER,
+                    overallPercent = 50,
+                    segmentedProgress = 52,
+                    usesProgressStyleApi36 = usesApi36,
+                )
+            }
+        }
+        TransferStateUi.CANCELLED, TransferStateUi.FAILED -> TransferProgressModel(
+            stage = TransferProgressStage.PREPARE,
+            overallPercent = 0,
+            segmentedProgress = 0,
+            usesProgressStyleApi36 = usesApi36,
+        )
+    }
+}
+
+const val MAX_DISPLAY_NAME_LEN = 64
+
+fun validateDisplayNameInput(raw: String): Result<String> {
+    val trimmed = raw.trim()
+    if (trimmed.isEmpty()) {
+        return Result.failure(IllegalArgumentException("Device name cannot be empty"))
+    }
+    if (trimmed.length > MAX_DISPLAY_NAME_LEN) {
+        return Result.failure(IllegalArgumentException("Device name must be $MAX_DISPLAY_NAME_LEN characters or fewer"))
+    }
+    if (trimmed.any { it.isISOControl() }) {
+        return Result.failure(IllegalArgumentException("Device name contains unsupported control characters"))
+    }
+    return Result.success(trimmed)
+}
+
+data class PermissionsChecklistState(
+    val nearbyGranted: Boolean,
+    val notificationsGranted: Boolean,
+    val batteryOptimizationIgnored: Boolean,
+    val companionAssociated: Boolean,
+) {
+    val allRequiredGranted: Boolean
+        get() = nearbyGranted && notificationsGranted
+
+    val allRecommendedComplete: Boolean
+        get() = allRequiredGranted && batteryOptimizationIgnored
+
+    val completedCount: Int
+        get() = listOf(
+            nearbyGranted,
+            notificationsGranted,
+            batteryOptimizationIgnored,
+            companionAssociated,
+        ).count { it }
+}
+
+fun evaluatePermissionsChecklist(
+    context: Context,
+    sdkInt: Int = Build.VERSION.SDK_INT,
+): PermissionsChecklistState {
+    val bleReady = KeynearBleConstants.hasScanPermission(context) &&
+        KeynearBleConstants.hasConnectPermission(context) &&
+        KeynearBleConstants.hasAdvertisePermission(context)
+    val wifiNearbyReady = sdkInt < 33 ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.NEARBY_WIFI_DEVICES) ==
+        PackageManager.PERMISSION_GRANTED
+    val lnpReady = LocalNetworkConstants.hasLocalNetworkPermission(context, sdkInt)
+    val notificationsReady = sdkInt < 33 ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+        PackageManager.PERMISSION_GRANTED
+    val batteryIgnored = runCatching {
+        context.getSystemService(PowerManager::class.java)
+            ?.isIgnoringBatteryOptimizations(context.packageName) == true
+    }.getOrDefault(false)
+    val companionAssociated = runCatching {
+        val manager = context.getSystemService(CompanionDeviceManager::class.java) ?: return@runCatching false
+        if (sdkInt >= 33) {
+            manager.myAssociations.isNotEmpty()
+        } else {
+            @Suppress("DEPRECATION")
+            manager.associations.isNotEmpty()
+        }
+    }.getOrDefault(false)
+
+    return PermissionsChecklistState(
+        nearbyGranted = bleReady && wifiNearbyReady && lnpReady,
+        notificationsGranted = notificationsReady,
+        batteryOptimizationIgnored = batteryIgnored,
+        companionAssociated = companionAssociated,
+    )
+}
+
 interface CoreBridge {
     fun loadState(): CoreState
     fun cycleVisibility(): CoreState
+    fun setVisibility(mode: VisibilityState): CoreState = loadState()
     fun tick(): CoreState = loadState()
     fun updateNearbyPeers(peers: List<DiscoveredPeerUi>) {}
     fun updateBluetoothStatus(status: BluetoothStatus, warning: String? = null) {}
@@ -222,6 +375,7 @@ interface CoreBridge {
     fun currentLocalNetworkStatus(): LocalNetworkStatus = LocalNetworkStatus.READY
     fun setPendingPairing(prompt: PendingPairingUi?) {}
     fun unpairDevice(deviceId: String): CoreState = loadState()
+    fun renamePairedDevice(deviceId: String, newDisplayName: String): CoreState = loadState()
     fun setAutoAcceptFiles(deviceId: String, enabled: Boolean): CoreState = loadState()
     fun acceptTransfer(transferId: String): CoreState = loadState()
     fun declineTransfer(transferId: String): CoreState = loadState()
@@ -452,6 +606,9 @@ class UniffiCoreClient(
     private val notifiedTerminalIds = ConcurrentHashMap.newKeySet<String>()
     private val fdHandedOffIds = ConcurrentHashMap.newKeySet<String>()
 
+    @Volatile
+    private var lastSyncedShortcutSnapshot: List<Pair<String, String>>? = null
+
     @Synchronized
     fun attachContext(context: Context) {
         val app = context.applicationContext
@@ -673,6 +830,7 @@ class UniffiCoreClient(
         val sessions = runCatching { node.listTransfers() }.getOrNull() ?: return false
         val peerNames = getPairedDevices().associate { it.deviceId to it.displayName }
         var changed = false
+        var hasActiveTransfers = false
 
         for (session in sessions) {
             val uiState = TransferStateUi.fromFfi(session.state)
@@ -692,12 +850,17 @@ class UniffiCoreClient(
                 }
             }
 
-            if (session.direction == FfiTransferDirection.RECEIVE && uiState == TransferStateUi.ACTIVE) {
-                if (isSingleFileReceive(session) && !fdHandedOffIds.contains(session.transferId)) {
+            if (uiState == TransferStateUi.ACTIVE) {
+                hasActiveTransfers = true
+                if (session.direction == FfiTransferDirection.RECEIVE && isSingleFileReceive(session) && !fdHandedOffIds.contains(session.transferId)) {
                     if (prepareAndHandOffReceiveFd(node, session)) {
                         changed = true
                     }
                 }
+                PairingNotificationManager.showOrUpdateTransferProgress(
+                    context = app,
+                    transfer = toTransferUi(session, peerNames),
+                )
             }
 
             mediaStoreTracker?.reconcileState(session.transferId, uiState)
@@ -726,6 +889,7 @@ class UniffiCoreClient(
                 }
             }
         }
+        KeynearTransferJobService.syncActiveTransfers(app, hasActiveTransfers)
         return changed
     }
 
@@ -831,6 +995,15 @@ class UniffiCoreClient(
         }
     }
 
+    override fun setVisibility(mode: VisibilityState): CoreState {
+        return try {
+            handle.setVisibilityMode(mode.toFfi())
+            buildState()
+        } catch (t: Throwable) {
+            CoreState.Error(t.message ?: "Unable to set visibility mode", snapshotFromCurrent())
+        }
+    }
+
     override fun tick(): CoreState = buildState()
 
     override fun unpairDevice(deviceId: String): CoreState {
@@ -838,9 +1011,24 @@ class UniffiCoreClient(
             devicesPath?.let { handle.removePairedDevice(it, deviceId) }
             secretStore?.deletePeerSecrets(deviceId)
             runCatching { orionNode?.removePeer(deviceId) }
+            lastSyncedShortcutSnapshot = null
             buildState()
         } catch (t: Throwable) {
             CoreState.Error(t.message ?: "Unable to unpair device")
+        }
+    }
+
+    override fun renamePairedDevice(deviceId: String, newDisplayName: String): CoreState {
+        val validated = validateDisplayNameInput(newDisplayName).getOrElse { err ->
+            return CoreState.Error(err.message ?: "Invalid device name", snapshotFromCurrent())
+        }
+        val path = devicesPath ?: return CoreState.Error("Device store path unavailable", snapshotFromCurrent())
+        return try {
+            handle.renamePairedDevice(path, deviceId, validated)
+            lastSyncedShortcutSnapshot = null
+            buildState()
+        } catch (t: Throwable) {
+            CoreState.Error(t.message ?: "Unable to rename device", snapshotFromCurrent())
         }
     }
 
@@ -956,7 +1144,10 @@ class UniffiCoreClient(
                     stagingDir.deleteRecursively()
                 }
             }
-            toTransferUi(session, peerNames)
+            val uiTransfer = toTransferUi(session, peerNames)
+            PairingNotificationManager.showOrUpdateTransferProgress(ctx, uiTransfer)
+            KeynearTransferJobService.syncActiveTransfers(ctx, true)
+            uiTransfer
         }
     }
 
@@ -1012,6 +1203,13 @@ class UniffiCoreClient(
                 autoAcceptFiles = dev.autoAcceptFiles,
                 lastEndpointId = dev.lastEndpointId,
             )
+        }
+        val shortcutSnapshot = paired.map { it.deviceId to it.displayName }
+        appContext?.let { ctx ->
+            if (lastSyncedShortcutSnapshot != shortcutSnapshot) {
+                lastSyncedShortcutSnapshot = shortcutSnapshot
+                DirectShareManager.syncShortcuts(ctx, paired)
+            }
         }
         val transfers = orionNode?.let { node ->
             runCatching { node.listTransfers() }.getOrDefault(emptyList())

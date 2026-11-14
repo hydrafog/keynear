@@ -15,8 +15,8 @@ android {
         applicationId = "org.keynear.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.3.0-orion"
+        versionCode = 4
+        versionName = "0.4.0-aquila"
     }
 
     buildFeatures {

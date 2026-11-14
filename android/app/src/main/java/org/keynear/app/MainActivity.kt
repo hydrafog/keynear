@@ -1,6 +1,9 @@
 package org.keynear.app
 
+import android.Manifest
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -9,6 +12,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -33,14 +37,17 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -55,6 +62,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -71,11 +79,14 @@ import org.keynear.app.core.DiscoveredPeerUi
 import org.keynear.app.core.LocalNetworkStatus
 import org.keynear.app.core.PairedDeviceUi
 import org.keynear.app.core.PendingPairingUi
+import org.keynear.app.core.PermissionsChecklistState
 import org.keynear.app.core.TransferDirectionUi
 import org.keynear.app.core.TransferStateUi
 import org.keynear.app.core.TransferUi
 import org.keynear.app.core.VisibilityState
+import org.keynear.app.core.evaluatePermissionsChecklist
 import org.keynear.app.core.formatByteCount
+import org.keynear.app.core.validateDisplayNameInput
 import org.keynear.app.lan.LocalNetworkConstants
 import org.keynear.app.lan.LocalNetworkManager
 import org.keynear.app.service.KeynearForegroundService
@@ -96,11 +107,15 @@ private data class SnapshotActions(
     val onRequestBluetoothPermissions: () -> Unit,
     val onOpenBluetoothSettings: () -> Unit,
     val onRequestLocalNetworkPermission: () -> Unit,
+    val onRequestNearbyOnboardingPermissions: () -> Unit,
+    val onRequestNotificationsPermission: () -> Unit,
+    val onRequestBatteryOptimization: () -> Unit,
     val onOpenAppSettings: () -> Unit,
     val onInitiatePairing: (String) -> Unit,
     val onApprovePairing: () -> Unit,
     val onRejectPairing: () -> Unit,
     val onToggleAutoAccept: (String, Boolean) -> Unit,
+    val onRenameDevice: (String, String) -> Unit,
     val onAcceptTransfer: (String) -> Unit,
     val onDeclineTransfer: (String) -> Unit,
     val onCancelTransfer: (String) -> Unit,
@@ -109,15 +124,37 @@ private data class SnapshotActions(
     val onConfirmUnpair: (String) -> Unit,
 )
 
+private fun launchFirstResolvableActivity(
+    context: Context,
+    candidates: List<Intent>,
+): Boolean {
+    val pm = context.packageManager
+    for (intent in candidates) {
+        if (intent.resolveActivity(pm) != null) {
+            if (runCatching { context.startActivity(intent) }.isSuccess) {
+                return true
+            }
+        }
+    }
+    return false
+}
+
 class MainActivity : ComponentActivity() {
+    private var resumeTick by mutableIntStateOf(0)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val bridge = CoreClientProvider.init(applicationContext)
         setContent {
             KeynearTheme {
-                KeynearFoundationScreen(bridge = bridge)
+                KeynearFoundationScreen(bridge = bridge, resumeTick = resumeTick)
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        resumeTick += 1
     }
 }
 
@@ -129,7 +166,10 @@ private fun snapshotFromState(state: CoreState): CoreSnapshot? = when (state) {
 }
 
 @Composable
-private fun KeynearFoundationScreen(bridge: CoreBridge) {
+private fun KeynearFoundationScreen(
+    bridge: CoreBridge,
+    resumeTick: Int = 0,
+) {
     val palette = LocalKeynearPalette.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -145,6 +185,9 @@ private fun KeynearFoundationScreen(bridge: CoreBridge) {
 
     var uiState by remember { mutableStateOf<CoreState>(CoreState.Loading) }
     var confirmUnpairDeviceId by remember { mutableStateOf<String?>(null) }
+    var permissionsChecklist by remember {
+        mutableStateOf(evaluatePermissionsChecklist(context))
+    }
 
     val syncBleAndLoad: suspend () -> Unit = {
         val loaded = withContext(Dispatchers.IO) { bridge.loadState() }
@@ -153,6 +196,7 @@ private fun KeynearFoundationScreen(bridge: CoreBridge) {
             KeynearBleManager.startOrSync(context, vis)
             KeynearForegroundService.syncIfPermitted(context)
         }
+        permissionsChecklist = evaluatePermissionsChecklist(context)
         uiState = withContext(Dispatchers.IO) { bridge.loadState() }
     }
 
@@ -162,7 +206,7 @@ private fun KeynearFoundationScreen(bridge: CoreBridge) {
         scope.launch { syncBleAndLoad() }
     }
 
-    LaunchedEffect(bridge) {
+    LaunchedEffect(bridge, resumeTick) {
         syncBleAndLoad()
     }
 
@@ -215,7 +259,10 @@ private fun KeynearFoundationScreen(bridge: CoreBridge) {
             }
         },
         onOpenBluetoothSettings = {
-            context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
+            launchFirstResolvableActivity(
+                context,
+                listOf(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)),
+            )
         },
         onRequestLocalNetworkPermission = {
             if (LocalNetworkConstants.requiresLocalNetworkPermission(Build.VERSION.SDK_INT)) {
@@ -226,12 +273,81 @@ private fun KeynearFoundationScreen(bridge: CoreBridge) {
                 uiState = bridge.loadState()
             }
         },
-        onOpenAppSettings = {
-            val intent = Intent(
-                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                Uri.fromParts("package", context.packageName, null),
+        onRequestNearbyOnboardingPermissions = {
+            val missing = KeynearBleConstants.missingPermissions(
+                context,
+                Build.VERSION.SDK_INT,
+            ).toMutableList()
+            if (Build.VERSION.SDK_INT >= 33 &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.NEARBY_WIFI_DEVICES) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                missing.add(Manifest.permission.NEARBY_WIFI_DEVICES)
+            }
+            if (LocalNetworkConstants.requiresLocalNetworkPermission(Build.VERSION.SDK_INT)) {
+                missing.add(LocalNetworkConstants.PERMISSION_ACCESS_LOCAL_NETWORK)
+            }
+            if (missing.isNotEmpty()) {
+                permissionLauncher.launch(missing.distinct().toTypedArray())
+            } else {
+                launchFirstResolvableActivity(
+                    context,
+                    listOf(
+                        Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.fromParts("package", context.packageName, null),
+                        ),
+                    ),
+                )
+            }
+        },
+        onRequestNotificationsPermission = {
+            if (Build.VERSION.SDK_INT >= 33 &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                permissionLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
+            } else {
+                launchFirstResolvableActivity(
+                    context,
+                    listOf(
+                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(
+                            Settings.EXTRA_APP_PACKAGE,
+                            context.packageName,
+                        ),
+                        Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.fromParts("package", context.packageName, null),
+                        ),
+                    ),
+                )
+            }
+        },
+        onRequestBatteryOptimization = {
+            val pkgUri = Uri.parse("package:${context.packageName}")
+            launchFirstResolvableActivity(
+                context,
+                listOf(
+                    Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, pkgUri),
+                    Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
+                    Intent(
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.fromParts("package", context.packageName, null),
+                    ),
+                ),
             )
-            context.startActivity(intent)
+            permissionsChecklist = evaluatePermissionsChecklist(context)
+        },
+        onOpenAppSettings = {
+            launchFirstResolvableActivity(
+                context,
+                listOf(
+                    Intent(
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.fromParts("package", context.packageName, null),
+                    ),
+                ),
+            )
         },
         onInitiatePairing = { addr ->
             scope.launch {
@@ -261,6 +377,13 @@ private fun KeynearFoundationScreen(bridge: CoreBridge) {
             scope.launch {
                 uiState = withContext(Dispatchers.IO) {
                     bridge.setAutoAcceptFiles(deviceId, enabled)
+                }
+            }
+        },
+        onRenameDevice = { deviceId, newDisplayName ->
+            scope.launch {
+                uiState = withContext(Dispatchers.IO) {
+                    bridge.renamePairedDevice(deviceId, newDisplayName)
                 }
             }
         },
@@ -342,6 +465,7 @@ private fun KeynearFoundationScreen(bridge: CoreBridge) {
                             err.previous?.let { previous ->
                                 SnapshotContent(
                                     snapshot = previous,
+                                    checklist = permissionsChecklist,
                                     confirmUnpairDeviceId = confirmUnpairDeviceId,
                                     actions = actions,
                                 )
@@ -353,6 +477,7 @@ private fun KeynearFoundationScreen(bridge: CoreBridge) {
                         if (snapshot != null) {
                             SnapshotContent(
                                 snapshot = snapshot,
+                                checklist = permissionsChecklist,
                                 confirmUnpairDeviceId = confirmUnpairDeviceId,
                                 actions = actions,
                             )
@@ -815,6 +940,7 @@ private fun TransferRow(
 @Composable
 private fun SnapshotContent(
     snapshot: CoreSnapshot,
+    checklist: PermissionsChecklistState,
     confirmUnpairDeviceId: String?,
     actions: SnapshotActions,
 ) {
@@ -822,6 +948,13 @@ private fun SnapshotContent(
     val dark = isSystemInDarkTheme()
     val warningBg = if (dark) Color(0xFF381C00) else Color(0xFFFFF6D3)
     val warningFg = if (dark) Color(0xFFFFEAA5) else Color(0xFF863300)
+
+    PermissionsOnboardingCard(
+        checklist = checklist,
+        onGrantNearby = actions.onRequestNearbyOnboardingPermissions,
+        onGrantNotifications = actions.onRequestNotificationsPermission,
+        onAllowBackground = actions.onRequestBatteryOptimization,
+    )
 
     if (snapshot.bluetoothStatus != BluetoothStatus.READY || snapshot.warningMessage != null) {
         BluetoothWarningCard(
@@ -981,6 +1114,9 @@ private fun SnapshotContent(
                         onToggleAutoAccept = { enabled ->
                             actions.onToggleAutoAccept(device.deviceId, enabled)
                         },
+                        onRenameDevice = { newName ->
+                            actions.onRenameDevice(device.deviceId, newName)
+                        },
                         onRequestUnpair = { actions.onRequestUnpair(device.deviceId) },
                         onCancelUnpair = actions.onCancelUnpair,
                         onConfirmUnpair = { actions.onConfirmUnpair(device.deviceId) },
@@ -1079,17 +1215,181 @@ private fun NearbyPeerRow(
 }
 
 @Composable
+private fun PermissionsOnboardingCard(
+    checklist: PermissionsChecklistState,
+    onGrantNearby: () -> Unit,
+    onGrantNotifications: () -> Unit,
+    onAllowBackground: () -> Unit,
+) {
+    val palette = LocalKeynearPalette.current
+    var manualExpanded by remember { mutableStateOf<Boolean?>(null) }
+    val expanded = manualExpanded ?: !checklist.allRequiredGranted
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(KeynearRadii.TwoXl),
+        colors = CardDefaults.cardColors(containerColor = palette.surfaceTonal),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(KeynearSpacing.Lg),
+            verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.onboarding_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = palette.textPrimary,
+                    )
+                    Text(
+                        text = if (checklist.allRecommendedComplete) {
+                            stringResource(R.string.onboarding_summary_ready)
+                        } else {
+                            stringResource(R.string.onboarding_summary_pending)
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = palette.textSecondary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Spacer(modifier = Modifier.width(KeynearSpacing.Sm))
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "${checklist.completedCount}/4",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontFeatureSettings = "tnum",
+                        ),
+                        color = palette.accent,
+                    )
+                    TextButton(
+                        onClick = { manualExpanded = !expanded },
+                        modifier = Modifier.defaultMinSize(
+                            minWidth = KeynearSpacing.MinTouchTarget,
+                            minHeight = KeynearSpacing.MinTouchTarget,
+                        ),
+                    ) {
+                        Text(
+                            text = if (expanded) {
+                                stringResource(R.string.onboarding_hide)
+                            } else {
+                                stringResource(R.string.onboarding_show)
+                            },
+                            color = palette.accent,
+                        )
+                    }
+                }
+            }
+
+            AnimatedVisibility(visible = expanded) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
+                ) {
+                    OnboardingChecklistRow(
+                        label = stringResource(R.string.onboarding_nearby_label),
+                        completed = checklist.nearbyGranted,
+                        actionLabel = stringResource(R.string.onboarding_grant_action),
+                        pendingLabel = stringResource(R.string.onboarding_status_needed),
+                        onAction = onGrantNearby,
+                    )
+                    OnboardingChecklistRow(
+                        label = stringResource(R.string.onboarding_notifications_label),
+                        completed = checklist.notificationsGranted,
+                        actionLabel = stringResource(R.string.onboarding_grant_action),
+                        pendingLabel = stringResource(R.string.onboarding_status_needed),
+                        onAction = onGrantNotifications,
+                    )
+                    OnboardingChecklistRow(
+                        label = stringResource(R.string.onboarding_battery_label),
+                        completed = checklist.batteryOptimizationIgnored,
+                        actionLabel = stringResource(R.string.onboarding_battery_action),
+                        pendingLabel = stringResource(R.string.onboarding_status_recommended),
+                        onAction = onAllowBackground,
+                    )
+                    OnboardingChecklistRow(
+                        label = stringResource(R.string.onboarding_companion_label),
+                        completed = checklist.companionAssociated,
+                        actionLabel = null,
+                        pendingLabel = stringResource(R.string.onboarding_status_recommended),
+                        onAction = null,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OnboardingChecklistRow(
+    label: String,
+    completed: Boolean,
+    actionLabel: String?,
+    pendingLabel: String,
+    onAction: (() -> Unit)?,
+) {
+    val palette = LocalKeynearPalette.current
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = palette.textPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = if (completed) stringResource(R.string.onboarding_status_ready) else pendingLabel,
+                style = MaterialTheme.typography.labelMedium,
+                color = if (completed) palette.accent else palette.textMuted,
+            )
+        }
+        if (!completed && actionLabel != null && onAction != null) {
+            Spacer(modifier = Modifier.width(KeynearSpacing.Sm))
+            OutlinedButton(
+                onClick = onAction,
+                modifier = Modifier.defaultMinSize(
+                    minWidth = KeynearSpacing.MinTouchTarget,
+                    minHeight = KeynearSpacing.MinTouchTarget,
+                ),
+                shape = RoundedCornerShape(KeynearRadii.Xl),
+            ) {
+                Text(
+                    text = actionLabel,
+                    color = palette.textPrimary,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun PairedDeviceRow(
     device: PairedDeviceUi,
     confirmingUnpair: Boolean,
     warningBg: Color,
     warningFg: Color,
     onToggleAutoAccept: (Boolean) -> Unit,
+    onRenameDevice: (String) -> Unit,
     onRequestUnpair: () -> Unit,
     onCancelUnpair: () -> Unit,
     onConfirmUnpair: () -> Unit,
 ) {
     val palette = LocalKeynearPalette.current
+    var editingRename by remember(device.deviceId) { mutableStateOf(false) }
+    var renameDraft by remember(device.deviceId, device.displayName) { mutableStateOf(device.displayName) }
+    var renameError by remember(device.deviceId) { mutableStateOf<String?>(null) }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
@@ -1107,8 +1407,13 @@ private fun PairedDeviceRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                val endpointSuffix = if (device.lastEndpointId.isNotBlank()) {
+                    " · ${device.lastEndpointId.take(8)}"
+                } else {
+                    ""
+                }
                 Text(
-                    text = "${device.role.label()} · ${device.publicKeyFingerprint}",
+                    text = "${device.role.label()} · ${device.publicKeyFingerprint}$endpointSuffix",
                     style = MaterialTheme.typography.labelMedium,
                     color = palette.textSecondary,
                     maxLines = 1,
@@ -1116,6 +1421,24 @@ private fun PairedDeviceRow(
                 )
             }
             Spacer(modifier = Modifier.width(KeynearSpacing.Sm))
+            OutlinedButton(
+                onClick = {
+                    renameDraft = device.displayName
+                    renameError = null
+                    editingRename = !editingRename
+                },
+                modifier = Modifier.defaultMinSize(
+                    minWidth = KeynearSpacing.MinTouchTarget,
+                    minHeight = KeynearSpacing.MinTouchTarget,
+                ),
+                shape = RoundedCornerShape(KeynearRadii.Xl),
+            ) {
+                Text(
+                    text = stringResource(R.string.action_rename),
+                    color = palette.textPrimary,
+                )
+            }
+            Spacer(modifier = Modifier.width(KeynearSpacing.Xs))
             OutlinedButton(
                 onClick = onRequestUnpair,
                 modifier = Modifier.defaultMinSize(
@@ -1128,6 +1451,88 @@ private fun PairedDeviceRow(
                     text = stringResource(R.string.action_unpair),
                     color = palette.textPrimary,
                 )
+            }
+        }
+
+        if (editingRename) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(KeynearRadii.Xl),
+                color = palette.surfaceTonal,
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(KeynearSpacing.Md),
+                    verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
+                ) {
+                    Text(
+                        text = stringResource(R.string.rename_dialog_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = palette.textPrimary,
+                    )
+                    OutlinedTextField(
+                        value = renameDraft,
+                        onValueChange = {
+                            renameDraft = it
+                            renameError = null
+                        },
+                        singleLine = true,
+                        label = { Text(text = stringResource(R.string.rename_input_label)) },
+                        isError = renameError != null,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    renameError?.let { err ->
+                        Text(
+                            text = err,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = palette.onDangerTonal,
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm)) {
+                        Button(
+                            onClick = {
+                                validateDisplayNameInput(renameDraft)
+                                    .onSuccess { clean ->
+                                        editingRename = false
+                                        renameError = null
+                                        onRenameDevice(clean)
+                                    }
+                                    .onFailure { err ->
+                                        renameError = err.message ?: "Invalid device name"
+                                    }
+                            },
+                            modifier = Modifier.defaultMinSize(
+                                minWidth = KeynearSpacing.MinTouchTarget,
+                                minHeight = KeynearSpacing.MinTouchTarget,
+                            ),
+                            shape = RoundedCornerShape(KeynearRadii.Xl),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = palette.accent,
+                                contentColor = palette.onAccent,
+                            ),
+                        ) {
+                            Text(text = stringResource(R.string.action_save))
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                editingRename = false
+                                renameDraft = device.displayName
+                                renameError = null
+                            },
+                            modifier = Modifier.defaultMinSize(
+                                minWidth = KeynearSpacing.MinTouchTarget,
+                                minHeight = KeynearSpacing.MinTouchTarget,
+                            ),
+                            shape = RoundedCornerShape(KeynearRadii.Xl),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.action_cancel),
+                                color = palette.textPrimary,
+                            )
+                        }
+                    }
+                }
             }
         }
 

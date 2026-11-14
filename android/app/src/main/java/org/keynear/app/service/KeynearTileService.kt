@@ -9,6 +9,34 @@ import org.keynear.app.core.CoreClientProvider
 import org.keynear.app.core.CoreState
 import org.keynear.app.core.VisibilityState
 
+enum class TileTransitionDecision {
+    APPLY_DIRECTLY,
+    REQUIRE_UNLOCK,
+}
+
+fun evaluateTileTransition(
+    current: VisibilityState,
+    isDeviceLocked: Boolean,
+): Pair<VisibilityState, TileTransitionDecision> = when (current) {
+    VisibilityState.HIDDEN -> VisibilityState.PAIRED_ONLY to TileTransitionDecision.APPLY_DIRECTLY
+    VisibilityState.PAIRED_ONLY -> {
+        val decision = if (isDeviceLocked) {
+            TileTransitionDecision.REQUIRE_UNLOCK
+        } else {
+            TileTransitionDecision.APPLY_DIRECTLY
+        }
+        VisibilityState.EVERYONE_NEARBY to decision
+    }
+    VisibilityState.EVERYONE_NEARBY -> {
+        val nextMode = if (isDeviceLocked) {
+            VisibilityState.PAIRED_ONLY
+        } else {
+            VisibilityState.HIDDEN
+        }
+        nextMode to TileTransitionDecision.APPLY_DIRECTLY
+    }
+}
+
 class KeynearTileService : TileService() {
     override fun onStartListening() {
         super.onStartListening()
@@ -25,7 +53,25 @@ class KeynearTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
-        when (val result = CoreClientProvider.init(applicationContext).cycleVisibility()) {
+        val client = CoreClientProvider.init(applicationContext)
+        val currentVisibility = when (val currentState = client.loadState()) {
+            is CoreState.Empty -> currentState.snapshot.visibility
+            is CoreState.Ready -> currentState.snapshot.visibility
+            is CoreState.Error -> currentState.previous?.visibility ?: VisibilityState.PAIRED_ONLY
+            CoreState.Loading -> VisibilityState.PAIRED_ONLY
+        }
+        val (targetVisibility, decision) = evaluateTileTransition(currentVisibility, isLocked)
+        if (decision == TileTransitionDecision.REQUIRE_UNLOCK) {
+            unlockAndRun {
+                applyVisibilityTarget(targetVisibility)
+            }
+        } else {
+            applyVisibilityTarget(targetVisibility)
+        }
+    }
+
+    private fun applyVisibilityTarget(target: VisibilityState) {
+        when (val result = CoreClientProvider.init(applicationContext).setVisibility(target)) {
             is CoreState.Empty -> {
                 applyVisibilityToTile(result.snapshot.visibility, result.snapshot.everyoneRemainingSecs)
                 KeynearBleManager.startOrSync(applicationContext, result.snapshot.visibility)
@@ -37,7 +83,7 @@ class KeynearTileService : TileService() {
                 KeynearForegroundService.syncIfPermitted(applicationContext)
             }
             is CoreState.Error -> {
-                Log.w(TAG, "visibility_cycle_failed")
+                Log.w(TAG, "visibility_set_failed")
             }
             CoreState.Loading -> Unit
         }

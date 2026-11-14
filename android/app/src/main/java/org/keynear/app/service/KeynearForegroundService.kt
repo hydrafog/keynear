@@ -16,8 +16,10 @@ import org.keynear.app.ble.KeynearBleConstants
 import org.keynear.app.ble.KeynearBleManager
 import org.keynear.app.core.CoreClientProvider
 import org.keynear.app.core.CoreState
+import org.keynear.app.core.TransferStateUi
 import org.keynear.app.core.VisibilityState
 import org.keynear.app.lan.LocalNetworkManager
+import org.keynear.app.share.DirectShareManager
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -74,8 +76,16 @@ class KeynearForegroundService : Service() {
         }
 
         val (visibility, remainingSecs) = when (val state = client.loadState()) {
-            is CoreState.Empty -> state.snapshot.visibility to state.snapshot.everyoneRemainingSecs
-            is CoreState.Ready -> state.snapshot.visibility to state.snapshot.everyoneRemainingSecs
+            is CoreState.Empty -> {
+                DirectShareManager.syncShortcuts(applicationContext, state.snapshot.pairedDevices)
+                state.snapshot.visibility to state.snapshot.everyoneRemainingSecs
+            }
+            is CoreState.Ready -> {
+                DirectShareManager.syncShortcuts(applicationContext, state.snapshot.pairedDevices)
+                val hasActive = state.snapshot.activeTransfers.any { it.state == TransferStateUi.ACTIVE }
+                KeynearTransferJobService.syncActiveTransfers(applicationContext, hasActive)
+                state.snapshot.visibility to state.snapshot.everyoneRemainingSecs
+            }
             else -> VisibilityState.PAIRED_ONLY to 0L
         }
 
