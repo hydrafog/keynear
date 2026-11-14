@@ -8,15 +8,23 @@ import org.junit.Test
 import org.keynear.app.core.CoreBridge
 import org.keynear.app.core.CoreSnapshot
 import org.keynear.app.core.CoreState
+import org.keynear.app.core.DaemonConfigUi
 import org.keynear.app.core.DeviceRoleUi
 import org.keynear.app.core.MAX_DISPLAY_NAME_LEN
 import org.keynear.app.core.PairedDeviceUi
 import org.keynear.app.core.PermissionsChecklistState
+import org.keynear.app.core.SendItemKind
+import org.keynear.app.core.SendQueueStore
+import org.keynear.app.core.TransferDirectionUi
 import org.keynear.app.core.TransferProgressStage
 import org.keynear.app.core.TransferStateUi
+import org.keynear.app.core.TransferUi
 import org.keynear.app.core.VisibilityState
 import org.keynear.app.core.computeTransferProgressModel
+import org.keynear.app.core.formatBytes
+import org.keynear.app.core.orbitFor
 import org.keynear.app.core.validateDisplayNameInput
+import uniffi.keynear_core.FfiVisibilityMode
 import org.keynear.app.service.TileTransitionDecision
 import org.keynear.app.service.evaluateTileTransition
 import org.keynear.app.share.DirectShareManager
@@ -203,6 +211,161 @@ class AquilaSurfacesAndOnboardingTest {
 
         val renamed = bridge.renamePairedDevice("dev-1", "  New Studio Name ") as CoreState.Ready
         assertEquals("New Studio Name", renamed.snapshot.pairedDevices.single().displayName)
+    }
+
+    @Test
+    fun orbitForMatchesPrototypeRadiusAndPhaseFormula() {
+        val near = orbitFor(rssi = -40, index = 0, count = 2)
+        assertEquals(128, near.radiusPx)
+        assertEquals(40, near.durationSec)
+        assertEquals(0f, near.phaseSec, 0.001f)
+
+        val far = orbitFor(rssi = -90, index = 1, count = 2)
+        assertEquals(176, far.radiusPx)
+        assertEquals(40, far.durationSec)
+        assertEquals(20f, far.phaseSec, 0.001f)
+
+        assertEquals(176, orbitFor(rssi = -120, index = 0, count = 1).radiusPx)
+        assertEquals(128, orbitFor(rssi = -10, index = 0, count = 1).radiusPx)
+    }
+
+    @Test
+    fun sendQueueStagesFileFolderClipboardAndTextAndSendsToPeer() {
+        val store = SendQueueStore()
+        var lastTarget: String? = null
+        var lastCount = 0
+
+        val bridge = object : CoreBridge {
+            override fun loadState(): CoreState = CoreState.Ready(
+                CoreSnapshot(
+                    version = "0.4.0",
+                    maxControlFrameBytes = 65_536L,
+                    ready = true,
+                    visibility = VisibilityState.PAIRED_ONLY,
+                    configSummary = "visibility=PairedOnly",
+                    pairedDevices = listOf(sampleDevice("dev-1", "Fedora Laptop")),
+                    sendQueue = store.snapshot(),
+                ),
+            )
+
+            override fun cycleVisibility(): CoreState = loadState()
+
+            override fun stageFileUris(uris: List<String>): CoreState {
+                uris.forEach { raw ->
+                    store.addFile(raw.substringAfterLast('/'), 2048L, "application/pdf", raw)
+                }
+                return loadState()
+            }
+
+            override fun stageFolderUri(
+                folderUri: String,
+                displayName: String,
+                fileUris: List<String>,
+            ): CoreState {
+                store.addFolder(displayName, folderUri, 4096L)
+                return loadState()
+            }
+
+            override fun stageClipboardText(text: String): CoreState {
+                store.addClipboard(text)
+                return loadState()
+            }
+
+            override fun stageTextSnippet(text: String): CoreState {
+                store.addTextSnippet(text)
+                return loadState()
+            }
+
+            override fun removeSendQueueItem(itemId: String): CoreState {
+                store.remove(itemId)
+                return loadState()
+            }
+
+            override fun sendQueueToPeer(peerDeviceId: String): Result<TransferUi> {
+                val staged = store.snapshot()
+                lastTarget = peerDeviceId
+                lastCount = staged.size
+                store.clear()
+                return Result.success(
+                    TransferUi(
+                        transferId = "tx-1",
+                        peerDeviceId = peerDeviceId,
+                        peerDisplayName = "Fedora Laptop",
+                        summaryName = staged.first().name,
+                        mimeType = staged.first().mime,
+                        isDirectory = false,
+                        direction = TransferDirectionUi.SEND,
+                        totalBytes = staged.sumOf { it.sizeBytes },
+                        transferredBytes = 0L,
+                        state = TransferStateUi.ACTIVE,
+                        startedAt = "1731585600",
+                    ),
+                )
+            }
+        }
+
+        bridge.stageFileUris(listOf("content://docs/report.pdf"))
+        bridge.stageFolderUri("content://tree/photos", "Photos")
+        bridge.stageClipboardText("copied secret phrase")
+        val stagedState = bridge.stageTextSnippet("quick note") as CoreState.Ready
+        assertEquals(4, stagedState.snapshot.sendQueue.size)
+        assertEquals(
+            listOf(
+                SendItemKind.FILE,
+                SendItemKind.FOLDER,
+                SendItemKind.CLIPBOARD,
+                SendItemKind.TEXT,
+            ),
+            stagedState.snapshot.sendQueue.map { it.kind },
+        )
+        assertEquals("2.0 KB", formatBytes(2048L))
+
+        val removed = bridge.removeSendQueueItem(stagedState.snapshot.sendQueue[1].id) as CoreState.Ready
+        assertEquals(3, removed.snapshot.sendQueue.size)
+
+        val result = bridge.sendQueueToPeer("dev-1")
+        assertTrue(result.isSuccess)
+        assertEquals("dev-1", lastTarget)
+        assertEquals(3, lastCount)
+        assertTrue((bridge.loadState() as CoreState.Ready).snapshot.sendQueue.isEmpty())
+    }
+
+    @Test
+    fun daemonConfigPersistsAllPrototypeSettingsAndIgnoredMimeTypes() {
+        val customConfig = DaemonConfigUi(
+            incomingDirectory = "~/Public/Keynear",
+            autoAcceptFromPaired = true,
+            clipboardSyncEnabled = false,
+            clipboardImagesEnabled = false,
+            otpPassthroughEnabled = true,
+            audioHandoffEnabled = true,
+            ignoredMimeTypes = listOf("x-kde-passwordManagerHint", "application/x-custom"),
+            notifyAutoAcceptComplete = true,
+            darkTheme = true,
+        )
+        val ffi = customConfig.toFfi(VisibilityState.EVERYONE_NEARBY)
+        assertEquals(FfiVisibilityMode.EVERYONE_NEARBY, ffi.visibilityMode)
+        assertEquals("~/Public/Keynear", ffi.incomingDirectory)
+        assertTrue(ffi.autoAcceptFromPaired)
+        assertFalse(ffi.clipboardSyncEnabled)
+        assertFalse(ffi.clipboardImagesEnabled)
+        assertTrue(ffi.otpPassthroughEnabled)
+        assertTrue(ffi.audioHandoffEnabled)
+        assertEquals(listOf("x-kde-passwordManagerHint", "application/x-custom"), ffi.ignoredMimeTypes)
+        assertTrue(ffi.notifyAutoAcceptComplete)
+
+        val roundTripped = DaemonConfigUi.fromFfi(ffi, darkTheme = true)
+        assertEquals(customConfig, roundTripped)
+
+        val missingOne = PermissionsChecklistState(
+            nearbyGranted = true,
+            notificationsGranted = true,
+            batteryOptimizationIgnored = true,
+            companionAssociated = true,
+            localNetworkGranted = false,
+        )
+        assertEquals(1, missingOne.missingPermissionsCount)
+        assertFalse(missingOne.allRequiredGranted)
     }
 
     private fun sampleDevice(deviceId: String, displayName: String): PairedDeviceUi =

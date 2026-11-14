@@ -20,6 +20,7 @@ import org.keynear.app.lan.LocalNetworkConstants
 import org.keynear.app.service.KeynearTransferJobService
 import org.keynear.app.share.DirectShareManager
 import uniffi.keynear_core.CoreHandle
+import uniffi.keynear_core.FfiDaemonConfig
 import uniffi.keynear_core.FfiDeviceRole
 import uniffi.keynear_core.FfiLanEndpoint
 import uniffi.keynear_core.FfiPairedDevice
@@ -33,8 +34,11 @@ import uniffi.keynear_core.everyoneNearbyTimeoutSecs
 import java.io.File
 import java.io.FileOutputStream
 import java.security.SecureRandom
+import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
+import kotlin.math.roundToInt
 
 enum class VisibilityState {
     HIDDEN,
@@ -174,6 +178,95 @@ data class DiscoveredPeerUi(
     val batteryLevel: Int? = null,
 )
 
+data class OrbitPlacement(
+    val radiusPx: Int,
+    val durationSec: Int,
+    val phaseSec: Float,
+)
+
+fun orbitFor(rssi: Int, index: Int, count: Int): OrbitPlacement {
+    val clamped = rssi.coerceIn(-90, -40)
+    val strength = ((-clamped - 40f) / 50f).coerceIn(0f, 1f)
+    val radius = (128f + strength * 48f).roundToInt()
+    val safeCount = maxOf(1, count)
+    return OrbitPlacement(
+        radiusPx = radius,
+        durationSec = 40,
+        phaseSec = (index.toFloat() / safeCount.toFloat()) * 40f,
+    )
+}
+
+enum class SendItemKind {
+    FILE,
+    FOLDER,
+    CLIPBOARD,
+    TEXT,
+}
+
+data class SendQueueItemUi(
+    val id: String,
+    val name: String,
+    val sizeBytes: Long,
+    val kind: SendItemKind,
+    val mime: String,
+    val uriString: String = "",
+    val textPayload: String = "",
+)
+
+fun formatBytes(bytes: Long): String {
+    if (bytes <= 0L) return "0 B"
+    if (bytes < 1024L) return "$bytes B"
+    val kb = bytes.toDouble() / 1024.0
+    if (kb < 1024.0) return String.format(Locale.US, "%.1f KB", kb)
+    val mb = kb / 1024.0
+    if (mb < 1024.0) return String.format(Locale.US, "%.1f MB", mb)
+    val gb = mb / 1024.0
+    return String.format(Locale.US, "%.1f GB", gb)
+}
+
+data class DaemonConfigUi(
+    val incomingDirectory: String = "~/Downloads/Keynear",
+    val autoAcceptFromPaired: Boolean = false,
+    val clipboardSyncEnabled: Boolean = true,
+    val clipboardImagesEnabled: Boolean = true,
+    val otpPassthroughEnabled: Boolean = true,
+    val audioHandoffEnabled: Boolean = false,
+    val ignoredMimeTypes: List<String> = DEFAULT_IGNORED_MIMES,
+    val notifyAutoAcceptComplete: Boolean = false,
+    val darkTheme: Boolean = false,
+) {
+    fun toFfi(visibility: VisibilityState): FfiDaemonConfig = FfiDaemonConfig(
+        visibilityMode = visibility.toFfi(),
+        incomingDirectory = incomingDirectory,
+        autoAcceptFromPaired = autoAcceptFromPaired,
+        clipboardSyncEnabled = clipboardSyncEnabled,
+        clipboardImagesEnabled = clipboardImagesEnabled,
+        otpPassthroughEnabled = otpPassthroughEnabled,
+        audioHandoffEnabled = audioHandoffEnabled,
+        ignoredMimeTypes = ignoredMimeTypes,
+        notifyAutoAcceptComplete = notifyAutoAcceptComplete,
+    )
+
+    companion object {
+        val DEFAULT_IGNORED_MIMES = listOf(
+            "x-kde-passwordManagerHint",
+            "application/x-password",
+        )
+
+        fun fromFfi(ffi: FfiDaemonConfig, darkTheme: Boolean): DaemonConfigUi = DaemonConfigUi(
+            incomingDirectory = ffi.incomingDirectory,
+            autoAcceptFromPaired = ffi.autoAcceptFromPaired,
+            clipboardSyncEnabled = ffi.clipboardSyncEnabled,
+            clipboardImagesEnabled = ffi.clipboardImagesEnabled,
+            otpPassthroughEnabled = ffi.otpPassthroughEnabled,
+            audioHandoffEnabled = ffi.audioHandoffEnabled,
+            ignoredMimeTypes = ffi.ignoredMimeTypes,
+            notifyAutoAcceptComplete = ffi.notifyAutoAcceptComplete,
+            darkTheme = darkTheme,
+        )
+    }
+}
+
 data class PairedDeviceUi(
     val deviceId: String,
     val displayName: String,
@@ -183,6 +276,9 @@ data class PairedDeviceUi(
     val pairedAt: String,
     val autoAcceptFiles: Boolean = false,
     val lastEndpointId: String = "",
+    val lastLanAddress: String = "",
+    val isOnline: Boolean = lastLanAddress.isNotBlank(),
+    val rssi: Int = if (lastLanAddress.isNotBlank()) -52 else -76,
 )
 
 data class PendingPairingUi(
@@ -207,6 +303,8 @@ data class CoreSnapshot(
     val localNetworkStatus: LocalNetworkStatus = LocalNetworkStatus.READY,
     val localNetworkMessage: String? = null,
     val activeTransfers: List<TransferUi> = emptyList(),
+    val daemonConfig: DaemonConfigUi = DaemonConfigUi(),
+    val sendQueue: List<SendQueueItemUi> = emptyList(),
 )
 
 sealed interface CoreState {
@@ -312,9 +410,10 @@ data class PermissionsChecklistState(
     val notificationsGranted: Boolean,
     val batteryOptimizationIgnored: Boolean,
     val companionAssociated: Boolean,
+    val localNetworkGranted: Boolean = true,
 ) {
     val allRequiredGranted: Boolean
-        get() = nearbyGranted && notificationsGranted
+        get() = nearbyGranted && localNetworkGranted && notificationsGranted
 
     val allRecommendedComplete: Boolean
         get() = allRequiredGranted && batteryOptimizationIgnored
@@ -326,6 +425,15 @@ data class PermissionsChecklistState(
             batteryOptimizationIgnored,
             companionAssociated,
         ).count { it }
+
+    val missingPermissionsCount: Int
+        get() = listOf(
+            nearbyGranted,
+            localNetworkGranted,
+            companionAssociated,
+            notificationsGranted,
+            batteryOptimizationIgnored,
+        ).count { !it }
 }
 
 fun evaluatePermissionsChecklist(
@@ -357,10 +465,11 @@ fun evaluatePermissionsChecklist(
     }.getOrDefault(false)
 
     return PermissionsChecklistState(
-        nearbyGranted = bleReady && wifiNearbyReady && lnpReady,
+        nearbyGranted = bleReady && wifiNearbyReady,
         notificationsGranted = notificationsReady,
         batteryOptimizationIgnored = batteryIgnored,
         companionAssociated = companionAssociated,
+        localNetworkGranted = lnpReady,
     )
 }
 
@@ -377,9 +486,23 @@ interface CoreBridge {
     fun unpairDevice(deviceId: String): CoreState = loadState()
     fun renamePairedDevice(deviceId: String, newDisplayName: String): CoreState = loadState()
     fun setAutoAcceptFiles(deviceId: String, enabled: Boolean): CoreState = loadState()
+    fun resetBleBond(deviceId: String): CoreState = loadState()
     fun acceptTransfer(transferId: String): CoreState = loadState()
     fun declineTransfer(transferId: String): CoreState = loadState()
     fun cancelTransfer(transferId: String): CoreState = loadState()
+    fun stageFileUris(uris: List<String>): CoreState = loadState()
+    fun stageFolderUri(
+        folderUri: String,
+        displayName: String,
+        fileUris: List<String> = emptyList(),
+    ): CoreState = loadState()
+    fun stageClipboardText(text: String): CoreState = loadState()
+    fun stageTextSnippet(text: String): CoreState = loadState()
+    fun removeSendQueueItem(itemId: String): CoreState = loadState()
+    fun clearSendQueue(): CoreState = loadState()
+    fun sendQueueToPeer(peerDeviceId: String): Result<TransferUi> =
+        Result.failure(UnsupportedOperationException("send unavailable"))
+    fun updateDaemonConfig(transform: (DaemonConfigUi) -> DaemonConfigUi): CoreState = loadState()
     fun sendContentUris(
         peerDeviceId: String,
         uris: List<String>,
@@ -571,15 +694,115 @@ fun evaluateConsentRequirement(
     globalAutoAccept: Boolean,
 ): Boolean = isPaired && (deviceAutoAccept || globalAutoAccept)
 
+class SendQueueStore {
+    private val items = mutableListOf<SendQueueItemUi>()
+    private val seq = AtomicLong(1L)
+
+    @Synchronized
+    fun snapshot(): List<SendQueueItemUi> = items.toList()
+
+    @Synchronized
+    fun addFile(
+        name: String,
+        sizeBytes: Long,
+        mime: String,
+        uriString: String,
+    ): SendQueueItemUi {
+        val item = SendQueueItemUi(
+            id = "sq-${seq.getAndIncrement()}",
+            name = name.ifBlank { "shared-file.bin" },
+            sizeBytes = sizeBytes.coerceAtLeast(0L),
+            kind = SendItemKind.FILE,
+            mime = mime.ifBlank { "application/octet-stream" },
+            uriString = uriString,
+        )
+        items.add(item)
+        return item
+    }
+
+    @Synchronized
+    fun addFolder(
+        displayName: String,
+        uriString: String,
+        sizeBytes: Long = 0L,
+    ): SendQueueItemUi {
+        val clean = displayName.trim().ifBlank { "Folder" }
+        val item = SendQueueItemUi(
+            id = "sq-${seq.getAndIncrement()}",
+            name = "$clean/",
+            sizeBytes = sizeBytes.coerceAtLeast(0L),
+            kind = SendItemKind.FOLDER,
+            mime = "inode/directory",
+            uriString = uriString,
+        )
+        items.add(item)
+        return item
+    }
+
+    @Synchronized
+    fun addClipboard(text: String): SendQueueItemUi? {
+        val clean = text.trim()
+        if (clean.isEmpty()) return null
+        val bytes = clean.toByteArray(Charsets.UTF_8).size.toLong()
+        val label = if (clean.length > 36) "${clean.take(36)}..." else clean
+        val item = SendQueueItemUi(
+            id = "sq-${seq.getAndIncrement()}",
+            name = "Clipboard: $label",
+            sizeBytes = bytes,
+            kind = SendItemKind.CLIPBOARD,
+            mime = "text/plain",
+            textPayload = clean,
+        )
+        items.add(item)
+        return item
+    }
+
+    @Synchronized
+    fun addTextSnippet(text: String): SendQueueItemUi? {
+        val clean = text.trim()
+        if (clean.isEmpty()) return null
+        val bytes = clean.toByteArray(Charsets.UTF_8).size.toLong()
+        val label = if (clean.length > 32) "${clean.take(32)}..." else clean
+        val item = SendQueueItemUi(
+            id = "sq-${seq.getAndIncrement()}",
+            name = "Text: $label",
+            sizeBytes = bytes,
+            kind = SendItemKind.TEXT,
+            mime = "text/plain",
+            textPayload = clean,
+        )
+        items.add(item)
+        return item
+    }
+
+    @Synchronized
+    fun remove(itemId: String) {
+        items.removeAll { it.id == itemId }
+    }
+
+    @Synchronized
+    fun clear() {
+        items.clear()
+    }
+}
+
 class UniffiCoreClient(
     private var appContext: Context? = null,
 ) : CoreBridge {
     private val handle: CoreHandle by lazy { CoreHandle() }
     private var devicesPath: String? = appContext?.let { File(it.filesDir, "devices.toml").absolutePath }
+    private var configPath: String? = appContext?.let { File(it.filesDir, "config.toml").absolutePath }
     private var secretStore: KeystoreSecretStore? = appContext?.let { runCatching { KeystoreSecretStore.open(it) }.getOrNull() }
     private var localDeviceId: String = appContext?.let { resolveLocalDeviceId(it) } ?: "android-device"
     private var mediaStoreTracker: PendingMediaStoreTracker<Uri>? =
         appContext?.let { PendingMediaStoreTracker(AndroidMediaStoreOps(it.applicationContext)) }
+    private val sendQueueStore = SendQueueStore()
+
+    @Volatile
+    private var cachedDarkTheme: Boolean = appContext?.let { readDarkThemePref(it) } ?: false
+
+    @Volatile
+    private var cachedDaemonConfig: DaemonConfigUi = DaemonConfigUi(darkTheme = cachedDarkTheme)
 
     @Volatile
     private var orionNode: OrionNodeHandle? = null
@@ -618,6 +841,9 @@ class UniffiCoreClient(
         if (devicesPath == null) {
             devicesPath = File(app.filesDir, "devices.toml").absolutePath
         }
+        if (configPath == null) {
+            configPath = File(app.filesDir, "config.toml").absolutePath
+        }
         if (secretStore == null) {
             secretStore = runCatching { KeystoreSecretStore.open(app) }.getOrNull()
         }
@@ -625,6 +851,28 @@ class UniffiCoreClient(
             mediaStoreTracker = PendingMediaStoreTracker(AndroidMediaStoreOps(app))
         }
         localDeviceId = resolveLocalDeviceId(app)
+        cachedDarkTheme = readDarkThemePref(app)
+        refreshConfigFromDisk()
+    }
+
+    private fun readDarkThemePref(context: Context): Boolean =
+        context.getSharedPreferences(UI_PREFS_NAME, Context.MODE_PRIVATE)
+            .getBoolean(PREF_DARK_THEME, false)
+
+    private fun writeDarkThemePref(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(UI_PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(PREF_DARK_THEME, enabled)
+            .apply()
+    }
+
+    private fun refreshConfigFromDisk() {
+        val path = configPath ?: return
+        runCatching {
+            val loaded = handle.loadDaemonConfig(path)
+            handle.setVisibilityMode(loaded.visibilityMode)
+            cachedDaemonConfig = DaemonConfigUi.fromFfi(loaded, cachedDarkTheme)
+        }
     }
 
     fun coreHandle(): CoreHandle = handle
@@ -989,6 +1237,8 @@ class UniffiCoreClient(
     override fun cycleVisibility(): CoreState {
         return try {
             handle.cycleVisibilityMode()
+            val mode = VisibilityState.fromFfi(handle.visibilityMode())
+            persistCurrentConfig(mode)
             buildState()
         } catch (t: Throwable) {
             CoreState.Error(t.message ?: "Unable to cycle visibility mode")
@@ -998,9 +1248,123 @@ class UniffiCoreClient(
     override fun setVisibility(mode: VisibilityState): CoreState {
         return try {
             handle.setVisibilityMode(mode.toFfi())
+            persistCurrentConfig(mode)
             buildState()
         } catch (t: Throwable) {
             CoreState.Error(t.message ?: "Unable to set visibility mode", snapshotFromCurrent())
+        }
+    }
+
+    private fun persistCurrentConfig(visibility: VisibilityState) {
+        val path = configPath ?: return
+        runCatching {
+            val saved = handle.saveDaemonConfig(path, cachedDaemonConfig.toFfi(visibility))
+            cachedDaemonConfig = DaemonConfigUi.fromFfi(saved, cachedDarkTheme)
+        }
+    }
+
+    override fun resetBleBond(deviceId: String): CoreState {
+        return try {
+            secretStore?.deletePeerSecrets(deviceId)
+            buildState()
+        } catch (t: Throwable) {
+            CoreState.Error(t.message ?: "Unable to reset Bluetooth bond", snapshotFromCurrent())
+        }
+    }
+
+    override fun stageFileUris(uris: List<String>): CoreState {
+        val ctx = appContext
+        uris.forEach { raw ->
+            if (raw.isBlank()) return@forEach
+            if (ctx != null) {
+                val (name, size, mime) = queryUriMetadata(ctx, Uri.parse(raw))
+                sendQueueStore.addFile(name, size, mime, raw)
+            } else {
+                val name = raw.substringAfterLast('/').ifBlank { "shared-file.bin" }
+                sendQueueStore.addFile(name, 0L, "application/octet-stream", raw)
+            }
+        }
+        return buildState()
+    }
+
+    override fun stageFolderUri(
+        folderUri: String,
+        displayName: String,
+        fileUris: List<String>,
+    ): CoreState {
+        val ctx = appContext
+        if (fileUris.isNotEmpty()) {
+            fileUris.forEach { raw ->
+                if (raw.isBlank()) return@forEach
+                if (ctx != null) {
+                    val (name, size, mime) = queryUriMetadata(ctx, Uri.parse(raw))
+                    sendQueueStore.addFile(name, size, mime, raw)
+                } else {
+                    val name = raw.substringAfterLast('/').ifBlank { "shared-file.bin" }
+                    sendQueueStore.addFile(name, 0L, "application/octet-stream", raw)
+                }
+            }
+        } else if (folderUri.isNotBlank()) {
+            sendQueueStore.addFolder(displayName, folderUri)
+        }
+        return buildState()
+    }
+
+    override fun stageClipboardText(text: String): CoreState {
+        sendQueueStore.addClipboard(text)
+        return buildState()
+    }
+
+    override fun stageTextSnippet(text: String): CoreState {
+        sendQueueStore.addTextSnippet(text)
+        return buildState()
+    }
+
+    override fun removeSendQueueItem(itemId: String): CoreState {
+        sendQueueStore.remove(itemId)
+        return buildState()
+    }
+
+    override fun clearSendQueue(): CoreState {
+        sendQueueStore.clear()
+        return buildState()
+    }
+
+    override fun sendQueueToPeer(peerDeviceId: String): Result<TransferUi> {
+        val items = sendQueueStore.snapshot()
+        if (items.isEmpty()) {
+            return Result.failure(IllegalArgumentException("Stage at least one file or snippet first"))
+        }
+        val uris = items.mapNotNull { item ->
+            item.uriString.takeIf { it.isNotBlank() && item.kind != SendItemKind.FOLDER }
+        }
+        val textCombined = items
+            .mapNotNull { it.textPayload.takeIf { txt -> txt.isNotEmpty() } }
+            .joinToString(separator = "\n\n")
+            .ifBlank { null }
+        val result = sendContentUris(peerDeviceId, uris, textCombined)
+        if (result.isSuccess) {
+            sendQueueStore.clear()
+        }
+        return result
+    }
+
+    override fun updateDaemonConfig(transform: (DaemonConfigUi) -> DaemonConfigUi): CoreState {
+        return try {
+            val updated = transform(cachedDaemonConfig)
+            cachedDarkTheme = updated.darkTheme
+            appContext?.let { writeDarkThemePref(it, updated.darkTheme) }
+            val currentVisibility = VisibilityState.fromFfi(handle.visibilityMode())
+            val path = configPath
+            cachedDaemonConfig = if (path != null) {
+                val saved = handle.saveDaemonConfig(path, updated.toFfi(currentVisibility))
+                DaemonConfigUi.fromFfi(saved, updated.darkTheme)
+            } else {
+                updated
+            }
+            buildState()
+        } catch (t: Throwable) {
+            CoreState.Error(t.message ?: "Unable to save settings", snapshotFromCurrent())
         }
     }
 
@@ -1193,6 +1557,7 @@ class UniffiCoreClient(
         val rawPaired = getPairedDevices()
         val peerNames = rawPaired.associate { it.deviceId to it.displayName }
         val paired = rawPaired.map { dev ->
+            val online = dev.lastLanAddress.isNotBlank()
             PairedDeviceUi(
                 deviceId = dev.deviceId,
                 displayName = dev.displayName,
@@ -1202,6 +1567,9 @@ class UniffiCoreClient(
                 pairedAt = dev.pairedAt,
                 autoAcceptFiles = dev.autoAcceptFiles,
                 lastEndpointId = dev.lastEndpointId,
+                lastLanAddress = dev.lastLanAddress,
+                isOnline = online,
+                rssi = if (online) -52 else -76,
             )
         }
         val shortcutSnapshot = paired.map { it.deviceId to it.displayName }
@@ -1222,6 +1590,13 @@ class UniffiCoreClient(
         if (cachedPendingPairing != null) {
             cachedPendingPairing = pending
         }
+        val activeConfig = configPath?.let { path ->
+            runCatching {
+                DaemonConfigUi.fromFfi(handle.loadDaemonConfig(path), cachedDarkTheme)
+            }.getOrNull()
+        }?.also { cachedDaemonConfig = it } ?: cachedDaemonConfig.copy(darkTheme = cachedDarkTheme)
+
+        val queue = sendQueueStore.snapshot()
         val snapshot = CoreSnapshot(
             version = status.version,
             maxControlFrameBytes = status.maxControlFrameBytes.toLong(),
@@ -1237,8 +1612,10 @@ class UniffiCoreClient(
             localNetworkStatus = cachedLnpStatus,
             localNetworkMessage = cachedLnpMessage,
             activeTransfers = transfers,
+            daemonConfig = activeConfig,
+            sendQueue = queue,
         )
-        if (paired.isEmpty() && cachedNearby.isEmpty() && cachedPendingPairing == null && transfers.isEmpty()) {
+        if (paired.isEmpty() && cachedNearby.isEmpty() && cachedPendingPairing == null && transfers.isEmpty() && queue.isEmpty()) {
             CoreState.Empty(snapshot)
         } else {
             CoreState.Ready(snapshot)
@@ -1286,6 +1663,8 @@ class UniffiCoreClient(
 
     companion object {
         private const val TAG = "UniffiCoreClient"
+        private const val UI_PREFS_NAME = "keynear_ui_prefs"
+        private const val PREF_DARK_THEME = "dark_theme"
     }
 }
 

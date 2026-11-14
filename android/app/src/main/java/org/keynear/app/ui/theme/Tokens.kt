@@ -26,6 +26,40 @@ object KeynearTokenHex {
     const val ACCENT_BLUE_600: Long = 0xFF004CED
     const val ON_ACCENT_WHITE: Long = 0xFFFFFFFE
     const val FOCUS_BLUE_500: Long = 0xFF0172F9
+    const val LOADING_BLUE: Long = 0xFF0195D4
+    const val ERROR_ORANGE: Long = 0xFFE84201
+
+    const val LIGHT_BACKDROP: Long = 0xFFE2E8F2
+    const val LIGHT_MAP_GROUND: Long = 0xFFE7EEF9
+    const val LIGHT_SURFACE_HOVER: Long = 0xFFF4F7FD
+    const val LIGHT_LOADING_TONAL: Long = 0xFFD1ECF7
+    const val LIGHT_ON_LOADING_TONAL: Long = 0xFF00425F
+    const val LIGHT_WARNING_TONAL: Long = 0xFFFFF6D3
+    const val LIGHT_ON_WARNING_TONAL: Long = 0xFF863300
+    const val LIGHT_INPUT: Long = 0xFFE8EEFA
+    const val LIGHT_SWITCH_TRACK_OFF: Long = 0xFFDEE6F6
+    const val LIGHT_SNACKBAR: Long = 0xFF0F223E
+    const val LIGHT_ON_SNACKBAR: Long = 0xFFFFFFFE
+    const val LIGHT_SHEET_HANDLE: Long = 0xFFCADBEE
+    const val LIGHT_GESTURE_PILL: Long = 0xFF819BBB
+    const val LIGHT_TRACK_WELL: Long = 0xFFE7EDF8
+    const val LIGHT_SCRIM: Long = 0x7300021E
+
+    const val DARK_BACKDROP: Long = 0xFF04070B
+    const val DARK_MAP_GROUND: Long = 0xFF080C12
+    const val DARK_SURFACE_HOVER: Long = 0xFF242531
+    const val DARK_LOADING_TONAL: Long = 0xFF11364C
+    const val DARK_ON_LOADING_TONAL: Long = 0xFF99D5EE
+    const val DARK_WARNING_TONAL: Long = 0xFF381C00
+    const val DARK_ON_WARNING_TONAL: Long = 0xFFFFEAA5
+    const val DARK_INPUT: Long = 0xFF090E14
+    const val DARK_SWITCH_TRACK_OFF: Long = 0xFF10141C
+    const val DARK_SNACKBAR: Long = 0xFF1E202B
+    const val DARK_ON_SNACKBAR: Long = 0xFFF7F6F7
+    const val DARK_SHEET_HANDLE: Long = 0xFF474756
+    const val DARK_GESTURE_PILL: Long = 0xFF474756
+    const val DARK_TRACK_WELL: Long = 0xFF0D1018
+    const val DARK_SCRIM: Long = 0x99000000
 }
 
 data class KeynearPalette(
@@ -40,6 +74,24 @@ data class KeynearPalette(
     val focusRing: Color,
     val errorTonal: Color,
     val onDangerTonal: Color,
+    val backdrop: Color = Color(KeynearTokenHex.LIGHT_BACKDROP),
+    val mapGround: Color = Color(KeynearTokenHex.LIGHT_MAP_GROUND),
+    val surfaceHover: Color = Color(KeynearTokenHex.LIGHT_SURFACE_HOVER),
+    val loading: Color = Color(KeynearTokenHex.LOADING_BLUE),
+    val loadingTonal: Color = Color(KeynearTokenHex.LIGHT_LOADING_TONAL),
+    val onLoadingTonal: Color = Color(KeynearTokenHex.LIGHT_ON_LOADING_TONAL),
+    val warningTonal: Color = Color(KeynearTokenHex.LIGHT_WARNING_TONAL),
+    val onWarningTonal: Color = Color(KeynearTokenHex.LIGHT_ON_WARNING_TONAL),
+    val error: Color = Color(KeynearTokenHex.ERROR_ORANGE),
+    val input: Color = Color(KeynearTokenHex.LIGHT_INPUT),
+    val switchTrackOff: Color = Color(KeynearTokenHex.LIGHT_SWITCH_TRACK_OFF),
+    val snackbar: Color = Color(KeynearTokenHex.LIGHT_SNACKBAR),
+    val onSnackbar: Color = Color(KeynearTokenHex.LIGHT_ON_SNACKBAR),
+    val sheetHandle: Color = Color(KeynearTokenHex.LIGHT_SHEET_HANDLE),
+    val gesturePill: Color = Color(KeynearTokenHex.LIGHT_GESTURE_PILL),
+    val trackWell: Color = Color(KeynearTokenHex.LIGHT_TRACK_WELL),
+    val scrim: Color = Color(KeynearTokenHex.LIGHT_SCRIM),
+    val isDark: Boolean = false,
 )
 
 val LightKeynearPalette = KeynearPalette(
@@ -54,6 +106,24 @@ val LightKeynearPalette = KeynearPalette(
     focusRing = Color(KeynearTokenHex.FOCUS_BLUE_500),
     errorTonal = Color(KeynearTokenHex.LIGHT_ERROR_TONAL),
     onDangerTonal = Color(KeynearTokenHex.LIGHT_ON_DANGER_TONAL),
+    backdrop = Color(KeynearTokenHex.LIGHT_BACKDROP),
+    mapGround = Color(KeynearTokenHex.LIGHT_MAP_GROUND),
+    surfaceHover = Color(KeynearTokenHex.LIGHT_SURFACE_HOVER),
+    loading = Color(KeynearTokenHex.LOADING_BLUE),
+    loadingTonal = Color(KeynearTokenHex.LIGHT_LOADING_TONAL),
+    onLoadingTonal = Color(KeynearTokenHex.LIGHT_ON_LOADING_TONAL),
+    warningTonal = Color(KeynearTokenHex.LIGHT_WARNING_TONAL),
+    onWarningTonal = Color(KeynearTokenHex.LIGHT_ON_WARNING_TONAL),
+    error = Color(KeynearTokenHex.ERROR_ORANGE),
+    input = Color(KeynearTokenHex.LIGHT_INPUT),
+    switchTrackOff = Color(KeynearTokenHex.LIGHT_SWITCH_TRACK_OFF),
+    snackbar = Color(KeynearTokenHex.LIGHT_SNACKBAR),
+    onSnackbar = Color(KeynearTokenHex.LIGHT_ON_SNACKBAR),
+    sheetHandle = Color(KeynearTokenHex.LIGHT_SHEET_HANDLE),
+    gesturePill = Color(KeynearTokenHex.LIGHT_GESTURE_PILL),
+    trackWell = Color(KeynearTokenHex.LIGHT_TRACK_WELL),
+    scrim = Color(KeynearTokenHex.LIGHT_SCRIM),
+    isDark = false,
 )
 
 val DarkKeynearPalette = KeynearPalette(
@@ -68,6 +138,24 @@ val DarkKeynearPalette = KeynearPalette(
     focusRing = Color(KeynearTokenHex.FOCUS_BLUE_500),
     errorTonal = Color(KeynearTokenHex.DARK_ERROR_TONAL),
     onDangerTonal = Color(KeynearTokenHex.DARK_ON_DANGER_TONAL),
+    backdrop = Color(KeynearTokenHex.DARK_BACKDROP),
+    mapGround = Color(KeynearTokenHex.DARK_MAP_GROUND),
+    surfaceHover = Color(KeynearTokenHex.DARK_SURFACE_HOVER),
+    loading = Color(KeynearTokenHex.LOADING_BLUE),
+    loadingTonal = Color(KeynearTokenHex.DARK_LOADING_TONAL),
+    onLoadingTonal = Color(KeynearTokenHex.DARK_ON_LOADING_TONAL),
+    warningTonal = Color(KeynearTokenHex.DARK_WARNING_TONAL),
+    onWarningTonal = Color(KeynearTokenHex.DARK_ON_WARNING_TONAL),
+    error = Color(KeynearTokenHex.ERROR_ORANGE),
+    input = Color(KeynearTokenHex.DARK_INPUT),
+    switchTrackOff = Color(KeynearTokenHex.DARK_SWITCH_TRACK_OFF),
+    snackbar = Color(KeynearTokenHex.DARK_SNACKBAR),
+    onSnackbar = Color(KeynearTokenHex.DARK_ON_SNACKBAR),
+    sheetHandle = Color(KeynearTokenHex.DARK_SHEET_HANDLE),
+    gesturePill = Color(KeynearTokenHex.DARK_GESTURE_PILL),
+    trackWell = Color(KeynearTokenHex.DARK_TRACK_WELL),
+    scrim = Color(KeynearTokenHex.DARK_SCRIM),
+    isDark = true,
 )
 
 object KeynearRadii {
