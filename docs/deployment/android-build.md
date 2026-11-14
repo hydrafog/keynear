@@ -1,6 +1,6 @@
 # Android Build
 
-The Android companion app (`org.keynear.app`, `versionCode = 3`, `versionName = "0.3.0-orion"`) compiles `keynear-core` into `jniLibs` with `cargo-ndk` using 16 KB ELF page alignment before assembling the Gradle APK or AAB.
+The Android companion app (`org.keynear.app`, `versionCode = 4`, `versionName = "0.4.0-aquila"`) compiles `keynear-core` into `jniLibs` with `cargo-ndk` using 16 KB ELF page alignment before assembling the Gradle APK or AAB.
 
 ## Native Library Compilation
 
@@ -21,9 +21,9 @@ Verify that every `LOAD` program header reports `0x4000` alignment.
 ```bash
 cargo build --release -p keynear-core
 cargo run -p keynear-core --features bindgen-cli --bin uniffi-bindgen -- generate \
-  --library target/release/libkeynear_core.so \
   --language kotlin \
-  --out-dir android/app/src/main/java
+  --out-dir android/app/src/main/java \
+  target/release/libkeynear_core.so
 ```
 
 ## Gradle Assembly and Unit Tests

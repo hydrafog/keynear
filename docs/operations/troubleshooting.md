@@ -21,7 +21,14 @@ Use these checks to diagnose discovery, Noise XX pairing, keyring, local network
 - On Android 17 and later (`SDK_INT >= 37`), `LocalNetworkManager` checks `ACCESS_LOCAL_NETWORK`, uses reflection-guarded `NsdManager.DiscoveryRequest` (`FLAG_SHOW_PICKER`), and watches `NetworkCallback.onBlockedStatusChanged` for `ANDROID_NETWORK_BLOCKED_REASON_LNP`. When local network access is blocked, tap Open settings in the Android warning banner or notification to allow local network access, then tap Retry.
 - When multicast mDNS (`_keynear._udp.local.`) is unavailable on a restricted network or headless host (`mdns_degraded`), `keynear-linux` and Android fall back to exchanging ephemeral `LanEndpoint` coordinates over the encrypted BLE GATT characteristic `0xFE70` (`LAN_ENDPOINT_CHAR_UUID`).
 - If an Android download is cancelled or fails mid-transfer, `CoreClient` deletes the incomplete `MediaStore.Downloads` row (`IS_PENDING = 1`) and `OrionNodeHandle` closes the detached `OwnedFd` automatically.
-- On Linux, verify `daemon.sock` exists inside the configuration directory (`0o600` socket inside a `0o700` directory) if `keynear-linux --transfers` or `keynear-settings` reports the daemon is unreachable.
+- If the Android Quick Settings tile prompts to unlock the screen when switching to `Everyone nearby`, complete the device unlock (`unlockAndRun`); toggles between `Hidden` and `Paired devices only` apply without unlocking.
+- When transfers stall in the background on Android, expand the permissions onboarding card in `MainActivity` and tap Allow on `Allow background running` (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`) or open app battery settings.
+
+## Linux Desktop Tray, Notifications, and Portal Integration
+
+- On headless Linux sessions or compositors without `org.kde.StatusNotifierWatcher` or `org.freedesktop.Notifications`, `keynear-linux` logs `tray_unavailable` or `notifications_unavailable` and continues running local daemon IPC and QUIC/BLE continuity headlessly.
+- If GTK4 file or folder pickers fail to open in `keynear-settings`, verify that a desktop `xdg-desktop-portal` backend is running for your session (`ashpd`) and confirm `daemon.sock` exists (`0o600` inside a `0o700` config directory) or retry via the inline offline banner.
+- Ensure Nautilus (`~/.local/share/nautilus/scripts/Send via Keynear`), Dolphin (`~/.local/share/kio/servicemenus/keynear-send.desktop`), or Yazi (`~/.config/yazi/plugins/keynear.yazi/main.lua`) can resolve `keynear-settings` on `PATH` (for example under `~/.local/bin`).
 
 ## Wayland Clipboard Permissions (Upcoming `0.5.0-draco`)
 

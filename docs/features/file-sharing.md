@@ -1,6 +1,6 @@
 # File Sharing
 
-`Keynear` (`0.3.0-orion`) streams files and directories directly between paired peers over relay-free `iroh` QUIC streams.
+`Keynear` (`0.4.0-aquila`) streams files and directories directly between paired peers over relay-free `iroh` QUIC streams.
 
 ## Transfer Pipeline
 
@@ -23,9 +23,8 @@ flowchart LR
 - Incoming `TransferOffer` messages from authenticated paired devices enter `PendingConsent` by default and do not write target files until approved (`TransferConsent(accepted = true)`), transitioning through `Active` to `Completed`, `Cancelled`, or `Failed`.
 - Per-device `PairedDevice.auto_accept_files` overrides and global `DaemonConfig.auto_accept_from_paired` (both `false` by default) bypass the consent prompt and transition paired offers straight to `Active`. Declining an offer returns `TransferConsent(accepted = false)` without touching target storage.
 
-## Current Entrypoints and Upcoming OS Integrations
+## Desktop and Mobile Entrypoints
 
-- **Linux CLI and daemon**: `keynear-linux` executes `--send <device_id> <path>...`, `--accept <transfer_id>`, `--decline <transfer_id>`, `--cancel <transfer_id>`, and `--transfers` over the `0o600` `daemon.sock` Unix socket.
-- **Linux settings UI**: `keynear-settings` provides per-device `Auto-accept files` switches and an `Active transfers` card (`Accept`, `Decline`, `Cancel`).
-- **Android UI and notifications**: `PairingNotificationManager` posts incoming transfer consent (`Accept`/`Decline`), completion, and error notifications; `MainActivity` exposes the `Active transfers` card and per-device `Auto-accept files` switches; `ShareActivity` provides a paired-device target picker for `ACTION_SEND` and `ACTION_SEND_MULTIPLE`.
-- **Upcoming `0.4.0-aquila` integrations**: `ksni` system tray menus, `ashpd` (`xdg-desktop-portal`) file pickers, Nautilus/Dolphin/Yazi file-manager context menus, Direct Share shortcuts, and `Notification.ProgressStyle` Live Updates backed by `User-Initiated Data Transfer Jobs` are scheduled for `0.4.0-aquila`.
+- **Linux daemon, tray, and notifications**: `keynear-linux` executes `--send <device_id> <path>...`, `--accept <transfer_id>`, `--decline <transfer_id>`, `--cancel <transfer_id>`, and `--transfers` over the `0o600` `daemon.sock` Unix socket. When a graphical D-Bus session is available, `keynear-linux` registers a `ksni` `StatusNotifierItem` tray menu and posts `org.freedesktop.Notifications` consent and status alerts with inline actions.
+- **Linux settings portal and file-manager integrations**: `keynear-settings` uses `ashpd` (`xdg-desktop-portal`) file and folder choosers to send files, toggle global `auto_accept_from_paired` or per-device `Auto-accept files`, rename paired devices inline, and manage `Active transfers` (`Accept`, `Decline`, `Cancel`). `--send-picker [--device <id>]` and `--share [--device <id>] [--] <path>...` power the Nautilus (`integrations/nautilus/send-via-keynear`), Dolphin (`integrations/dolphin/keynear-send.desktop`), and Yazi (`integrations/yazi/keynear.yazi/main.lua`) context-menu integrations.
+- **Android UI, Direct Share, and Live Updates**: `PairingNotificationManager` posts incoming consent prompts (`Accept`/`Decline`), completion/error alerts, and ongoing progress notifications rendered with Android 16 (API 36) `Notification.ProgressStyle` three-segment progress (`Prepare`, `Transfer`, `Complete`) or API 31–35 `NotificationCompat` progress bars backed by `KeynearTransferJobService` (`User-Initiated Data Transfer Jobs`). `MainActivity` exposes `Active transfers`, paired-device rename, and per-device `Auto-accept files` switches; `ShareActivity` renders a translucent bottom-sheet picker synchronized with `DirectShareManager` Direct Share targets (`res/xml/share_targets.xml`).
