@@ -22,7 +22,7 @@ use crate::ipc::{
     set_daemon_socket_permissions, DaemonStatus, IpcRequest, IpcResponse, MAX_IPC_FRAME_BYTES,
 };
 
-const DEVICES_POLL_INTERVAL: Duration = Duration::from_secs(1);
+const DEVICES_POLL_INTERVAL: Duration = Duration::from_millis(200);
 const LAN_ENDPOINT_CHANNEL_SLOTS: usize = 32;
 
 #[derive(Debug, Clone)]
@@ -508,10 +508,33 @@ async fn handle_ipc_connection(
     Ok(())
 }
 
+async fn sync_ipc_context(ctx: &IpcDispatchContext) -> Result<(), KeynearError> {
+    sync_paired_devices_and_policies(
+        &ctx.device_store,
+        ctx.secret_store.as_deref(),
+        ctx.quic_node.as_deref(),
+        &ctx.transfer_engine,
+        &ctx.known_peers,
+    )
+    .await
+}
+
 async fn dispatch_ipc_request(req: IpcRequest, ctx: &IpcDispatchContext) -> IpcResponse {
     match req {
         IpcRequest::Status => {
-            let devices = ctx.device_store.load().unwrap_or_default();
+            if let Err(err) = sync_ipc_context(ctx).await {
+                return IpcResponse::Error {
+                    message: err.to_string(),
+                };
+            }
+            let devices = match ctx.device_store.load() {
+                Ok(devices) => devices,
+                Err(err) => {
+                    return IpcResponse::Error {
+                        message: err.to_string(),
+                    };
+                }
+            };
             let transfers = ctx.transfer_engine.list_transfers();
             let active_count = transfers
                 .iter()
@@ -575,15 +598,7 @@ async fn dispatch_ipc_request(req: IpcRequest, ctx: &IpcDispatchContext) -> IpcR
             }
         }
         IpcRequest::SendFiles { device_id, paths } => {
-            if let Err(err) = sync_paired_devices_and_policies(
-                &ctx.device_store,
-                ctx.secret_store.as_deref(),
-                ctx.quic_node.as_deref(),
-                &ctx.transfer_engine,
-                &ctx.known_peers,
-            )
-            .await
-            {
+            if let Err(err) = sync_ipc_context(ctx).await {
                 return IpcResponse::Error {
                     message: err.to_string(),
                 };
@@ -947,8 +962,8 @@ mod tests {
         )
         .expect("commit alice on bob");
 
-        // Wait for bob's 1s reload tick so alice is in bob's allowlist before dialing.
-        tokio::time::sleep(Duration::from_millis(1150)).await;
+        wait_for_paired_devices(&bob_sock, 1).await;
+        wait_for_paired_devices(&alice_sock, 1).await;
 
         let sample_file = dir.join("note.txt");
         let payload = b"orion daemon ipc transfer payload";
@@ -956,7 +971,7 @@ mod tests {
 
         let send_sock = alice_sock.clone();
         let send_path = sample_file.clone();
-        let send_handle = tokio::task::spawn_blocking(move || {
+        let mut send_handle = tokio::task::spawn_blocking(move || {
             send_request_to(
                 &send_sock,
                 &IpcRequest::SendFiles {
@@ -966,7 +981,7 @@ mod tests {
             )
         });
 
-        let pending_id = wait_for_pending_transfer(&bob_sock).await;
+        let pending_id = wait_for_pending_transfer(&bob_sock, &mut send_handle).await;
         let bob_sock_accept = bob_sock.clone();
         let accepted_resp = tokio::task::spawn_blocking(move || {
             send_request_to(
@@ -999,36 +1014,77 @@ mod tests {
     }
 
     async fn wait_for_status(sock_path: &Path) -> DaemonStatus {
-        for _ in 0..50 {
+        wait_for_status_with(sock_path, |_| true, "daemon status").await
+    }
+
+    async fn wait_for_paired_devices(sock_path: &Path, min_count: u32) -> DaemonStatus {
+        let description = format!("paired_device_count >= {min_count}");
+        wait_for_status_with(
+            sock_path,
+            |status| status.paired_device_count >= min_count,
+            &description,
+        )
+        .await
+    }
+
+    async fn wait_for_status_with<F>(
+        sock_path: &Path,
+        mut predicate: F,
+        description: &str,
+    ) -> DaemonStatus
+    where
+        F: FnMut(&DaemonStatus) -> bool,
+    {
+        let mut last_err = None;
+        for _ in 0..80 {
             let p = sock_path.to_path_buf();
-            if let Ok(Ok(IpcResponse::Status(status))) =
-                tokio::task::spawn_blocking(move || send_request_to(&p, &IpcRequest::Status)).await
+            match tokio::task::spawn_blocking(move || send_request_to(&p, &IpcRequest::Status))
+                .await
             {
-                return status;
+                Ok(Ok(IpcResponse::Status(status))) if predicate(&status) => return status,
+                Ok(Ok(IpcResponse::Status(_))) => {}
+                Ok(Ok(other)) => last_err = Some(format!("unexpected IPC response: {other:?}")),
+                Ok(Err(err)) => last_err = Some(err.to_string()),
+                Err(err) => last_err = Some(err.to_string()),
             }
             tokio::time::sleep(Duration::from_millis(25)).await;
         }
         panic!(
-            "timed out waiting for daemon socket {}",
+            "timed out waiting for {description} on {} (last error: {last_err:?})",
             sock_path.display()
         );
     }
 
-    async fn wait_for_pending_transfer(sock_path: &Path) -> String {
+    async fn wait_for_pending_transfer(
+        sock_path: &Path,
+        send_handle: &mut tokio::task::JoinHandle<Result<IpcResponse, KeynearError>>,
+    ) -> String {
         for _ in 0..80 {
             let p = sock_path.to_path_buf();
-            if let Ok(Ok(IpcResponse::Transfers(list))) =
-                tokio::task::spawn_blocking(move || send_request_to(&p, &IpcRequest::ListTransfers))
-                    .await
-            {
-                if let Some(session) = list
-                    .into_iter()
-                    .find(|s| s.state == TransferState::PendingConsent)
-                {
-                    return session.transfer_id;
+            let list_fut = tokio::task::spawn_blocking(move || {
+                send_request_to(&p, &IpcRequest::ListTransfers)
+            });
+            tokio::select! {
+                send_res = &mut *send_handle => {
+                    panic!("send task finished before PendingConsent appeared: {send_res:?}");
+                }
+                list_res = list_fut => {
+                    if let Ok(Ok(IpcResponse::Transfers(list))) = list_res {
+                        if let Some(session) = list
+                            .into_iter()
+                            .find(|s| s.state == TransferState::PendingConsent)
+                        {
+                            return session.transfer_id;
+                        }
+                    }
                 }
             }
-            tokio::time::sleep(Duration::from_millis(25)).await;
+            tokio::select! {
+                send_res = &mut *send_handle => {
+                    panic!("send task finished while waiting for PendingConsent: {send_res:?}");
+                }
+                _ = tokio::time::sleep(Duration::from_millis(25)) => {}
+            }
         }
         panic!("timed out waiting for pending consent transfer");
     }
