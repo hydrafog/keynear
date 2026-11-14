@@ -3,7 +3,7 @@ use gtk4::prelude::*;
 use relm4::ComponentSender;
 
 use crate::state::{role_label, SettingsModel, SettingsMsg, SubScreen};
-use crate::views::sync_switch;
+use crate::views::{lucide_icon, sync_switch, LucideIcon};
 
 pub(crate) struct DeviceDetailParts {
     pub(crate) root: gtk4::ScrolledWindow,
@@ -69,8 +69,7 @@ pub(crate) fn build_device_detail(sender: &ComponentSender<SettingsModel>) -> De
         .valign(gtk4::Align::Center)
         .build();
     icon_box.add_css_class("kn-loading-tonal-badge");
-    let icon = gtk4::Image::from_icon_name("phone-symbolic");
-    icon.set_pixel_size(24);
+    let icon = lucide_icon(LucideIcon::Smartphone, 24);
     icon.set_hexpand(true);
     icon.set_vexpand(true);
     icon.set_halign(gtk4::Align::Center);
@@ -99,7 +98,7 @@ pub(crate) fn build_device_detail(sender: &ComponentSender<SettingsModel>) -> De
     page.append(&hero_card);
 
     let rename_heading = gtk4::Label::builder()
-        .label("DEVICE NAME")
+        .label("COMPUTER NAME")
         .xalign(0.0)
         .build();
     rename_heading.add_css_class("kn-section-heading");
@@ -176,7 +175,7 @@ pub(crate) fn build_device_detail(sender: &ComponentSender<SettingsModel>) -> De
         .build();
     aa_title.add_css_class("keynear-description");
     let aa_desc = gtk4::Label::builder()
-        .label("Receive files from this device without an approval prompt")
+        .label("Save files from this device without asking")
         .xalign(0.0)
         .wrap(true)
         .build();
@@ -218,11 +217,18 @@ pub(crate) fn build_device_detail(sender: &ComponentSender<SettingsModel>) -> De
         .build();
     conn_card.add_css_class("keynear-card");
 
-    let (key_row, key_value) = meta_row("Public key");
+    let (key_row, key_value) = meta_row("Key fingerprint");
     let (ble_row, ble_value) = meta_row("Bluetooth address");
-    let (lan_row, lan_value) = meta_row("Last Wi-Fi endpoint");
+    let (lan_row, lan_value) = meta_row("Local Wi-Fi endpoint");
 
-    let reset_ble_btn = gtk4::Button::with_label("Reset Bluetooth bond");
+    let reset_row = gtk4::Box::builder()
+        .orientation(gtk4::Orientation::Horizontal)
+        .spacing(8)
+        .halign(gtk4::Align::Center)
+        .build();
+    reset_row.append(&lucide_icon(LucideIcon::RefreshCw, 18));
+    reset_row.append(&gtk4::Label::new(Some("Reset Bluetooth bond")));
+    let reset_ble_btn = gtk4::Button::builder().child(&reset_row).build();
     reset_ble_btn.add_css_class("kn-tonal-action-btn");
     {
         let s = sender.clone();
@@ -241,7 +247,14 @@ pub(crate) fn build_device_detail(sender: &ComponentSender<SettingsModel>) -> De
     conn_card.append(&reset_ble_btn);
     page.append(&conn_card);
 
-    let remove_btn = gtk4::Button::with_label("Remove device");
+    let remove_row = gtk4::Box::builder()
+        .orientation(gtk4::Orientation::Horizontal)
+        .spacing(8)
+        .halign(gtk4::Align::Center)
+        .build();
+    remove_row.append(&lucide_icon(LucideIcon::Trash2, 18));
+    remove_row.append(&gtk4::Label::new(Some("Remove device")));
+    let remove_btn = gtk4::Button::builder().child(&remove_row).build();
     remove_btn.add_css_class("keynear-danger-btn");
     {
         let s = sender.clone();

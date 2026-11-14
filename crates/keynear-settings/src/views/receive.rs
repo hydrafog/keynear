@@ -8,7 +8,7 @@ use keynear_core::{TransferDirection, TransferSession, TransferState, Visibility
 use relm4::ComponentSender;
 
 use crate::state::{orbit_for, role_label, MapPin, SettingsModel, SettingsMsg};
-use crate::views::clear_box_children;
+use crate::views::{clear_box_children, lucide_icon, LucideIcon};
 
 pub(crate) struct ReceiveTabParts {
     pub(crate) root: gtk4::Box,
@@ -102,17 +102,33 @@ pub(crate) fn build_receive_tab(sender: &ComponentSender<SettingsModel>) -> Rece
         .build();
     seg_well.add_css_class("kn-track-well");
 
-    let mk_seg = |label: &str, mode: VisibilityMode| -> gtk4::Button {
-        let btn = gtk4::Button::with_label(label);
+    let mk_seg = |icon_kind: LucideIcon, label: &str, mode: VisibilityMode| -> gtk4::Button {
+        let row = gtk4::Box::builder()
+            .orientation(gtk4::Orientation::Horizontal)
+            .spacing(6)
+            .halign(gtk4::Align::Center)
+            .valign(gtk4::Align::Center)
+            .build();
+        row.append(&lucide_icon(icon_kind, 16));
+        row.append(&gtk4::Label::new(Some(label)));
+        let btn = gtk4::Button::builder().child(&row).build();
         btn.add_css_class("kn-seg-btn");
         let s = sender.clone();
         btn.connect_clicked(move |_| s.input(SettingsMsg::SetVisibility(mode)));
         btn
     };
 
-    let vis_hidden_btn = mk_seg("Hidden", VisibilityMode::Hidden);
-    let vis_paired_btn = mk_seg("Paired", VisibilityMode::PairedOnly);
-    let vis_everyone_btn = mk_seg("Everyone", VisibilityMode::EveryoneNearby);
+    let vis_hidden_btn = mk_seg(LucideIcon::EyeOff, "Hidden", VisibilityMode::Hidden);
+    let vis_paired_btn = mk_seg(
+        LucideIcon::ShieldCheck,
+        "Paired",
+        VisibilityMode::PairedOnly,
+    );
+    let vis_everyone_btn = mk_seg(
+        LucideIcon::Radio,
+        "Everyone",
+        VisibilityMode::EveryoneNearby,
+    );
 
     seg_well.append(&vis_hidden_btn);
     seg_well.append(&vis_paired_btn);
@@ -155,8 +171,7 @@ pub(crate) fn build_receive_tab(sender: &ComponentSender<SettingsModel>) -> Rece
         .build();
     self_node_circle.add_css_class("kn-center-node-active");
 
-    let self_icon = gtk4::Image::from_icon_name("computer-symbolic");
-    self_icon.set_pixel_size(28);
+    let self_icon = lucide_icon(LucideIcon::Laptop, 28);
     self_icon.set_hexpand(true);
     self_icon.set_vexpand(true);
     self_icon.set_halign(gtk4::Align::Center);
@@ -332,8 +347,9 @@ pub(crate) fn build_receive_tab(sender: &ComponentSender<SettingsModel>) -> Rece
         sheet_toggle_btn.connect_clicked(move |_| s.input(SettingsMsg::ToggleSheetExpanded));
     }
 
+    let refresh_icon = lucide_icon(LucideIcon::RefreshCw, 18);
     let refresh_btn = gtk4::Button::builder()
-        .icon_name("view-refresh-symbolic")
+        .child(&refresh_icon)
         .tooltip_text("Refresh devices and daemon state")
         .build();
     refresh_btn.add_css_class("kn-tonal-action-btn");
@@ -447,12 +463,14 @@ pub(crate) fn rebuild_radar_pins(
             .build();
         circle.add_css_class("kn-pin-circle");
 
-        let icon = gtk4::Image::from_icon_name(if pin.is_paired {
-            "phone-symbolic"
-        } else {
-            "network-wireless-symbolic"
-        });
-        icon.set_pixel_size(24);
+        let icon = lucide_icon(
+            if pin.is_paired {
+                LucideIcon::Smartphone
+            } else {
+                LucideIcon::Radio
+            },
+            24,
+        );
         icon.set_hexpand(true);
         icon.set_vexpand(true);
         icon.set_halign(gtk4::Align::Center);
@@ -658,12 +676,14 @@ pub(crate) fn rebuild_sheet_rows(
             "kn-surface-tonal-badge"
         });
 
-        let icon = gtk4::Image::from_icon_name(if pin.is_paired {
-            "phone-symbolic"
-        } else {
-            "network-wireless-symbolic"
-        });
-        icon.set_pixel_size(20);
+        let icon = lucide_icon(
+            if pin.is_paired {
+                LucideIcon::Smartphone
+            } else {
+                LucideIcon::Radio
+            },
+            20,
+        );
         icon.set_hexpand(true);
         icon.set_vexpand(true);
         icon.set_halign(gtk4::Align::Center);
@@ -703,12 +723,16 @@ pub(crate) fn rebuild_sheet_rows(
         text_col.append(&name);
         text_col.append(&sub);
 
-        let action_btn = gtk4::Button::with_label(if pin.is_paired { "Details >" } else { "Pair" });
-        action_btn.add_css_class(if pin.is_paired {
-            "kn-tonal-action-btn"
+        let action_btn = if pin.is_paired {
+            let icon = lucide_icon(LucideIcon::ChevronRight, 18);
+            let btn = gtk4::Button::builder().child(&icon).build();
+            btn.add_css_class("kn-tonal-action-btn");
+            btn
         } else {
-            "kn-loading-btn"
-        });
+            let btn = gtk4::Button::with_label("Pair");
+            btn.add_css_class("kn-loading-btn");
+            btn
+        };
         {
             let s = sender.clone();
             let id = pin.id.clone();

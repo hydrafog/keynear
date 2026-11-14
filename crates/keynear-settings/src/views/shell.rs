@@ -4,6 +4,7 @@ use gtk4::prelude::*;
 use relm4::ComponentSender;
 
 use crate::state::{ActiveTab, SettingsModel, SettingsMsg};
+use crate::views::{lucide_icon, LucideIcon};
 
 pub(crate) const STYLE_CSS: &str = include_str!("../../assets/style.css");
 
@@ -35,8 +36,9 @@ pub(crate) fn build_top_bar(sender: &ComponentSender<SettingsModel>) -> TopBarPa
         .build();
     root.add_css_class("kn-topbar");
 
+    let back_icon = lucide_icon(LucideIcon::ArrowLeft, 24);
     let back_btn = gtk4::Button::builder()
-        .icon_name("go-previous-symbolic")
+        .child(&back_icon)
         .visible(false)
         .width_request(48)
         .height_request(48)
@@ -138,7 +140,7 @@ pub(crate) struct BottomNavParts {
 }
 
 fn nav_tab_button(
-    icon_name: &str,
+    icon_kind: LucideIcon,
     label_text: &str,
     tab: ActiveTab,
     sender: &ComponentSender<SettingsModel>,
@@ -161,8 +163,7 @@ fn nav_tab_button(
         .build();
     pill.add_css_class("kn-nav-pill-inactive");
 
-    let icon = gtk4::Image::from_icon_name(icon_name);
-    icon.set_pixel_size(18);
+    let icon = lucide_icon(icon_kind, 20);
     icon.set_hexpand(true);
     icon.set_halign(gtk4::Align::Center);
     icon.set_valign(gtk4::Align::Center);
@@ -194,16 +195,12 @@ pub(crate) fn build_bottom_nav(sender: &ComponentSender<SettingsModel>) -> Botto
         .spacing(8)
         .build();
 
-    let (rec_btn, receive_pill, receive_text) = nav_tab_button(
-        "network-wireless-symbolic",
-        "Receive",
-        ActiveTab::Receive,
-        sender,
-    );
+    let (rec_btn, receive_pill, receive_text) =
+        nav_tab_button(LucideIcon::Inbox, "Receive", ActiveTab::Receive, sender);
     let (send_btn, send_pill, send_text) =
-        nav_tab_button("document-send-symbolic", "Send", ActiveTab::Send, sender);
+        nav_tab_button(LucideIcon::Send, "Send", ActiveTab::Send, sender);
     let (set_btn, settings_pill, settings_text) = nav_tab_button(
-        "preferences-system-symbolic",
+        LucideIcon::SlidersHorizontal,
         "Settings",
         ActiveTab::Settings,
         sender,
@@ -213,15 +210,7 @@ pub(crate) fn build_bottom_nav(sender: &ComponentSender<SettingsModel>) -> Botto
     tabs_row.append(&send_btn);
     tabs_row.append(&set_btn);
 
-    let gesture_pill = gtk4::Box::builder()
-        .halign(gtk4::Align::Center)
-        .width_request(128)
-        .height_request(5)
-        .build();
-    gesture_pill.add_css_class("kn-gesture-pill");
-
     root.append(&tabs_row);
-    root.append(&gesture_pill);
 
     BottomNavParts {
         root,

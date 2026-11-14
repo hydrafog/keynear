@@ -3,7 +3,7 @@ use gtk4::prelude::*;
 use relm4::ComponentSender;
 
 use crate::state::{SettingsModel, SettingsMsg};
-use crate::views::clear_box_children;
+use crate::views::{clear_box_children, lucide_icon, LucideIcon};
 
 pub(crate) struct SettingsTabParts {
     pub(crate) root: gtk4::ScrolledWindow,
@@ -13,7 +13,8 @@ pub(crate) struct SettingsTabParts {
     pub(crate) clipboard_images_switch: gtk4::Switch,
     pub(crate) otp_passthrough_switch: gtk4::Switch,
     pub(crate) mime_count_label: gtk4::Label,
-    pub(crate) mime_chevron_label: gtk4::Label,
+    pub(crate) mime_chevron_down: gtk4::DrawingArea,
+    pub(crate) mime_chevron_up: gtk4::DrawingArea,
     pub(crate) mime_editor_box: gtk4::Box,
     pub(crate) mime_chips_box: gtk4::Box,
     pub(crate) mime_entry: gtk4::Entry,
@@ -77,7 +78,7 @@ pub(crate) fn build_settings_tab(sender: &ComponentSender<SettingsModel>) -> Set
         .margin_bottom(24)
         .build();
 
-    page.append(&section_heading("RECEIVING"));
+    page.append(&section_heading("GENERAL & STORAGE"));
     let recv_card = gtk4::Box::builder()
         .orientation(gtk4::Orientation::Vertical)
         .spacing(10)
@@ -100,7 +101,7 @@ pub(crate) fn build_settings_tab(sender: &ComponentSender<SettingsModel>) -> Set
         .build();
     folder_title.add_css_class("keynear-description");
     let folder_desc = gtk4::Label::builder()
-        .label("Directory for incoming Keynear files")
+        .label("Where received files are saved")
         .xalign(0.0)
         .build();
     folder_desc.add_css_class("keynear-caption");
@@ -118,8 +119,8 @@ pub(crate) fn build_settings_tab(sender: &ComponentSender<SettingsModel>) -> Set
     recv_card.append(&folder_row);
 
     let (global_aa_row, global_auto_accept_switch) = switch_row(
-        "Auto-accept from paired",
-        "Accept files from paired devices automatically",
+        "Auto-accept from paired devices",
+        "Save files from paired devices without asking",
         {
             let s = sender.clone();
             move |enabled| s.input(SettingsMsg::SetGlobalAutoAccept(enabled))
@@ -128,32 +129,29 @@ pub(crate) fn build_settings_tab(sender: &ComponentSender<SettingsModel>) -> Set
     recv_card.append(&global_aa_row);
     page.append(&recv_card);
 
-    page.append(&section_heading("CLIPBOARD & CONTINUITY"));
+    page.append(&section_heading("CLIPBOARD"));
     let clip_card = gtk4::Box::builder()
         .orientation(gtk4::Orientation::Vertical)
         .spacing(10)
         .build();
     clip_card.add_css_class("keynear-card");
 
-    let (clip_row, clipboard_sync_switch) = switch_row(
-        "Sync clipboard with paired devices",
-        "Share text and links over the active local transport",
-        {
+    let (clip_row, clipboard_sync_switch) =
+        switch_row("Clipboard sync", "Keep clipboard text in sync", {
             let s = sender.clone();
             move |enabled| s.input(SettingsMsg::ToggleClipboardSync(enabled))
-        },
-    );
+        });
     let (img_row, clipboard_images_switch) = switch_row(
-        "Include images over Wi-Fi",
-        "Relay copied screenshots only while connected on LAN",
+        "Sync clipboard images",
+        "Include images in clipboard sync",
         {
             let s = sender.clone();
             move |enabled| s.input(SettingsMsg::ToggleClipboardImages(enabled))
         },
     );
     let (otp_row, otp_passthrough_switch) = switch_row(
-        "Auto-clear SMS OTP codes",
-        "Expire copied one-time passwords after handoff",
+        "2FA code pass-through",
+        "Pass verification codes to the computer",
         {
             let s = sender.clone();
             move |enabled| s.input(SettingsMsg::ToggleOtpPassthrough(enabled))
@@ -176,12 +174,12 @@ pub(crate) fn build_settings_tab(sender: &ComponentSender<SettingsModel>) -> Set
         .hexpand(true)
         .build();
     let mime_title = gtk4::Label::builder()
-        .label("Ignored MIME types")
+        .label("Ignored clipboard formats")
         .xalign(0.0)
         .build();
     mime_title.add_css_class("keynear-description");
     let mime_sub = gtk4::Label::builder()
-        .label("Password manager and sensitive clipboard hints to skip")
+        .label("Formats that are never shared")
         .xalign(0.0)
         .build();
     mime_sub.add_css_class("keynear-caption");
@@ -190,12 +188,14 @@ pub(crate) fn build_settings_tab(sender: &ComponentSender<SettingsModel>) -> Set
 
     let mime_count_label = gtk4::Label::builder().label("0").build();
     mime_count_label.add_css_class("kn-count-badge");
-    let mime_chevron_label = gtk4::Label::builder().label("v").build();
-    mime_chevron_label.add_css_class("keynear-caption");
+    let mime_chevron_down = lucide_icon(LucideIcon::ChevronDown, 20);
+    let mime_chevron_up = lucide_icon(LucideIcon::ChevronUp, 20);
+    mime_chevron_up.set_visible(false);
 
     mime_row.append(&mime_text);
     mime_row.append(&mime_count_label);
-    mime_row.append(&mime_chevron_label);
+    mime_row.append(&mime_chevron_down);
+    mime_row.append(&mime_chevron_up);
     mime_header_btn.set_child(Some(&mime_row));
     {
         let s = sender.clone();
@@ -219,7 +219,7 @@ pub(crate) fn build_settings_tab(sender: &ComponentSender<SettingsModel>) -> Set
         .spacing(8)
         .build();
     let mime_entry = gtk4::Entry::builder()
-        .placeholder_text("application/x-custom-secret")
+        .placeholder_text("application/x-secret")
         .hexpand(true)
         .build();
     mime_entry.add_css_class("kn-recessed-entry");
@@ -254,17 +254,14 @@ pub(crate) fn build_settings_tab(sender: &ComponentSender<SettingsModel>) -> Set
         .build();
     audio_card.add_css_class("keynear-card");
 
-    let (audio_row, audio_handoff_switch) = switch_row(
-        "Audio call handoff",
-        "Show notification when a paired phone rings",
-        {
+    let (audio_row, audio_handoff_switch) =
+        switch_row("Smart audio handoff", "Move audio between devices", {
             let s = sender.clone();
             move |enabled| s.input(SettingsMsg::ToggleAudioHandoff(enabled))
-        },
-    );
+        });
     let (notify_row, notify_auto_accept_switch) = switch_row(
-        "Notify when auto-accepted",
-        "Silent desktop banner after an automatic file transfer",
+        "Completion notifications",
+        "Notify when files finish saving",
         {
             let s = sender.clone();
             move |enabled| s.input(SettingsMsg::ToggleNotifyAutoAccept(enabled))
@@ -281,14 +278,10 @@ pub(crate) fn build_settings_tab(sender: &ComponentSender<SettingsModel>) -> Set
         .build();
     appear_card.add_css_class("keynear-card");
 
-    let (theme_row, dark_theme_switch) = switch_row(
-        "Dark theme",
-        "Switch between light daytime canvas and dark slate palette",
-        {
-            let s = sender.clone();
-            move |enabled| s.input(SettingsMsg::ToggleDarkTheme(enabled))
-        },
-    );
+    let (theme_row, dark_theme_switch) = switch_row("Dark theme", "Switch the app color theme", {
+        let s = sender.clone();
+        move |enabled| s.input(SettingsMsg::ToggleDarkTheme(enabled))
+    });
     appear_card.append(&theme_row);
     page.append(&appear_card);
 
@@ -306,7 +299,8 @@ pub(crate) fn build_settings_tab(sender: &ComponentSender<SettingsModel>) -> Set
         clipboard_images_switch,
         otp_passthrough_switch,
         mime_count_label,
-        mime_chevron_label,
+        mime_chevron_down,
+        mime_chevron_up,
         mime_editor_box,
         mime_chips_box,
         mime_entry,
@@ -337,8 +331,9 @@ pub(crate) fn rebuild_mime_chips(
             .build();
         lbl.add_css_class("keynear-caption");
 
+        let remove_icon = lucide_icon(LucideIcon::X, 16);
         let remove_btn = gtk4::Button::builder()
-            .icon_name("window-close-symbolic")
+            .child(&remove_icon)
             .tooltip_text("Remove MIME rule")
             .build();
         remove_btn.add_css_class("kn-error-action-btn");

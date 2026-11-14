@@ -6,7 +6,7 @@ use relm4::ComponentSender;
 use crate::state::{
     format_bytes, role_label, SendItemKind, SendQueueItem, SettingsModel, SettingsMsg,
 };
-use crate::views::clear_box_children;
+use crate::views::{clear_box_children, lucide_icon, LucideIcon};
 
 pub(crate) struct SendTabParts {
     pub(crate) root: gtk4::ScrolledWindow,
@@ -22,7 +22,11 @@ pub(crate) struct SendTabParts {
     pub(crate) targets_box: gtk4::Box,
 }
 
-fn selection_tile(icon_name: &str, label: &str, on_click: impl Fn() + 'static) -> gtk4::Button {
+fn selection_tile(
+    icon_kind: LucideIcon,
+    label: &str,
+    on_click: impl Fn() + 'static,
+) -> gtk4::Button {
     let btn = gtk4::Button::builder().hexpand(true).build();
     btn.add_css_class("kn-selection-tile");
 
@@ -33,8 +37,7 @@ fn selection_tile(icon_name: &str, label: &str, on_click: impl Fn() + 'static) -
         .valign(gtk4::Align::Center)
         .build();
 
-    let icon = gtk4::Image::from_icon_name(icon_name);
-    icon.set_pixel_size(32);
+    let icon = lucide_icon(icon_kind, 32);
     icon.set_halign(gtk4::Align::Center);
     icon.add_css_class("kn-tile-icon");
 
@@ -74,19 +77,19 @@ pub(crate) fn build_send_tab(sender: &ComponentSender<SettingsModel>) -> SendTab
         .column_homogeneous(true)
         .build();
 
-    let file_tile = selection_tile("text-x-generic-symbolic", "File", {
+    let file_tile = selection_tile(LucideIcon::FileText, "File", {
         let s = sender.clone();
         move || s.input(SettingsMsg::PickSendFiles)
     });
-    let folder_tile = selection_tile("folder-symbolic", "Folder", {
+    let folder_tile = selection_tile(LucideIcon::Folder, "Folder", {
         let s = sender.clone();
         move || s.input(SettingsMsg::PickSendFolder)
     });
-    let clipboard_tile = selection_tile("edit-paste-symbolic", "Clipboard", {
+    let clipboard_tile = selection_tile(LucideIcon::Clipboard, "Clipboard", {
         let s = sender.clone();
         move || s.input(SettingsMsg::StageClipboardForSend)
     });
-    let text_tile = selection_tile("document-edit-symbolic", "Text", {
+    let text_tile = selection_tile(LucideIcon::Plus, "Text", {
         let s = sender.clone();
         move || s.input(SettingsMsg::ToggleTextComposer)
     });
@@ -233,11 +236,11 @@ pub(crate) fn rebuild_send_queue_rows(
             .build();
         row.add_css_class("kn-queue-row");
 
-        let icon_name = match item.kind {
-            SendItemKind::Folder => "folder-symbolic",
-            SendItemKind::Clipboard => "edit-paste-symbolic",
-            SendItemKind::Text => "document-edit-symbolic",
-            SendItemKind::File => "text-x-generic-symbolic",
+        let icon_kind = match item.kind {
+            SendItemKind::Folder => LucideIcon::Folder,
+            SendItemKind::Clipboard => LucideIcon::Clipboard,
+            SendItemKind::Text => LucideIcon::Plus,
+            SendItemKind::File => LucideIcon::FileText,
         };
         let badge = gtk4::Box::builder()
             .width_request(36)
@@ -246,8 +249,7 @@ pub(crate) fn rebuild_send_queue_rows(
             .valign(gtk4::Align::Center)
             .build();
         badge.add_css_class("kn-loading-tonal-badge");
-        let icon = gtk4::Image::from_icon_name(icon_name);
-        icon.set_pixel_size(16);
+        let icon = lucide_icon(icon_kind, 16);
         icon.set_hexpand(true);
         icon.set_vexpand(true);
         icon.set_halign(gtk4::Align::Center);
@@ -275,8 +277,9 @@ pub(crate) fn rebuild_send_queue_rows(
         col.append(&name);
         col.append(&size_lbl);
 
+        let remove_icon = lucide_icon(LucideIcon::X, 16);
         let remove_btn = gtk4::Button::builder()
-            .icon_name("window-close-symbolic")
+            .child(&remove_icon)
             .tooltip_text("Remove")
             .build();
         remove_btn.add_css_class("kn-error-action-btn");
@@ -304,9 +307,8 @@ pub(crate) fn rebuild_send_targets(
     clear_box_children(container);
     if devices.is_empty() {
         let empty = gtk4::Label::builder()
-            .label("No paired devices yet. Switch visibility to Everyone nearby to pair a device first.")
+            .label("No paired devices")
             .xalign(0.0)
-            .wrap(true)
             .build();
         empty.add_css_class("keynear-caption");
         container.append(&empty);
@@ -333,11 +335,13 @@ pub(crate) fn rebuild_send_targets(
             "kn-surface-tonal-badge"
         });
 
-        let icon = gtk4::Image::from_icon_name(match dev.device_role {
-            DeviceRole::Desktop => "computer-symbolic",
-            DeviceRole::Mobile => "phone-symbolic",
-        });
-        icon.set_pixel_size(20);
+        let icon = lucide_icon(
+            match dev.device_role {
+                DeviceRole::Desktop => LucideIcon::Laptop,
+                DeviceRole::Mobile => LucideIcon::Smartphone,
+            },
+            20,
+        );
         icon.set_hexpand(true);
         icon.set_vexpand(true);
         icon.set_halign(gtk4::Align::Center);

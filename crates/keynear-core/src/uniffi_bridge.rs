@@ -1483,7 +1483,6 @@ mod tests {
             let _owned = wrap_raw_fd(raw_fd).expect("wrap valid raw fd");
         }
 
-        // Borrowing raw_fd after OwnedFd dropped must fail with EBADF (closed exactly once).
         let reopened = unsafe { fs::File::from_raw_fd(raw_fd) };
         let err = reopened.sync_all().expect_err("fd must already be closed");
         std::mem::forget(reopened);
