@@ -11,7 +11,7 @@ crate-type = ["rlib", "cdylib"]
 [features]
 default = []
 bindgen-cli = ["uniffi/cli"]
-linux-oo7 = ["dep:oo7", "dep:tokio"]
+linux-oo7 = ["dep:oo7"]
 
 [[bin]]
 name = "uniffi-bindgen"
@@ -23,21 +23,25 @@ aes-gcm.workspace = true
 hex.workspace = true
 hkdf.workspace = true
 hmac.workspace = true
+iroh.workspace = true
+mdns-sd.workspace = true
 oo7 = { workspace = true, optional = true }
 prost.workspace = true
 rand.workspace = true
+rustls.workspace = true
 serde.workspace = true
 sha2.workspace = true
 snow.workspace = true
 subtle.workspace = true
 thiserror.workspace = true
-tokio = { workspace = true, optional = true }
+tokio.workspace = true
 toml.workspace = true
 tracing.workspace = true
 uniffi.workspace = true
 uuid.workspace = true
 x25519-dalek.workspace = true
 zeroize.workspace = true
+zip.workspace = true
 
 [build-dependencies]
 prost-build.workspace = true

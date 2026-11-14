@@ -13,6 +13,10 @@ message Envelope {
     ClipboardPayload clipboard = 12;
     AudioStatePayload audio_state = 13;
     ControlAck control_ack = 14;
+    LanEndpoint lan_endpoint = 15;
+    TransferConsent transfer_consent = 16;
+    TransferCancel transfer_cancel = 17;
+    TransferComplete transfer_complete = 18;
   }
 }
 
@@ -21,6 +25,7 @@ message HandshakePayload {
   string display_name = 2;
   bytes ephemeral_pubkey = 3;
   uint32 capability_flags = 4;
+  bytes auth_proof = 5;
 }
 
 message TransferOffer {
@@ -52,5 +57,30 @@ message ControlAck {
   uint64 acked_sequence = 1;
   bool accepted = 2;
   string reason = 3;
+}
+
+message LanEndpoint {
+  string device_id = 1;
+  bytes endpoint_id = 2;
+  repeated string socket_addrs = 3;
+  uint32 capability_flags = 4;
+  int64 issued_at_ms = 5;
+}
+
+message TransferConsent {
+  string transfer_id = 1;
+  bool accepted = 2;
+  string reason = 3;
+}
+
+message TransferCancel {
+  string transfer_id = 1;
+  string reason = 2;
+}
+
+message TransferComplete {
+  string transfer_id = 1;
+  uint64 bytes_transferred = 2;
+  bytes sha256_digest = 3;
 }
 

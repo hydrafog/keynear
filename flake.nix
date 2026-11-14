@@ -82,6 +82,7 @@
             nativeBuildInputs = with pkgsAndroid; [
               rustAndroidToolchain
               cargo-ndk
+              cmake
               protobuf
               pkg-config
               jdk21
@@ -98,7 +99,7 @@
             GRADLE_OPTS = "-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdk}/libexec/android-sdk/build-tools/36.0.0/aapt2";
 
             shellHook = ''
-              for tool in cargo rustc cargo-ndk protoc java gradle llvm-readelf; do
+              for tool in cargo rustc cargo-ndk cmake protoc java gradle llvm-readelf; do
                 if ! command -v "$tool" >/dev/null 2>&1; then
                   echo "keynear android devShell warning: missing tool '$tool'" >&2
                 fi

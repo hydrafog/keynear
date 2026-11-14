@@ -1,4 +1,5 @@
 use prost::Message;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 use crate::error::KeynearError;
 
@@ -7,6 +8,29 @@ pub mod v1 {
 }
 
 pub const MAX_CONTROL_FRAME_BYTES: usize = 65_536;
+
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum QuicStreamKind {
+    Control = 0x01,
+    RawFileChunk = 0x02,
+    StoredZipArchive = 0x03,
+}
+
+impl TryFrom<u8> for QuicStreamKind {
+    type Error = KeynearError;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0x01 => Ok(Self::Control),
+            0x02 => Ok(Self::RawFileChunk),
+            0x03 => Ok(Self::StoredZipArchive),
+            other => Err(KeynearError::Protocol(format!(
+                "unknown QUIC stream kind 0x{other:02x}"
+            ))),
+        }
+    }
+}
 
 #[derive(Clone, PartialEq, Message)]
 pub struct ControlFrame {
@@ -85,6 +109,16 @@ pub fn envelope_to_control_frame(envelope: &v1::Envelope) -> Result<ControlFrame
         Some(v1::envelope::Payload::Clipboard(inner)) => ("clipboard", inner.encode_to_vec()),
         Some(v1::envelope::Payload::AudioState(inner)) => ("audio_state", inner.encode_to_vec()),
         Some(v1::envelope::Payload::ControlAck(inner)) => ("control_ack", inner.encode_to_vec()),
+        Some(v1::envelope::Payload::LanEndpoint(inner)) => ("lan_endpoint", inner.encode_to_vec()),
+        Some(v1::envelope::Payload::TransferConsent(inner)) => {
+            ("transfer_consent", inner.encode_to_vec())
+        }
+        Some(v1::envelope::Payload::TransferCancel(inner)) => {
+            ("transfer_cancel", inner.encode_to_vec())
+        }
+        Some(v1::envelope::Payload::TransferComplete(inner)) => {
+            ("transfer_complete", inner.encode_to_vec())
+        }
         None => {
             return Err(KeynearError::Protocol(
                 "envelope payload must not be empty".to_string(),
@@ -141,6 +175,22 @@ pub fn control_frame_to_envelope(frame: &ControlFrame) -> Result<v1::Envelope, K
         "control_ack" => v1::envelope::Payload::ControlAck(
             v1::ControlAck::decode(slice).map_err(|err| KeynearError::Protocol(err.to_string()))?,
         ),
+        "lan_endpoint" => v1::envelope::Payload::LanEndpoint(
+            v1::LanEndpoint::decode(slice)
+                .map_err(|err| KeynearError::Protocol(err.to_string()))?,
+        ),
+        "transfer_consent" => v1::envelope::Payload::TransferConsent(
+            v1::TransferConsent::decode(slice)
+                .map_err(|err| KeynearError::Protocol(err.to_string()))?,
+        ),
+        "transfer_cancel" => v1::envelope::Payload::TransferCancel(
+            v1::TransferCancel::decode(slice)
+                .map_err(|err| KeynearError::Protocol(err.to_string()))?,
+        ),
+        "transfer_complete" => v1::envelope::Payload::TransferComplete(
+            v1::TransferComplete::decode(slice)
+                .map_err(|err| KeynearError::Protocol(err.to_string()))?,
+        ),
         other => {
             return Err(KeynearError::Protocol(format!(
                 "unknown control frame kind '{other}'"
@@ -154,6 +204,58 @@ pub fn control_frame_to_envelope(frame: &ControlFrame) -> Result<v1::Envelope, K
         timestamp_ms: frame.timestamp_ms,
         payload: Some(payload),
     })
+}
+
+pub async fn write_stream_kind<W: AsyncWrite + Unpin>(
+    writer: &mut W,
+    kind: QuicStreamKind,
+) -> Result<(), KeynearError> {
+    writer.write_all(&[kind as u8]).await?;
+    Ok(())
+}
+
+pub async fn read_stream_kind<R: AsyncRead + Unpin>(
+    reader: &mut R,
+) -> Result<QuicStreamKind, KeynearError> {
+    let mut buf = [0u8; 1];
+    reader.read_exact(&mut buf).await?;
+    QuicStreamKind::try_from(buf[0])
+}
+
+pub async fn write_control_envelope<W: AsyncWrite + Unpin>(
+    writer: &mut W,
+    envelope: &v1::Envelope,
+) -> Result<(), KeynearError> {
+    let encoded = encode_envelope(envelope)?;
+    let len = u32::try_from(encoded.len()).map_err(|_| KeynearError::FrameTooLarge {
+        size: encoded.len(),
+        max: MAX_CONTROL_FRAME_BYTES,
+    })?;
+    writer.write_all(&len.to_be_bytes()).await?;
+    writer.write_all(&encoded).await?;
+    Ok(())
+}
+
+pub async fn read_control_envelope<R: AsyncRead + Unpin>(
+    reader: &mut R,
+) -> Result<v1::Envelope, KeynearError> {
+    let mut len_buf = [0u8; 4];
+    reader.read_exact(&mut len_buf).await?;
+    let len = u32::from_be_bytes(len_buf) as usize;
+    if len == 0 {
+        return Err(KeynearError::Protocol(
+            "control frame length must be positive".to_string(),
+        ));
+    }
+    if len > MAX_CONTROL_FRAME_BYTES {
+        return Err(KeynearError::FrameTooLarge {
+            size: len,
+            max: MAX_CONTROL_FRAME_BYTES,
+        });
+    }
+    let mut payload = vec![0u8; len];
+    reader.read_exact(&mut payload).await?;
+    decode_envelope(&payload)
 }
 
 #[cfg(test)]
@@ -213,6 +315,7 @@ mod tests {
                 display_name: "Pixel".to_string(),
                 ephemeral_pubkey: vec![0xAA; 32],
                 capability_flags: 3,
+                auth_proof: vec![0x55; 32],
             })),
             sample_envelope(v1::envelope::Payload::TransferOffer(v1::TransferOffer {
                 transfer_id: "tx-1".to_string(),
@@ -239,6 +342,31 @@ mod tests {
                 accepted: true,
                 reason: String::new(),
             })),
+            sample_envelope(v1::envelope::Payload::LanEndpoint(v1::LanEndpoint {
+                device_id: "dev-1".to_string(),
+                endpoint_id: vec![0x11; 32],
+                socket_addrs: vec!["192.168.1.25:49152".to_string()],
+                capability_flags: 1,
+                issued_at_ms: 1_763_000_000_000,
+            })),
+            sample_envelope(v1::envelope::Payload::TransferConsent(
+                v1::TransferConsent {
+                    transfer_id: "tx-1".to_string(),
+                    accepted: true,
+                    reason: String::new(),
+                },
+            )),
+            sample_envelope(v1::envelope::Payload::TransferCancel(v1::TransferCancel {
+                transfer_id: "tx-1".to_string(),
+                reason: "user_cancelled".to_string(),
+            })),
+            sample_envelope(v1::envelope::Payload::TransferComplete(
+                v1::TransferComplete {
+                    transfer_id: "tx-1".to_string(),
+                    bytes_transferred: 128,
+                    sha256_digest: vec![0x99; 32],
+                },
+            )),
         ];
 
         for env in cases {
@@ -300,6 +428,65 @@ mod tests {
         assert!(matches!(
             control_frame_to_envelope(&frame),
             Err(KeynearError::Protocol(_))
+        ));
+    }
+
+    #[test]
+    fn quic_stream_kind_roundtrip_and_rejection() {
+        for (byte, kind) in [
+            (0x01, QuicStreamKind::Control),
+            (0x02, QuicStreamKind::RawFileChunk),
+            (0x03, QuicStreamKind::StoredZipArchive),
+        ] {
+            assert_eq!(QuicStreamKind::try_from(byte).unwrap(), kind);
+        }
+        assert!(matches!(
+            QuicStreamKind::try_from(0xff),
+            Err(KeynearError::Protocol(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn control_envelope_stream_roundtrip_and_bounds() {
+        let env = sample_envelope(v1::envelope::Payload::TransferConsent(
+            v1::TransferConsent {
+                transfer_id: "tx-42".to_string(),
+                accepted: true,
+                reason: "ok".to_string(),
+            },
+        ));
+
+        let mut buf = Vec::new();
+        write_stream_kind(&mut buf, QuicStreamKind::Control)
+            .await
+            .expect("write kind");
+        write_control_envelope(&mut buf, &env)
+            .await
+            .expect("write envelope");
+
+        let mut reader = buf.as_slice();
+        assert_eq!(
+            read_stream_kind(&mut reader).await.expect("read kind"),
+            QuicStreamKind::Control
+        );
+        let decoded = read_control_envelope(&mut reader)
+            .await
+            .expect("read envelope");
+        assert_eq!(decoded, env);
+
+        let zero_len = 0u32.to_be_bytes();
+        assert!(matches!(
+            read_control_envelope(&mut zero_len.as_slice()).await,
+            Err(KeynearError::Protocol(_))
+        ));
+
+        let oversized_len = ((MAX_CONTROL_FRAME_BYTES + 1) as u32).to_be_bytes();
+        assert!(matches!(
+            read_control_envelope(&mut oversized_len.as_slice()).await,
+            Err(KeynearError::FrameTooLarge {
+                size,
+                max: MAX_CONTROL_FRAME_BYTES
+            }) if size == MAX_CONTROL_FRAME_BYTES + 1
         ));
     }
 }

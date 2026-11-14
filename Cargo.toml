@@ -7,7 +7,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 license = "GPL-3.0-only"
 repository = "https://github.com/hydrafog/keynear"
@@ -19,11 +19,14 @@ gtk4 = "0.11"
 hex = "0.4"
 hkdf = "0.13"
 hmac = "0.13"
+iroh = { version = "1.4.1", default-features = false, features = ["tls-aws-lc-rs"] }
+mdns-sd = "0.21.7"
 oo7 = "0.7"
 prost = "0.14"
 prost-build = "0.14"
 rand = "0.10"
 relm4 = "0.11"
+rustls = { version = "0.23.46", default-features = false, features = ["aws_lc_rs", "prefer-post-quantum", "std", "tls12"] }
 serde = { version = "1", features = ["derive"] }
 sha2 = "0.11"
 snow = "0.10"
@@ -37,3 +40,4 @@ uniffi = "0.32"
 uuid = { version = "1.29", features = ["v4"] }
 x25519-dalek = { version = "3.0", features = ["static_secrets", "getrandom"] }
 zeroize = { version = "1.9", features = ["derive"] }
+zip = { version = "9.4.1", default-features = false }
