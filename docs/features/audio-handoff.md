@@ -1,6 +1,6 @@
 # Smart Audio Handoff
 
-`Keynear` coordinates shared Bluetooth audio peripherals (earbuds, headphones, and speakers) across Linux and Android without mid-stream disconnects.
+`Keynear` coordinates shared Bluetooth audio peripherals (earbuds, headphones, and speakers) between Linux and Android without a mid-stream disconnect.
 
 ## Handoff Sequence
 
@@ -19,5 +19,5 @@ sequenceDiagram
 
 ## Coordination Details
 
-- **Linux Monitoring**: `keynear-linux` monitors BlueZ device/transport objects alongside PipeWire (`bap_sink` for LE Audio and `a2dp_sink` / `hfp_hf`) and MPRIS2 media players.
-- **Conflict-Free Switching**: Android publishes call and sink state over the continuity channel while Linux pauses active MPRIS2 playback and releases the PipeWire sink profile cleanly before the peer claims the headset, resuming playback when the sink returns.
+- `keynear-linux` monitors BlueZ device and transport objects alongside PipeWire (`bap_sink` for LE Audio, `a2dp_sink`, and `hfp_hf`) and MPRIS2 media players.
+- Android publishes call and sink state over the continuity channel. Linux pauses active MPRIS2 playback and releases the PipeWire sink profile before the peer claims the headset, then reclaims the sink and resumes playback when it returns.

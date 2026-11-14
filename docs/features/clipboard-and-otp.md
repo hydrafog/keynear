@@ -4,11 +4,10 @@
 
 ## Linux Clipboard Sync
 
-- **Wayland & X11**: The daemon prioritizes `ext-data-control-v1` (KDE KWin, COSMIC, Sway, Hyprland) with `zwlr-data-control-v1` and X11 fallbacks, using delayed rendering for outgoing images.
-- **Password Exclusion**: Incoming clipboard offers are inspected before reading. Entries carrying `x-kde-passwordManagerHint` or `application/x-password` are skipped automatically.
+- The daemon prefers `ext-data-control-v1` (KDE KWin, COSMIC, Sway, Hyprland) and falls back to `zwlr-data-control-v1` and X11. Outgoing images use delayed rendering.
+- Incoming clipboard offers are inspected before any payload is read. Entries carrying `x-kde-passwordManagerHint` or `application/x-password` are skipped automatically.
 
 ## Android Clipboard and OTPs
 
-- **Background Sync**: Receiving clipboard items from Linux works in the background. Reading the phone clipboard respects Android focus rules via notification or Quick Settings tile actions.
-- **SMS User Consent**: One-time passwords on Android use SMS User Consent to present a consent-driven prompt that copies the verified code to the desktop clipboard and makes it available under **Copy latest OTP** in the tray menu.
-
+- Clipboard items received from Linux land in the background. Reading the phone clipboard respects Android focus rules and runs from a notification or Quick Settings tile action.
+- One-time passwords on Android use SMS User Consent, which presents a consent-driven prompt, copies the verified code to the desktop clipboard, and exposes it as the **Copy latest OTP** action in the tray menu.
