@@ -214,7 +214,9 @@ fn parse_visibility_arg(raw: &str) -> Result<VisibilityMode, KeynearError> {
         "everyone" | "everyone_nearby" | "everyone-nearby" => Ok(VisibilityMode::EveryoneNearby),
         _ => Err(KeynearError::Validation {
             field: "visibilityMode",
-            message: format!("unknown visibility mode '{raw}' (expected hidden, paired, or everyone)"),
+            message: format!(
+                "unknown visibility mode '{raw}' (expected hidden, paired, or everyone)"
+            ),
         }),
     }
 }

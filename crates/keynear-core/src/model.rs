@@ -654,7 +654,10 @@ mod tests {
         assert_eq!(renamed.static_x25519_pubkey, "pubkey-hex");
         assert!(renamed.auto_accept_files);
 
-        let loaded = store.get("pixel-9").expect("load renamed").expect("present");
+        let loaded = store
+            .get("pixel-9")
+            .expect("load renamed")
+            .expect("present");
         assert_eq!(loaded.display_name, "Studio Phone");
 
         let raw = fs::read_to_string(&path).expect("read devices toml");

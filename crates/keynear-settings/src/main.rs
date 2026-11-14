@@ -269,13 +269,11 @@ fn launch_settings_gui(
         Err(_) => {}
     }
 
-    if let Ok(ipc::IpcResponse::Config(daemon_cfg)) =
-        ipc::send_request(&ipc::IpcRequest::GetConfig)
+    if let Ok(ipc::IpcResponse::Config(daemon_cfg)) = ipc::send_request(&ipc::IpcRequest::GetConfig)
     {
         config = daemon_cfg;
     }
-    if let Ok(ipc::IpcResponse::Devices(devices)) =
-        ipc::send_request(&ipc::IpcRequest::ListDevices)
+    if let Ok(ipc::IpcResponse::Devices(devices)) = ipc::send_request(&ipc::IpcRequest::ListDevices)
     {
         paired_devices = devices;
     }
@@ -883,7 +881,10 @@ mod tests {
             updated_incoming.display().to_string(),
         ));
         assert!(model.auto_accept_from_paired());
-        assert_eq!(model.incoming_directory(), updated_incoming.to_string_lossy());
+        assert_eq!(
+            model.incoming_directory(),
+            updated_incoming.to_string_lossy()
+        );
         let saved = DaemonConfig::load_or_default(&cfg_path).expect("reload saved cfg");
         assert!(saved.auto_accept_from_paired);
         assert_eq!(saved.incoming_directory, updated_incoming.to_string_lossy());
@@ -895,7 +896,7 @@ mod tests {
         assert_eq!(model.send_paths(), &[PathBuf::from("/tmp/a.txt")]);
         assert_eq!(model.selected_send_device_id(), Some("pixel-9"));
         model.apply_msg(app::SettingsMsg::SendCompleted(Err(
-            "daemon offline".to_string(),
+            "daemon offline".to_string()
         )));
         assert_eq!(model.send_error(), Some("daemon offline"));
 

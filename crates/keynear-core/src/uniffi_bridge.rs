@@ -1581,7 +1581,11 @@ mod tests {
         assert_eq!(updated.display_name, "Pixel Daily");
 
         assert!(handle
-            .rename_paired_device(devices_str.clone(), "phone-1".to_string(), "   ".to_string())
+            .rename_paired_device(
+                devices_str.clone(),
+                "phone-1".to_string(),
+                "   ".to_string()
+            )
             .is_err());
 
         let _ = fs::remove_dir_all(&dir);

@@ -34,10 +34,12 @@ fn portal_runtime() -> Result<&'static tokio::runtime::Runtime, String> {
 }
 
 pub fn file_uri_to_path(uri: &str) -> Result<PathBuf, KeynearError> {
-    let after_scheme = uri.strip_prefix("file://").ok_or_else(|| KeynearError::Validation {
-        field: "uri",
-        message: format!("expected file:// URI, got '{uri}'"),
-    })?;
+    let after_scheme = uri
+        .strip_prefix("file://")
+        .ok_or_else(|| KeynearError::Validation {
+            field: "uri",
+            message: format!("expected file:// URI, got '{uri}'"),
+        })?;
     let raw_path = if let Some(rest) = after_scheme.strip_prefix("localhost/") {
         format!("/{rest}")
     } else if after_scheme.starts_with('/') {
@@ -171,9 +173,15 @@ pub enum SettingsMsg {
     CancelUnpair,
     StartRename(String),
     UpdateRenameDraft(String),
-    SubmitRename { device_id: String, display_name: String },
+    SubmitRename {
+        device_id: String,
+        display_name: String,
+    },
     CancelRename,
-    SetAutoAcceptFiles { device_id: String, enabled: bool },
+    SetAutoAcceptFiles {
+        device_id: String,
+        enabled: bool,
+    },
     SetGlobalAutoAccept(bool),
     PickSendFiles,
     PickSendFolder,
@@ -635,8 +643,7 @@ impl SettingsModel {
                 let mut renamed = match self.device_store.rename(&device_id, &clean) {
                     Ok(device) => Some(device),
                     Err(KeynearError::Validation {
-                        field: "deviceId",
-                        ..
+                        field: "deviceId", ..
                     }) => self
                         .paired_devices
                         .iter()
@@ -770,8 +777,7 @@ impl SettingsModel {
             SettingsMsg::SetIncomingDirectory(dir) => {
                 let clean = dir.trim().to_string();
                 if clean.is_empty() {
-                    self.error_message =
-                        Some("Incoming directory must not be empty.".to_string());
+                    self.error_message = Some("Incoming directory must not be empty.".to_string());
                     return;
                 }
                 self.incoming_directory = clean.clone();
@@ -1203,11 +1209,7 @@ async fn pick_paths_via_portal(
     };
     let portal_id = keep_alive
         .as_ref()
-        .and_then(|id| {
-            id.to_string()
-                .parse::<ashpd::WindowIdentifierType>()
-                .ok()
-        })
+        .and_then(|id| id.to_string().parse::<ashpd::WindowIdentifierType>().ok())
         .map(ashpd::WindowIdentifier::from);
     let rt = portal_runtime()?;
     let (tx, rx) = tokio::sync::oneshot::channel();
@@ -2015,9 +2017,11 @@ impl SimpleComponent for SettingsModel {
             });
         }
 
-        widgets
-            .send_card
-            .set_visible(self.send_picker_active || !self.paired_devices.is_empty() || !self.send_paths.is_empty());
+        widgets.send_card.set_visible(
+            self.send_picker_active
+                || !self.paired_devices.is_empty()
+                || !self.send_paths.is_empty(),
+        );
         widgets
             .send_paths_label
             .set_label(&summarize_send_paths(&self.send_paths));

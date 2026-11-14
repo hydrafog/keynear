@@ -730,12 +730,12 @@ async fn apply_daemon_config(
         .set_auto_accept_from_paired(new_config.auto_accept_from_paired);
     ctx.transfer_engine
         .set_incoming_directory(PathBuf::from(&new_config.incoming_directory))?;
-    *ctx.everyone_deadline.lock().await = if new_config.visibility_mode == VisibilityMode::EveryoneNearby
-    {
-        Some(Instant::now() + ctx.everyone_nearby_timeout)
-    } else {
-        None
-    };
+    *ctx.everyone_deadline.lock().await =
+        if new_config.visibility_mode == VisibilityMode::EveryoneNearby {
+            Some(Instant::now() + ctx.everyone_nearby_timeout)
+        } else {
+            None
+        };
     let _ = ctx.visibility_tx.send(new_config.visibility_mode);
     ctx.deadline_notify.notify_waiters();
     {
@@ -798,7 +798,9 @@ async fn handle_tray_command(cmd: TrayCommand, ctx: &IpcDispatchContext) {
         TrayCommand::SetDeviceAutoAccept { device_id, enabled } => {
             match ctx.device_store.set_auto_accept_files(&device_id, enabled) {
                 Ok(_) => {
-                    let _ = ctx.transfer_engine.set_peer_auto_accept(&device_id, enabled);
+                    let _ = ctx
+                        .transfer_engine
+                        .set_peer_auto_accept(&device_id, enabled);
                     ctx.refresh_notify.notify_waiters();
                 }
                 Err(err) => {
@@ -938,7 +940,9 @@ async fn dispatch_ipc_request(req: IpcRequest, ctx: &IpcDispatchContext) -> IpcR
         IpcRequest::SetDeviceAutoAccept { device_id, enabled } => {
             match ctx.device_store.set_auto_accept_files(&device_id, enabled) {
                 Ok(updated) => {
-                    let _ = ctx.transfer_engine.set_peer_auto_accept(&device_id, enabled);
+                    let _ = ctx
+                        .transfer_engine
+                        .set_peer_auto_accept(&device_id, enabled);
                     ctx.refresh_notify.notify_waiters();
                     IpcResponse::Device(updated)
                 }
@@ -1626,7 +1630,8 @@ mod tests {
             returned_cfg.incoming_directory,
             incoming_dir_updated.display().to_string()
         );
-        let persisted_cfg = DaemonConfig::load_or_default(&config_path).expect("reload updated cfg");
+        let persisted_cfg =
+            DaemonConfig::load_or_default(&config_path).expect("reload updated cfg");
         assert!(persisted_cfg.auto_accept_from_paired);
         assert_eq!(
             persisted_cfg.incoming_directory,
