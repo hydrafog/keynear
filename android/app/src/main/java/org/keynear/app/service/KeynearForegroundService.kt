@@ -17,12 +17,24 @@ import org.keynear.app.ble.KeynearBleManager
 import org.keynear.app.core.CoreClientProvider
 import org.keynear.app.core.CoreState
 import org.keynear.app.core.VisibilityState
+import org.keynear.app.lan.LocalNetworkManager
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 
 class KeynearForegroundService : Service() {
+    @Volatile
+    private var transferMonitor: ScheduledExecutorService? = null
+
+    @Volatile
+    private var actionExecutor: ExecutorService? = null
+
     override fun onCreate() {
         super.onCreate()
         CoreClientProvider.init(applicationContext)
         ensureNotificationChannel()
+        actionExecutor = Executors.newSingleThreadExecutor()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -32,6 +44,33 @@ class KeynearForegroundService : Service() {
         when (intent?.action) {
             ACTION_PAIRING_APPROVE -> KeynearBleManager.approveActivePairing(applicationContext)
             ACTION_PAIRING_REJECT -> KeynearBleManager.rejectActivePairing(applicationContext)
+            ACTION_TRANSFER_ACCEPT -> {
+                val transferId = intent.getStringExtra(EXTRA_TRANSFER_ID)
+                if (!transferId.isNullOrBlank()) {
+                    actionExecutor?.execute {
+                        client.acceptIncomingTransferOrSync(applicationContext, transferId)
+                        KeynearBleManager.notifyUiRefresh()
+                    }
+                }
+            }
+            ACTION_TRANSFER_DECLINE -> {
+                val transferId = intent.getStringExtra(EXTRA_TRANSFER_ID)
+                if (!transferId.isNullOrBlank()) {
+                    actionExecutor?.execute {
+                        client.declineTransfer(transferId)
+                        KeynearBleManager.notifyUiRefresh()
+                    }
+                }
+            }
+            ACTION_TRANSFER_CANCEL -> {
+                val transferId = intent.getStringExtra(EXTRA_TRANSFER_ID)
+                if (!transferId.isNullOrBlank()) {
+                    actionExecutor?.execute {
+                        client.cancelTransfer(transferId)
+                        KeynearBleManager.notifyUiRefresh()
+                    }
+                }
+            }
         }
 
         val (visibility, remainingSecs) = when (val state = client.loadState()) {
@@ -66,10 +105,47 @@ class KeynearForegroundService : Service() {
         }
 
         KeynearBleManager.startOrSync(applicationContext, visibility)
+        val node = client.ensureOrionNode(applicationContext)
+        val ep = node?.localLanEndpoint()
+        if (ep != null) {
+            val port = ep.socketAddrs.firstOrNull()?.substringAfterLast(':')?.toIntOrNull() ?: 0
+            LocalNetworkManager.startOrSync(
+                context = applicationContext,
+                localDeviceId = ep.deviceId,
+                endpointIdBytes = ep.endpointId,
+                quicPort = port,
+            )
+        }
+        ensureTransferMonitor()
         return START_STICKY
     }
 
+    private fun ensureTransferMonitor() {
+        if (transferMonitor != null) return
+        val scheduler = Executors.newSingleThreadScheduledExecutor()
+        scheduler.scheduleWithFixedDelay(
+            {
+                runCatching {
+                    val client = CoreClientProvider.getClient()
+                    if (client.syncTransferStates(applicationContext)) {
+                        KeynearBleManager.notifyUiRefresh()
+                    }
+                }
+            },
+            TRANSFER_POLL_INTERVAL_MS,
+            TRANSFER_POLL_INTERVAL_MS,
+            TimeUnit.MILLISECONDS,
+        )
+        transferMonitor = scheduler
+    }
+
     override fun onDestroy() {
+        transferMonitor?.shutdownNow()
+        transferMonitor = null
+        actionExecutor?.shutdownNow()
+        actionExecutor = null
+        LocalNetworkManager.stop(applicationContext)
+        CoreClientProvider.getClient().shutdownOrion()
         KeynearBleManager.stopAdvertisingAndScanning(applicationContext)
         super.onDestroy()
     }
@@ -90,11 +166,16 @@ class KeynearForegroundService : Service() {
 
     companion object {
         private const val TAG = "KeynearForegroundSvc"
+        private const val TRANSFER_POLL_INTERVAL_MS = 1000L
         const val CHANNEL_ID = "keynear_continuity"
         const val NOTIFICATION_ID = 1001
         const val ACTION_SYNC_VISIBILITY = "org.keynear.app.action.SYNC_VISIBILITY"
         const val ACTION_PAIRING_APPROVE = "org.keynear.app.action.PAIRING_APPROVE"
         const val ACTION_PAIRING_REJECT = "org.keynear.app.action.PAIRING_REJECT"
+        const val ACTION_TRANSFER_ACCEPT = "org.keynear.app.action.TRANSFER_ACCEPT"
+        const val ACTION_TRANSFER_DECLINE = "org.keynear.app.action.TRANSFER_DECLINE"
+        const val ACTION_TRANSFER_CANCEL = "org.keynear.app.action.TRANSFER_CANCEL"
+        const val EXTRA_TRANSFER_ID = "extra_transfer_id"
 
         fun syncIfPermitted(context: Context) {
             if (!KeynearBleConstants.hasScanPermission(context) ||

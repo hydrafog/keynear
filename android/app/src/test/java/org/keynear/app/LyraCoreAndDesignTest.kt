@@ -17,7 +17,7 @@ class LyraCoreAndDesignTest {
         private var current = VisibilityState.PAIRED_ONLY
 
         private fun snapshot(): CoreSnapshot = CoreSnapshot(
-            version = "0.1.0",
+            version = "0.3.0",
             maxControlFrameBytes = 65_536L,
             ready = true,
             visibility = current,
@@ -43,6 +43,7 @@ class LyraCoreAndDesignTest {
     fun coreBridgeTransitionsStateCleanly() {
         val bridge = FakeCoreBridge()
         val initial = bridge.loadState() as CoreState.Empty
+        assertEquals("0.3.0", initial.snapshot.version)
         assertEquals(VisibilityState.PAIRED_ONLY, initial.snapshot.visibility)
         assertEquals(65_536L, initial.snapshot.maxControlFrameBytes)
 

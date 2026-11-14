@@ -45,10 +45,12 @@ object KeynearBleConstants {
     val SERVICE_UUID: UUID = UUID.fromString("0000FE6D-0000-1000-8000-00805F9B34FB")
     val PAIRING_TX_CHAR_UUID: UUID = UUID.fromString("0000FE6E-0000-1000-8000-00805F9B34FB")
     val PAIRING_RX_CHAR_UUID: UUID = UUID.fromString("0000FE6F-0000-1000-8000-00805F9B34FB")
+    val LAN_ENDPOINT_CHAR_UUID: UUID = UUID.fromString("0000FE70-0000-1000-8000-00805F9B34FB")
     val CLIENT_CONFIG_DESCRIPTOR_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805F9B34FB")
 
     const val MAX_BEACON_DATA_BYTES = 24
     const val MAX_GATT_PAIRING_FRAME_BYTES = 512
+    const val MAX_LAN_ENDPOINT_GATT_BYTES = 65_536
     const val ANDROID_CAPABILITY_FLAGS = 0x03u
 
     fun requiredPermissions(sdkInt: Int): List<String> = buildList {
@@ -134,6 +136,10 @@ object KeynearBleManager {
 
     fun setUiRefreshListener(listener: (() -> Unit)?) {
         lastStateUpdateListener = listener
+    }
+
+    fun notifyUiRefresh() {
+        lastStateUpdateListener?.invoke()
     }
 
     fun evaluateStatus(context: Context): BluetoothStatus {
@@ -510,6 +516,12 @@ object KeynearBleManager {
         )
         service.addCharacteristic(txChar)
         service.addCharacteristic(rxChar)
+        val lanChar = BluetoothGattCharacteristic(
+            KeynearBleConstants.LAN_ENDPOINT_CHAR_UUID,
+            BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_WRITE,
+            BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE,
+        )
+        service.addCharacteristic(lanChar)
         rxNotifyCharacteristic = rxChar
         server.addService(service)
         gattServer = server
@@ -517,6 +529,31 @@ object KeynearBleManager {
 
     private fun buildGattServerCallback(context: Context): BluetoothGattServerCallback =
         object : BluetoothGattServerCallback() {
+            @SuppressLint("MissingPermission")
+            override fun onCharacteristicReadRequest(
+                device: BluetoothDevice,
+                requestId: Int,
+                offset: Int,
+                characteristic: BluetoothGattCharacteristic,
+            ) {
+                if (characteristic.uuid != KeynearBleConstants.LAN_ENDPOINT_CHAR_UUID) {
+                    gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED, offset, null)
+                    return
+                }
+                val client = CoreClientProvider.init(context)
+                val encoded = client.encodeLocalLanEndpointForBleAddress(device.address)
+                if (encoded == null) {
+                    gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_READ_NOT_PERMITTED, offset, null)
+                    return
+                }
+                if (offset < 0 || offset > encoded.size) {
+                    gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_INVALID_OFFSET, offset, null)
+                    return
+                }
+                val slice = encoded.copyOfRange(offset, encoded.size)
+                gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, slice)
+            }
+
             @SuppressLint("MissingPermission")
             override fun onCharacteristicWriteRequest(
                 device: BluetoothDevice,
@@ -527,6 +564,25 @@ object KeynearBleManager {
                 offset: Int,
                 value: ByteArray,
             ) {
+                if (characteristic.uuid == KeynearBleConstants.LAN_ENDPOINT_CHAR_UUID) {
+                    if (value.isEmpty() || value.size > KeynearBleConstants.MAX_LAN_ENDPOINT_GATT_BYTES) {
+                        if (responseNeeded) {
+                            gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_INVALID_ATTRIBUTE_LENGTH, offset, null)
+                        }
+                        return
+                    }
+                    val client = CoreClientProvider.init(context)
+                    val decoded = client.onEncryptedLanEndpointFromBle(value, device.address)
+                    if (responseNeeded) {
+                        val status = if (decoded != null) BluetoothGatt.GATT_SUCCESS else BluetoothGatt.GATT_WRITE_NOT_PERMITTED
+                        gattServer?.sendResponse(device, requestId, status, offset, null)
+                    }
+                    if (decoded != null) {
+                        lastStateUpdateListener?.invoke()
+                    }
+                    return
+                }
+
                 if (characteristic.uuid != KeynearBleConstants.PAIRING_TX_CHAR_UUID ||
                     !KeynearBleConstants.isValidGattFrame(value)
                 ) {
@@ -648,6 +704,35 @@ object KeynearBleManager {
                 val value = characteristic.value ?: return
                 handleClientNotification(context, gatt, peerAddress, characteristic, value)
             }
+
+            override fun onCharacteristicRead(
+                gatt: BluetoothGatt,
+                characteristic: BluetoothGattCharacteristic,
+                value: ByteArray,
+                status: Int,
+            ) {
+                if (status == BluetoothGatt.GATT_SUCCESS &&
+                    characteristic.uuid == KeynearBleConstants.LAN_ENDPOINT_CHAR_UUID
+                ) {
+                    CoreClientProvider.init(context).onEncryptedLanEndpointFromBle(value, peerAddress)
+                    lastStateUpdateListener?.invoke()
+                }
+            }
+
+            @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
+            override fun onCharacteristicRead(
+                gatt: BluetoothGatt,
+                characteristic: BluetoothGattCharacteristic,
+                status: Int,
+            ) {
+                val value = characteristic.value ?: return
+                if (status == BluetoothGatt.GATT_SUCCESS &&
+                    characteristic.uuid == KeynearBleConstants.LAN_ENDPOINT_CHAR_UUID
+                ) {
+                    CoreClientProvider.init(context).onEncryptedLanEndpointFromBle(value, peerAddress)
+                    lastStateUpdateListener?.invoke()
+                }
+            }
         }
 
     @SuppressLint("MissingPermission")
@@ -703,10 +788,29 @@ object KeynearBleManager {
                 }
                 activeSession = null
                 client.setPendingPairing(null)
+                exchangeLanEndpointWithGatt(context, gatt, completed.peerDeviceId)
                 lastStateUpdateListener?.invoke()
             }
             else -> Unit
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun exchangeLanEndpointWithGatt(
+        context: Context,
+        gatt: BluetoothGatt,
+        peerDeviceId: String,
+    ) {
+        if (!KeynearBleConstants.hasConnectPermission(context)) return
+        val lanChar = gatt
+            .getService(KeynearBleConstants.SERVICE_UUID)
+            ?.getCharacteristic(KeynearBleConstants.LAN_ENDPOINT_CHAR_UUID) ?: return
+        val client = CoreClientProvider.init(context)
+        val encoded = client.encodeLocalLanEndpointForPeer(peerDeviceId)
+        if (encoded != null) {
+            writeCharacteristicCompat(gatt, lanChar, encoded)
+        }
+        runCatching { gatt.readCharacteristic(lanChar) }
     }
 
     @SuppressLint("MissingPermission")

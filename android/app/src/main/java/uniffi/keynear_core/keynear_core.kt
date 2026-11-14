@@ -685,17 +685,25 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_keynear_core_checksum_func_get_core_status(
     ): Int
+    external fun uniffi_keynear_core_checksum_func_lan_endpoint_char_uuid16(
+    ): Int
+    external fun uniffi_keynear_core_checksum_func_lan_endpoint_char_uuid_string(
+    ): Int
     external fun uniffi_keynear_core_checksum_func_pairing_timeout_secs(
     ): Int
     external fun uniffi_keynear_core_checksum_method_corehandle_cycle_visibility_mode(
     ): Int
     external fun uniffi_keynear_core_checksum_method_corehandle_decode_everyone_nearby_beacon(
     ): Int
+    external fun uniffi_keynear_core_checksum_method_corehandle_decode_lan_endpoint(
+    ): Int
     external fun uniffi_keynear_core_checksum_method_corehandle_decode_paired_beacon(
     ): Int
     external fun uniffi_keynear_core_checksum_method_corehandle_derive_presence_token_bytes(
     ): Int
     external fun uniffi_keynear_core_checksum_method_corehandle_encode_everyone_nearby_beacon(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_corehandle_encode_lan_endpoint(
     ): Int
     external fun uniffi_keynear_core_checksum_method_corehandle_encode_paired_beacon(
     ): Int
@@ -708,6 +716,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_keynear_core_checksum_method_corehandle_remove_paired_device(
     ): Int
     external fun uniffi_keynear_core_checksum_method_corehandle_save_paired_device(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_corehandle_set_auto_accept_files(
     ): Int
     external fun uniffi_keynear_core_checksum_method_corehandle_set_visibility_mode(
     ): Int
@@ -735,11 +745,37 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_keynear_core_checksum_method_ffinoisepairingsession_step(
     ): Int
+    external fun uniffi_keynear_core_checksum_method_orionnodehandle_cancel_transfer(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_orionnodehandle_list_transfers(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_orionnodehandle_local_lan_endpoint(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_orionnodehandle_provide_receive_fd(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_orionnodehandle_remove_peer(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_orionnodehandle_respond_consent(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_orionnodehandle_send_fd(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_orionnodehandle_send_paths(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_orionnodehandle_set_auto_accept_from_paired(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_orionnodehandle_set_incoming_directory(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_orionnodehandle_shutdown(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_orionnodehandle_sync_peer(
+    ): Int
     external fun uniffi_keynear_core_checksum_constructor_corehandle_new(
     ): Int
     external fun uniffi_keynear_core_checksum_constructor_ffinoisepairingsession_new_initiator(
     ): Int
     external fun uniffi_keynear_core_checksum_constructor_ffinoisepairingsession_new_responder(
+    ): Int
+    external fun uniffi_keynear_core_checksum_constructor_orionnodehandle_new(
     ): Int
     external fun ffi_keynear_core_uniffi_contract_version(
     ): Int
@@ -771,11 +807,15 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_corehandle_decode_everyone_nearby_beacon(`ptr`: Long,`serviceData`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_corehandle_decode_lan_endpoint(`ptr`: Long,`encoded`: RustBuffer.ByValue,`expectedDeviceId`: RustBuffer.ByValue,`reconnectKey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_corehandle_decode_paired_beacon(`ptr`: Long,`serviceData`: RustBuffer.ByValue,`deviceId`: RustBuffer.ByValue,`expectedCounter`: Int,`lastAcceptedCounter`: RustBuffer.ByValue,`reconnectKey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_corehandle_derive_presence_token_bytes(`ptr`: Long,`deviceId`: RustBuffer.ByValue,`counter`: Int,`reconnectKey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_corehandle_encode_everyone_nearby_beacon(`ptr`: Long,`role`: RustBuffer.ByValue,`capabilityFlags`: Int,`displayName`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_corehandle_encode_lan_endpoint(`ptr`: Long,`endpoint`: RustBuffer.ByValue,`reconnectKey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_corehandle_encode_paired_beacon(`ptr`: Long,`deviceId`: RustBuffer.ByValue,`counter`: Int,`reconnectKey`: RustBuffer.ByValue,`available`: Byte,`batteryLevel`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -789,6 +829,8 @@ internal object UniffiLib {
     ): Byte
     external fun uniffi_keynear_core_fn_method_corehandle_save_paired_device(`ptr`: Long,`devicesTomlPath`: RustBuffer.ByValue,`device`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_keynear_core_fn_method_corehandle_set_auto_accept_files(`ptr`: Long,`devicesTomlPath`: RustBuffer.ByValue,`deviceId`: RustBuffer.ByValue,`enabled`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_corehandle_set_visibility_mode(`ptr`: Long,`mode`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_corehandle_status(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -823,6 +865,36 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_ffinoisepairingsession_step(`ptr`: Long,`inbound`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_clone_orionnodehandle(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_keynear_core_fn_free_orionnodehandle(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_keynear_core_fn_constructor_orionnodehandle_new(`deviceId`: RustBuffer.ByValue,`displayName`: RustBuffer.ByValue,`capabilityFlags`: Int,`quicSecretKey`: RustBuffer.ByValue,`incomingDirectory`: RustBuffer.ByValue,`autoAcceptFromPaired`: Byte,`requireExplicitFdForSingleFile`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_keynear_core_fn_method_orionnodehandle_cancel_transfer(`ptr`: Long,`transferId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_orionnodehandle_list_transfers(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_orionnodehandle_local_lan_endpoint(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_orionnodehandle_provide_receive_fd(`ptr`: Long,`transferId`: RustBuffer.ByValue,`rawFd`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_keynear_core_fn_method_orionnodehandle_remove_peer(`ptr`: Long,`deviceId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_keynear_core_fn_method_orionnodehandle_respond_consent(`ptr`: Long,`transferId`: RustBuffer.ByValue,`accepted`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_orionnodehandle_send_fd(`ptr`: Long,`peerDeviceId`: RustBuffer.ByValue,`fileName`: RustBuffer.ByValue,`mimeType`: RustBuffer.ByValue,`sizeBytes`: Long,`rawFd`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_orionnodehandle_send_paths(`ptr`: Long,`peerDeviceId`: RustBuffer.ByValue,`paths`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_orionnodehandle_set_auto_accept_from_paired(`ptr`: Long,`enabled`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_keynear_core_fn_method_orionnodehandle_set_incoming_directory(`ptr`: Long,`dir`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_keynear_core_fn_method_orionnodehandle_shutdown(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_keynear_core_fn_method_orionnodehandle_sync_peer(`ptr`: Long,`deviceId`: RustBuffer.ByValue,`endpointId`: RustBuffer.ByValue,`socketAddrs`: RustBuffer.ByValue,`reconnectSecret`: RustBuffer.ByValue,`autoAcceptFiles`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_keynear_core_fn_func_ble_service_uuid16(uniffi_out_err: UniffiRustCallStatus, 
     ): Int
     external fun uniffi_keynear_core_fn_func_ble_service_uuid_string(uniffi_out_err: UniffiRustCallStatus, 
@@ -832,6 +904,10 @@ internal object UniffiLib {
     external fun uniffi_keynear_core_fn_func_everyone_nearby_timeout_secs(uniffi_out_err: UniffiRustCallStatus, 
     ): Long
     external fun uniffi_keynear_core_fn_func_get_core_status(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_func_lan_endpoint_char_uuid16(uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
+    external fun uniffi_keynear_core_fn_func_lan_endpoint_char_uuid_string(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_func_pairing_timeout_secs(uniffi_out_err: UniffiRustCallStatus, 
     ): Long
@@ -969,6 +1045,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_keynear_core_checksum_func_get_core_status() and 0xFFFF) != 16378) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_keynear_core_checksum_func_lan_endpoint_char_uuid16() and 0xFFFF) != 41094) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_func_lan_endpoint_char_uuid_string() and 0xFFFF) != 22504) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_keynear_core_checksum_func_pairing_timeout_secs() and 0xFFFF) != 21109) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -978,6 +1060,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_keynear_core_checksum_method_corehandle_decode_everyone_nearby_beacon() and 0xFFFF) != 49500) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_keynear_core_checksum_method_corehandle_decode_lan_endpoint() and 0xFFFF) != 24760) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_keynear_core_checksum_method_corehandle_decode_paired_beacon() and 0xFFFF) != 30353) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -985,6 +1070,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_keynear_core_checksum_method_corehandle_encode_everyone_nearby_beacon() and 0xFFFF) != 55858) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_corehandle_encode_lan_endpoint() and 0xFFFF) != 47081) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_keynear_core_checksum_method_corehandle_encode_paired_beacon() and 0xFFFF) != 15691) {
@@ -1003,6 +1091,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_keynear_core_checksum_method_corehandle_save_paired_device() and 0xFFFF) != 54120) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_corehandle_set_auto_accept_files() and 0xFFFF) != 52189) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_keynear_core_checksum_method_corehandle_set_visibility_mode() and 0xFFFF) != 41707) {
@@ -1044,6 +1135,42 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_keynear_core_checksum_method_ffinoisepairingsession_step() and 0xFFFF) != 28255) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_cancel_transfer() and 0xFFFF) != 29991) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_list_transfers() and 0xFFFF) != 22309) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_local_lan_endpoint() and 0xFFFF) != 62674) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_provide_receive_fd() and 0xFFFF) != 41885) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_remove_peer() and 0xFFFF) != 31725) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_respond_consent() and 0xFFFF) != 32676) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_send_fd() and 0xFFFF) != 43515) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_send_paths() and 0xFFFF) != 10225) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_set_auto_accept_from_paired() and 0xFFFF) != 60788) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_set_incoming_directory() and 0xFFFF) != 40865) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_shutdown() and 0xFFFF) != 14030) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_sync_peer() and 0xFFFF) != 45694) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_keynear_core_checksum_constructor_corehandle_new() and 0xFFFF) != 13844) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1051,6 +1178,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_keynear_core_checksum_constructor_ffinoisepairingsession_new_responder() and 0xFFFF) != 53776) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_constructor_orionnodehandle_new() and 0xFFFF) != 64218) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
 }
@@ -1290,6 +1420,29 @@ public object FfiConverterUInt: FfiConverter<UInt, Int> {
 /**
  * @suppress
  */
+public object FfiConverterInt: FfiConverter<Int, Int> {
+    override fun lift(value: Int): Int {
+        return value
+    }
+
+    override fun read(buf: ByteBuffer): Int {
+        return buf.getInt()
+    }
+
+    override fun lower(value: Int): Int {
+        return value
+    }
+
+    override fun allocationSize(value: Int) = 4UL
+
+    override fun write(value: Int, buf: ByteBuffer) {
+        buf.putInt(value)
+    }
+}
+
+/**
+ * @suppress
+ */
 public object FfiConverterULong: FfiConverter<ULong, Long> {
     override fun lift(value: Long): ULong {
         return value.toULong()
@@ -1307,6 +1460,29 @@ public object FfiConverterULong: FfiConverter<ULong, Long> {
 
     override fun write(value: ULong, buf: ByteBuffer) {
         buf.putLong(value.toLong())
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterLong: FfiConverter<Long, Long> {
+    override fun lift(value: Long): Long {
+        return value
+    }
+
+    override fun read(buf: ByteBuffer): Long {
+        return buf.getLong()
+    }
+
+    override fun lower(value: Long): Long {
+        return value
+    }
+
+    override fun allocationSize(value: Long) = 8UL
+
+    override fun write(value: Long, buf: ByteBuffer) {
+        buf.putLong(value)
     }
 }
 
@@ -1511,11 +1687,15 @@ public interface CoreHandleInterface {
     
     fun `decodeEveryoneNearbyBeacon`(`serviceData`: kotlin.ByteArray): FfiEveryoneNearbyBeacon
     
+    fun `decodeLanEndpoint`(`encoded`: kotlin.ByteArray, `expectedDeviceId`: kotlin.String, `reconnectKey`: kotlin.ByteArray): FfiLanEndpoint
+    
     fun `decodePairedBeacon`(`serviceData`: kotlin.ByteArray, `deviceId`: kotlin.String, `expectedCounter`: kotlin.UInt, `lastAcceptedCounter`: kotlin.UInt?, `reconnectKey`: kotlin.ByteArray): FfiPairedBeaconState
     
     fun `derivePresenceTokenBytes`(`deviceId`: kotlin.String, `counter`: kotlin.UInt, `reconnectKey`: kotlin.ByteArray): kotlin.ByteArray
     
     fun `encodeEveryoneNearbyBeacon`(`role`: FfiDeviceRole, `capabilityFlags`: kotlin.UInt, `displayName`: kotlin.String): kotlin.ByteArray
+    
+    fun `encodeLanEndpoint`(`endpoint`: FfiLanEndpoint, `reconnectKey`: kotlin.ByteArray): kotlin.ByteArray
     
     fun `encodePairedBeacon`(`deviceId`: kotlin.String, `counter`: kotlin.UInt, `reconnectKey`: kotlin.ByteArray, `available`: kotlin.Boolean, `batteryLevel`: kotlin.UByte?): kotlin.ByteArray
     
@@ -1528,6 +1708,8 @@ public interface CoreHandleInterface {
     fun `removePairedDevice`(`devicesTomlPath`: kotlin.String, `deviceId`: kotlin.String): kotlin.Boolean
     
     fun `savePairedDevice`(`devicesTomlPath`: kotlin.String, `device`: FfiPairedDevice)
+    
+    fun `setAutoAcceptFiles`(`devicesTomlPath`: kotlin.String, `deviceId`: kotlin.String, `enabled`: kotlin.Boolean): FfiPairedDevice
     
     fun `setVisibilityMode`(`mode`: FfiVisibilityMode): FfiVisibilityMode
     
@@ -1680,6 +1862,23 @@ open class CoreHandle: Disposable, AutoCloseable, CoreHandleInterface
     
 
     
+    @Throws(FfiException::class)override fun `decodeLanEndpoint`(`encoded`: kotlin.ByteArray, `expectedDeviceId`: kotlin.String, `reconnectKey`: kotlin.ByteArray): FfiLanEndpoint {
+            return FfiConverterTypeFfiLanEndpoint.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_corehandle_decode_lan_endpoint(
+        it,
+        
+        FfiConverterByteArray.lower(`encoded`),
+        FfiConverterString.lower(`expectedDeviceId`),
+        FfiConverterByteArray.lower(`reconnectKey`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(FfiException::class)override fun `decodePairedBeacon`(`serviceData`: kotlin.ByteArray, `deviceId`: kotlin.String, `expectedCounter`: kotlin.UInt, `lastAcceptedCounter`: kotlin.UInt?, `reconnectKey`: kotlin.ByteArray): FfiPairedBeaconState {
             return FfiConverterTypeFfiPairedBeaconState.lift(
     callWithHandle {
@@ -1726,6 +1925,22 @@ open class CoreHandle: Disposable, AutoCloseable, CoreHandleInterface
         FfiConverterTypeFfiDeviceRole.lower(`role`),
         FfiConverterUInt.lower(`capabilityFlags`),
         FfiConverterString.lower(`displayName`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `encodeLanEndpoint`(`endpoint`: FfiLanEndpoint, `reconnectKey`: kotlin.ByteArray): kotlin.ByteArray {
+            return FfiConverterByteArray.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_corehandle_encode_lan_endpoint(
+        it,
+        
+        FfiConverterTypeFfiLanEndpoint.lower(`endpoint`),
+        FfiConverterByteArray.lower(`reconnectKey`),_status)
 }
     }
     )
@@ -1821,6 +2036,23 @@ open class CoreHandle: Disposable, AutoCloseable, CoreHandleInterface
 }
     }
     
+    
+
+    
+    @Throws(FfiException::class)override fun `setAutoAcceptFiles`(`devicesTomlPath`: kotlin.String, `deviceId`: kotlin.String, `enabled`: kotlin.Boolean): FfiPairedDevice {
+            return FfiConverterTypeFfiPairedDevice.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_corehandle_set_auto_accept_files(
+        it,
+        
+        FfiConverterString.lower(`devicesTomlPath`),
+        FfiConverterString.lower(`deviceId`),
+        FfiConverterBoolean.lower(`enabled`),_status)
+}
+    }
+    )
+    }
     
 
     override fun `setVisibilityMode`(`mode`: FfiVisibilityMode): FfiVisibilityMode {
@@ -2331,6 +2563,463 @@ public object FfiConverterTypeFfiNoisePairingSession: FfiConverter<FfiNoisePairi
 }
 
 
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+public interface OrionNodeHandleInterface {
+    
+    fun `cancelTransfer`(`transferId`: kotlin.String): FfiTransferSession
+    
+    fun `listTransfers`(): List<FfiTransferSession>
+    
+    fun `localLanEndpoint`(): FfiLanEndpoint
+    
+    fun `provideReceiveFd`(`transferId`: kotlin.String, `rawFd`: kotlin.Int)
+    
+    fun `removePeer`(`deviceId`: kotlin.String)
+    
+    fun `respondConsent`(`transferId`: kotlin.String, `accepted`: kotlin.Boolean): FfiTransferSession
+    
+    fun `sendFd`(`peerDeviceId`: kotlin.String, `fileName`: kotlin.String, `mimeType`: kotlin.String, `sizeBytes`: kotlin.ULong, `rawFd`: kotlin.Int): FfiTransferSession
+    
+    fun `sendPaths`(`peerDeviceId`: kotlin.String, `paths`: List<kotlin.String>): FfiTransferSession
+    
+    fun `setAutoAcceptFromPaired`(`enabled`: kotlin.Boolean)
+    
+    fun `setIncomingDirectory`(`dir`: kotlin.String)
+    
+    fun `shutdown`()
+    
+    fun `syncPeer`(`deviceId`: kotlin.String, `endpointId`: kotlin.ByteArray, `socketAddrs`: List<kotlin.String>, `reconnectSecret`: kotlin.ByteArray, `autoAcceptFiles`: kotlin.Boolean)
+    
+    companion object
+}
+
+open class OrionNodeHandle: Disposable, AutoCloseable, OrionNodeHandleInterface
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+    constructor(`deviceId`: kotlin.String, `displayName`: kotlin.String, `capabilityFlags`: kotlin.UInt, `quicSecretKey`: kotlin.ByteArray, `incomingDirectory`: kotlin.String, `autoAcceptFromPaired`: kotlin.Boolean, `requireExplicitFdForSingleFile`: kotlin.Boolean) :
+        this(UniffiWithHandle, 
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_constructor_orionnodehandle_new(
+    
+        
+        FfiConverterString.lower(`deviceId`),
+        FfiConverterString.lower(`displayName`),
+        FfiConverterUInt.lower(`capabilityFlags`),
+        FfiConverterByteArray.lower(`quicSecretKey`),
+        FfiConverterString.lower(`incomingDirectory`),
+        FfiConverterBoolean.lower(`autoAcceptFromPaired`),
+        FfiConverterBoolean.lower(`requireExplicitFdForSingleFile`),_status)
+}
+    )
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    /**
+     * Whether the current object has been destroyed and its reference is gone in the Rust side.
+     */
+    val uniffiIsDestroyed: Boolean get() = wasDestroyed.get()
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_keynear_core_fn_free_orionnodehandle(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_keynear_core_fn_clone_orionnodehandle(handle, status)
+        }
+    }
+
+    
+    @Throws(FfiException::class)override fun `cancelTransfer`(`transferId`: kotlin.String): FfiTransferSession {
+            return FfiConverterTypeFfiTransferSession.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_orionnodehandle_cancel_transfer(
+        it,
+        
+        FfiConverterString.lower(`transferId`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `listTransfers`(): List<FfiTransferSession> {
+            return FfiConverterSequenceTypeFfiTransferSession.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_orionnodehandle_list_transfers(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    override fun `localLanEndpoint`(): FfiLanEndpoint {
+            return FfiConverterTypeFfiLanEndpoint.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_orionnodehandle_local_lan_endpoint(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `provideReceiveFd`(`transferId`: kotlin.String, `rawFd`: kotlin.Int)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_orionnodehandle_provide_receive_fd(
+        it,
+        
+        FfiConverterString.lower(`transferId`),
+        FfiConverterInt.lower(`rawFd`),_status)
+}
+    }
+    
+    
+
+    
+    @Throws(FfiException::class)override fun `removePeer`(`deviceId`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_orionnodehandle_remove_peer(
+        it,
+        
+        FfiConverterString.lower(`deviceId`),_status)
+}
+    }
+    
+    
+
+    
+    @Throws(FfiException::class)override fun `respondConsent`(`transferId`: kotlin.String, `accepted`: kotlin.Boolean): FfiTransferSession {
+            return FfiConverterTypeFfiTransferSession.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_orionnodehandle_respond_consent(
+        it,
+        
+        FfiConverterString.lower(`transferId`),
+        FfiConverterBoolean.lower(`accepted`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `sendFd`(`peerDeviceId`: kotlin.String, `fileName`: kotlin.String, `mimeType`: kotlin.String, `sizeBytes`: kotlin.ULong, `rawFd`: kotlin.Int): FfiTransferSession {
+            return FfiConverterTypeFfiTransferSession.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_orionnodehandle_send_fd(
+        it,
+        
+        FfiConverterString.lower(`peerDeviceId`),
+        FfiConverterString.lower(`fileName`),
+        FfiConverterString.lower(`mimeType`),
+        FfiConverterULong.lower(`sizeBytes`),
+        FfiConverterInt.lower(`rawFd`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `sendPaths`(`peerDeviceId`: kotlin.String, `paths`: List<kotlin.String>): FfiTransferSession {
+            return FfiConverterTypeFfiTransferSession.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_orionnodehandle_send_paths(
+        it,
+        
+        FfiConverterString.lower(`peerDeviceId`),
+        FfiConverterSequenceString.lower(`paths`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `setAutoAcceptFromPaired`(`enabled`: kotlin.Boolean)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_orionnodehandle_set_auto_accept_from_paired(
+        it,
+        
+        FfiConverterBoolean.lower(`enabled`),_status)
+}
+    }
+    
+    
+
+    
+    @Throws(FfiException::class)override fun `setIncomingDirectory`(`dir`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_orionnodehandle_set_incoming_directory(
+        it,
+        
+        FfiConverterString.lower(`dir`),_status)
+}
+    }
+    
+    
+
+    override fun `shutdown`()
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_orionnodehandle_shutdown(
+        it,
+        _status)
+}
+    }
+    
+    
+
+    
+    @Throws(FfiException::class)override fun `syncPeer`(`deviceId`: kotlin.String, `endpointId`: kotlin.ByteArray, `socketAddrs`: List<kotlin.String>, `reconnectSecret`: kotlin.ByteArray, `autoAcceptFiles`: kotlin.Boolean)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_orionnodehandle_sync_peer(
+        it,
+        
+        FfiConverterString.lower(`deviceId`),
+        FfiConverterByteArray.lower(`endpointId`),
+        FfiConverterSequenceString.lower(`socketAddrs`),
+        FfiConverterByteArray.lower(`reconnectSecret`),
+        FfiConverterBoolean.lower(`autoAcceptFiles`),_status)
+}
+    }
+    
+    
+
+    
+
+    
+
+
+    
+    
+    /**
+     * @suppress
+     */
+    companion object
+    
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeOrionNodeHandle: FfiConverter<OrionNodeHandle, Long> {
+    override fun lower(value: OrionNodeHandle): Long {
+        return value.uniffiCloneHandle()
+    }
+
+    override fun lift(value: Long): OrionNodeHandle {
+        return OrionNodeHandle(UniffiWithHandle, value)
+    }
+
+    override fun read(buf: ByteBuffer): OrionNodeHandle {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: OrionNodeHandle) = 8UL
+
+    override fun write(value: OrionNodeHandle, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+
+
 
 data class CoreStatus (
     var `version`: kotlin.String
@@ -2418,6 +3107,59 @@ public object FfiConverterTypeFfiEveryoneNearbyBeacon: FfiConverterRustBuffer<Ff
 
 
 
+data class FfiLanEndpoint (
+    var `deviceId`: kotlin.String
+    , 
+    var `endpointId`: kotlin.ByteArray
+    , 
+    var `socketAddrs`: List<kotlin.String>
+    , 
+    var `capabilityFlags`: kotlin.UInt
+    , 
+    var `issuedAtMs`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiLanEndpoint: FfiConverterRustBuffer<FfiLanEndpoint> {
+    override fun read(buf: ByteBuffer): FfiLanEndpoint {
+        return FfiLanEndpoint(
+            FfiConverterString.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiLanEndpoint) = (
+            FfiConverterString.allocationSize(value.`deviceId`) +
+            FfiConverterByteArray.allocationSize(value.`endpointId`) +
+            FfiConverterSequenceString.allocationSize(value.`socketAddrs`) +
+            FfiConverterUInt.allocationSize(value.`capabilityFlags`) +
+            FfiConverterLong.allocationSize(value.`issuedAtMs`)
+    )
+
+    override fun write(value: FfiLanEndpoint, buf: ByteBuffer) {
+            FfiConverterString.write(value.`deviceId`, buf)
+            FfiConverterByteArray.write(value.`endpointId`, buf)
+            FfiConverterSequenceString.write(value.`socketAddrs`, buf)
+            FfiConverterUInt.write(value.`capabilityFlags`, buf)
+            FfiConverterLong.write(value.`issuedAtMs`, buf)
+    }
+}
+
+
+
 data class FfiPairedBeaconState (
     var `counter`: kotlin.UInt
     , 
@@ -2474,6 +3216,8 @@ data class FfiPairedDevice (
     , 
     var `lastLanAddress`: kotlin.String
     , 
+    var `lastEndpointId`: kotlin.String
+    , 
     var `capabilityFlags`: kotlin.UInt
     , 
     var `autoAcceptFiles`: kotlin.Boolean
@@ -2501,6 +3245,7 @@ public object FfiConverterTypeFfiPairedDevice: FfiConverterRustBuffer<FfiPairedD
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
             FfiConverterUInt.read(buf),
             FfiConverterBoolean.read(buf),
             FfiConverterString.read(buf),
@@ -2514,6 +3259,7 @@ public object FfiConverterTypeFfiPairedDevice: FfiConverterRustBuffer<FfiPairedD
             FfiConverterString.allocationSize(value.`staticX25519Pubkey`) +
             FfiConverterString.allocationSize(value.`lastBleAddress`) +
             FfiConverterString.allocationSize(value.`lastLanAddress`) +
+            FfiConverterString.allocationSize(value.`lastEndpointId`) +
             FfiConverterUInt.allocationSize(value.`capabilityFlags`) +
             FfiConverterBoolean.allocationSize(value.`autoAcceptFiles`) +
             FfiConverterString.allocationSize(value.`pairedAt`)
@@ -2526,6 +3272,7 @@ public object FfiConverterTypeFfiPairedDevice: FfiConverterRustBuffer<FfiPairedD
             FfiConverterString.write(value.`staticX25519Pubkey`, buf)
             FfiConverterString.write(value.`lastBleAddress`, buf)
             FfiConverterString.write(value.`lastLanAddress`, buf)
+            FfiConverterString.write(value.`lastEndpointId`, buf)
             FfiConverterUInt.write(value.`capabilityFlags`, buf)
             FfiConverterBoolean.write(value.`autoAcceptFiles`, buf)
             FfiConverterString.write(value.`pairedAt`, buf)
@@ -2678,6 +3425,132 @@ public object FfiConverterTypeFfiStaticKeypair: FfiConverterRustBuffer<FfiStatic
 
 
 
+data class FfiTransferItem (
+    var `name`: kotlin.String
+    , 
+    var `mimeType`: kotlin.String
+    , 
+    var `sizeBytes`: kotlin.ULong
+    , 
+    var `isDirectory`: kotlin.Boolean
+    , 
+    var `targetPath`: kotlin.String?
+    , 
+    var `checksum`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiTransferItem: FfiConverterRustBuffer<FfiTransferItem> {
+    override fun read(buf: ByteBuffer): FfiTransferItem {
+        return FfiTransferItem(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiTransferItem) = (
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterString.allocationSize(value.`mimeType`) +
+            FfiConverterULong.allocationSize(value.`sizeBytes`) +
+            FfiConverterBoolean.allocationSize(value.`isDirectory`) +
+            FfiConverterOptionalString.allocationSize(value.`targetPath`) +
+            FfiConverterOptionalString.allocationSize(value.`checksum`)
+    )
+
+    override fun write(value: FfiTransferItem, buf: ByteBuffer) {
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterString.write(value.`mimeType`, buf)
+            FfiConverterULong.write(value.`sizeBytes`, buf)
+            FfiConverterBoolean.write(value.`isDirectory`, buf)
+            FfiConverterOptionalString.write(value.`targetPath`, buf)
+            FfiConverterOptionalString.write(value.`checksum`, buf)
+    }
+}
+
+
+
+data class FfiTransferSession (
+    var `transferId`: kotlin.String
+    , 
+    var `peerDeviceId`: kotlin.String
+    , 
+    var `direction`: FfiTransferDirection
+    , 
+    var `items`: List<FfiTransferItem>
+    , 
+    var `totalBytes`: kotlin.ULong
+    , 
+    var `transferredBytes`: kotlin.ULong
+    , 
+    var `state`: FfiTransferState
+    , 
+    var `startedAt`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiTransferSession: FfiConverterRustBuffer<FfiTransferSession> {
+    override fun read(buf: ByteBuffer): FfiTransferSession {
+        return FfiTransferSession(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiTransferDirection.read(buf),
+            FfiConverterSequenceTypeFfiTransferItem.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterTypeFfiTransferState.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiTransferSession) = (
+            FfiConverterString.allocationSize(value.`transferId`) +
+            FfiConverterString.allocationSize(value.`peerDeviceId`) +
+            FfiConverterTypeFfiTransferDirection.allocationSize(value.`direction`) +
+            FfiConverterSequenceTypeFfiTransferItem.allocationSize(value.`items`) +
+            FfiConverterULong.allocationSize(value.`totalBytes`) +
+            FfiConverterULong.allocationSize(value.`transferredBytes`) +
+            FfiConverterTypeFfiTransferState.allocationSize(value.`state`) +
+            FfiConverterString.allocationSize(value.`startedAt`)
+    )
+
+    override fun write(value: FfiTransferSession, buf: ByteBuffer) {
+            FfiConverterString.write(value.`transferId`, buf)
+            FfiConverterString.write(value.`peerDeviceId`, buf)
+            FfiConverterTypeFfiTransferDirection.write(value.`direction`, buf)
+            FfiConverterSequenceTypeFfiTransferItem.write(value.`items`, buf)
+            FfiConverterULong.write(value.`totalBytes`, buf)
+            FfiConverterULong.write(value.`transferredBytes`, buf)
+            FfiConverterTypeFfiTransferState.write(value.`state`, buf)
+            FfiConverterString.write(value.`startedAt`, buf)
+    }
+}
+
+
+
 
 enum class FfiDeviceRole {
     
@@ -2788,6 +3661,38 @@ sealed class FfiException: kotlin.Exception() {
             get() = "detail=${ `detail` }"
     }
     
+    class Transport(
+        
+        val `detail`: kotlin.String
+        ) : FfiException() {
+        override val message
+            get() = "detail=${ `detail` }"
+    }
+    
+    class Transfer(
+        
+        val `detail`: kotlin.String
+        ) : FfiException() {
+        override val message
+            get() = "detail=${ `detail` }"
+    }
+    
+    class TransferCancelled(
+        
+        val `detail`: kotlin.String
+        ) : FfiException() {
+        override val message
+            get() = "detail=${ `detail` }"
+    }
+    
+    class UnauthorizedPeer(
+        
+        val `detail`: kotlin.String
+        ) : FfiException() {
+        override val message
+            get() = "detail=${ `detail` }"
+    }
+    
     class Io(
         
         val `detail`: kotlin.String
@@ -2840,7 +3745,19 @@ public object FfiConverterTypeFfiError : FfiConverterRustBuffer<FfiException> {
             9 -> FfiException.Bluetooth(
                 FfiConverterString.read(buf),
                 )
-            10 -> FfiException.Io(
+            10 -> FfiException.Transport(
+                FfiConverterString.read(buf),
+                )
+            11 -> FfiException.Transfer(
+                FfiConverterString.read(buf),
+                )
+            12 -> FfiException.TransferCancelled(
+                FfiConverterString.read(buf),
+                )
+            13 -> FfiException.UnauthorizedPeer(
+                FfiConverterString.read(buf),
+                )
+            14 -> FfiException.Io(
                 FfiConverterString.read(buf),
                 )
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
@@ -2890,6 +3807,26 @@ public object FfiConverterTypeFfiError : FfiConverterRustBuffer<FfiException> {
                 + FfiConverterString.allocationSize(value.`detail`)
             )
             is FfiException.Bluetooth -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`detail`)
+            )
+            is FfiException.Transport -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`detail`)
+            )
+            is FfiException.Transfer -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`detail`)
+            )
+            is FfiException.TransferCancelled -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`detail`)
+            )
+            is FfiException.UnauthorizedPeer -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
                 + FfiConverterString.allocationSize(value.`detail`)
@@ -2949,8 +3886,28 @@ public object FfiConverterTypeFfiError : FfiConverterRustBuffer<FfiException> {
                 FfiConverterString.write(value.`detail`, buf)
                 Unit
             }
-            is FfiException.Io -> {
+            is FfiException.Transport -> {
                 buf.putInt(10)
+                FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+            is FfiException.Transfer -> {
+                buf.putInt(11)
+                FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+            is FfiException.TransferCancelled -> {
+                buf.putInt(12)
+                FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+            is FfiException.UnauthorizedPeer -> {
+                buf.putInt(13)
+                FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+            is FfiException.Io -> {
+                buf.putInt(14)
                 FfiConverterString.write(value.`detail`, buf)
                 Unit
             }
@@ -3027,6 +3984,77 @@ public object FfiConverterTypeFfiPairingState: FfiConverterRustBuffer<FfiPairing
     override fun allocationSize(value: FfiPairingState) = 4UL
 
     override fun write(value: FfiPairingState, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class FfiTransferDirection {
+    
+    SEND,
+    RECEIVE;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiTransferDirection: FfiConverterRustBuffer<FfiTransferDirection> {
+    override fun read(buf: ByteBuffer) = try {
+        FfiTransferDirection.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiTransferDirection) = 4UL
+
+    override fun write(value: FfiTransferDirection, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class FfiTransferState {
+    
+    PENDING_CONSENT,
+    ACTIVE,
+    COMPLETED,
+    CANCELLED,
+    FAILED;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiTransferState: FfiConverterRustBuffer<FfiTransferState> {
+    override fun read(buf: ByteBuffer) = try {
+        FfiTransferState.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiTransferState) = 4UL
+
+    override fun write(value: FfiTransferState, buf: ByteBuffer) {
         buf.putInt(value.ordinal + 1)
     }
 }
@@ -3202,6 +4230,34 @@ public object FfiConverterOptionalByteArray: FfiConverterRustBuffer<kotlin.ByteA
 /**
  * @suppress
  */
+public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.String>> {
+    override fun read(buf: ByteBuffer): List<kotlin.String> {
+        val len = buf.getInt()
+        return List<kotlin.String>(len) {
+            FfiConverterString.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.String>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterString.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.String>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterString.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeFfiPairedDevice: FfiConverterRustBuffer<List<FfiPairedDevice>> {
     override fun read(buf: ByteBuffer): List<FfiPairedDevice> {
         val len = buf.getInt()
@@ -3220,6 +4276,62 @@ public object FfiConverterSequenceTypeFfiPairedDevice: FfiConverterRustBuffer<Li
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeFfiPairedDevice.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiTransferItem: FfiConverterRustBuffer<List<FfiTransferItem>> {
+    override fun read(buf: ByteBuffer): List<FfiTransferItem> {
+        val len = buf.getInt()
+        return List<FfiTransferItem>(len) {
+            FfiConverterTypeFfiTransferItem.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiTransferItem>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiTransferItem.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiTransferItem>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiTransferItem.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiTransferSession: FfiConverterRustBuffer<List<FfiTransferSession>> {
+    override fun read(buf: ByteBuffer): List<FfiTransferSession> {
+        val len = buf.getInt()
+        return List<FfiTransferSession>(len) {
+            FfiConverterTypeFfiTransferSession.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiTransferSession>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiTransferSession.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiTransferSession>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiTransferSession.write(it, buf)
         }
     }
 } fun `bleServiceUuid16`(): kotlin.UShort {
@@ -3266,6 +4378,26 @@ public object FfiConverterSequenceTypeFfiPairedDevice: FfiConverterRustBuffer<Li
             return FfiConverterTypeCoreStatus.lift(
     uniffiRustCall() { _status ->
     UniffiLib.uniffi_keynear_core_fn_func_get_core_status(
+    
+        _status)
+}
+    )
+    }
+    
+ fun `lanEndpointCharUuid16`(): kotlin.UShort {
+            return FfiConverterUShort.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_keynear_core_fn_func_lan_endpoint_char_uuid16(
+    
+        _status)
+}
+    )
+    }
+    
+ fun `lanEndpointCharUuidString`(): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_keynear_core_fn_func_lan_endpoint_char_uuid_string(
     
         _status)
 }

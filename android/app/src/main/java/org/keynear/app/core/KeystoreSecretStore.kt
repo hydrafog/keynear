@@ -129,19 +129,30 @@ class KeystoreSecretStore(
     private val cipher: SecretCipher,
 ) {
     @Synchronized
-    fun getOrCreateStaticPrivateKey(generator: () -> ByteArray): ByteArray {
-        val existing = backend.getString(KEY_STATIC_PRIVATE)
+    fun getOrCreateStaticPrivateKey(generator: () -> ByteArray): ByteArray =
+        getOrCreateSecretKey(KEY_STATIC_PRIVATE, "static private key", generator)
+
+    @Synchronized
+    fun getOrCreateQuicSecretKey(generator: () -> ByteArray): ByteArray =
+        getOrCreateSecretKey(KEY_QUIC_SECRET, "quic ed25519 key", generator)
+
+    private fun getOrCreateSecretKey(
+        storageKey: String,
+        label: String,
+        generator: () -> ByteArray,
+    ): ByteArray {
+        val existing = backend.getString(storageKey)
         if (existing != null) {
             val raw = Base64.getDecoder().decode(existing)
             val decrypted = cipher.decrypt(raw)
-            require(decrypted.size == SECRET_BYTES) { "invalid static private key length" }
+            require(decrypted.size == SECRET_BYTES) { "invalid $label length" }
             return decrypted
         }
         val created = generator()
-        require(created.size == SECRET_BYTES) { "generated static key must be 32 bytes" }
+        require(created.size == SECRET_BYTES) { "generated $label must be 32 bytes" }
         val sealed = cipher.encrypt(created)
-        val ok = backend.putString(KEY_STATIC_PRIVATE, Base64.getEncoder().encodeToString(sealed))
-        check(ok) { "failed to commit static keypair to storage" }
+        val ok = backend.putString(storageKey, Base64.getEncoder().encodeToString(sealed))
+        check(ok) { "failed to commit $label to storage" }
         return created
     }
 
@@ -214,6 +225,7 @@ class KeystoreSecretStore(
     companion object {
         private const val PREFS_NAME = "keynear_cygnus_keystore_vault"
         private const val KEY_STATIC_PRIVATE = "local_static_private_v1"
+        private const val KEY_QUIC_SECRET = "local_quic_ed25519_v1"
         private const val KEY_PRESENCE_COUNTER = "presence_counter_v1"
         private const val PEER_PREFIX = "peer_v1:"
         private const val SECRET_BYTES = 32

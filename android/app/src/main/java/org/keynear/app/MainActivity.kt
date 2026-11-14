@@ -1,6 +1,7 @@
 package org.keynear.app
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -29,9 +30,12 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -64,9 +68,16 @@ import org.keynear.app.core.CoreClientProvider
 import org.keynear.app.core.CoreSnapshot
 import org.keynear.app.core.CoreState
 import org.keynear.app.core.DiscoveredPeerUi
+import org.keynear.app.core.LocalNetworkStatus
 import org.keynear.app.core.PairedDeviceUi
 import org.keynear.app.core.PendingPairingUi
+import org.keynear.app.core.TransferDirectionUi
+import org.keynear.app.core.TransferStateUi
+import org.keynear.app.core.TransferUi
 import org.keynear.app.core.VisibilityState
+import org.keynear.app.core.formatByteCount
+import org.keynear.app.lan.LocalNetworkConstants
+import org.keynear.app.lan.LocalNetworkManager
 import org.keynear.app.service.KeynearForegroundService
 import org.keynear.app.ui.theme.KeynearMotion
 import org.keynear.app.ui.theme.KeynearRadii
@@ -79,6 +90,24 @@ private enum class ScreenCategory {
     SNAPSHOT,
     ERROR,
 }
+
+private data class SnapshotActions(
+    val onCycleVisibility: () -> Unit,
+    val onRequestBluetoothPermissions: () -> Unit,
+    val onOpenBluetoothSettings: () -> Unit,
+    val onRequestLocalNetworkPermission: () -> Unit,
+    val onOpenAppSettings: () -> Unit,
+    val onInitiatePairing: (String) -> Unit,
+    val onApprovePairing: () -> Unit,
+    val onRejectPairing: () -> Unit,
+    val onToggleAutoAccept: (String, Boolean) -> Unit,
+    val onAcceptTransfer: (String) -> Unit,
+    val onDeclineTransfer: (String) -> Unit,
+    val onCancelTransfer: (String) -> Unit,
+    val onRequestUnpair: (String) -> Unit,
+    val onCancelUnpair: () -> Unit,
+    val onConfirmUnpair: (String) -> Unit,
+)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -164,6 +193,110 @@ private fun KeynearFoundationScreen(bridge: CoreBridge) {
         }
     }
 
+    val actions = SnapshotActions(
+        onCycleVisibility = {
+            scope.launch {
+                val cycled = withContext(Dispatchers.IO) { bridge.cycleVisibility() }
+                val vis = snapshotFromState(cycled)?.visibility ?: VisibilityState.PAIRED_ONLY
+                withContext(Dispatchers.IO) {
+                    KeynearBleManager.startOrSync(context, vis)
+                    KeynearForegroundService.syncIfPermitted(context)
+                }
+                uiState = withContext(Dispatchers.IO) { bridge.loadState() }
+            }
+        },
+        onRequestBluetoothPermissions = {
+            val missing = KeynearBleConstants.missingPermissions(
+                context,
+                Build.VERSION.SDK_INT,
+            )
+            if (missing.isNotEmpty()) {
+                permissionLauncher.launch(missing.toTypedArray())
+            }
+        },
+        onOpenBluetoothSettings = {
+            context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
+        },
+        onRequestLocalNetworkPermission = {
+            if (LocalNetworkConstants.requiresLocalNetworkPermission(Build.VERSION.SDK_INT)) {
+                permissionLauncher.launch(arrayOf(LocalNetworkConstants.PERMISSION_ACCESS_LOCAL_NETWORK))
+            }
+            scope.launch(Dispatchers.IO) {
+                LocalNetworkManager.requestPickerDiscovery(context)
+                uiState = bridge.loadState()
+            }
+        },
+        onOpenAppSettings = {
+            val intent = Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.fromParts("package", context.packageName, null),
+            )
+            context.startActivity(intent)
+        },
+        onInitiatePairing = { addr ->
+            scope.launch {
+                withContext(Dispatchers.IO) {
+                    KeynearBleManager.initiatePairing(context, addr)
+                }
+                uiState = withContext(Dispatchers.IO) { bridge.loadState() }
+            }
+        },
+        onApprovePairing = {
+            scope.launch {
+                withContext(Dispatchers.IO) {
+                    KeynearBleManager.approveActivePairing(context)
+                }
+                uiState = withContext(Dispatchers.IO) { bridge.loadState() }
+            }
+        },
+        onRejectPairing = {
+            scope.launch {
+                withContext(Dispatchers.IO) {
+                    KeynearBleManager.rejectActivePairing(context)
+                }
+                uiState = withContext(Dispatchers.IO) { bridge.loadState() }
+            }
+        },
+        onToggleAutoAccept = { deviceId, enabled ->
+            scope.launch {
+                uiState = withContext(Dispatchers.IO) {
+                    bridge.setAutoAcceptFiles(deviceId, enabled)
+                }
+            }
+        },
+        onAcceptTransfer = { transferId ->
+            scope.launch {
+                uiState = withContext(Dispatchers.IO) {
+                    bridge.acceptTransfer(transferId)
+                }
+            }
+        },
+        onDeclineTransfer = { transferId ->
+            scope.launch {
+                uiState = withContext(Dispatchers.IO) {
+                    bridge.declineTransfer(transferId)
+                }
+            }
+        },
+        onCancelTransfer = { transferId ->
+            scope.launch {
+                uiState = withContext(Dispatchers.IO) {
+                    bridge.cancelTransfer(transferId)
+                }
+            }
+        },
+        onRequestUnpair = { deviceId -> confirmUnpairDeviceId = deviceId },
+        onCancelUnpair = { confirmUnpairDeviceId = null },
+        onConfirmUnpair = { deviceId ->
+            confirmUnpairDeviceId = null
+            scope.launch {
+                uiState = withContext(Dispatchers.IO) {
+                    bridge.unpairDevice(deviceId)
+                }
+            }
+        },
+    )
+
     val category = when (uiState) {
         CoreState.Loading -> ScreenCategory.LOADING
         is CoreState.Error -> ScreenCategory.ERROR
@@ -197,18 +330,6 @@ private fun KeynearFoundationScreen(bridge: CoreBridge) {
                     color = palette.textSecondary,
                 )
 
-                val onCycle: () -> Unit = {
-                    scope.launch {
-                        val cycled = withContext(Dispatchers.IO) { bridge.cycleVisibility() }
-                        val vis = snapshotFromState(cycled)?.visibility ?: VisibilityState.PAIRED_ONLY
-                        withContext(Dispatchers.IO) {
-                            KeynearBleManager.startOrSync(context, vis)
-                            KeynearForegroundService.syncIfPermitted(context)
-                        }
-                        uiState = withContext(Dispatchers.IO) { bridge.loadState() }
-                    }
-                }
-
                 when (targetCategory) {
                     ScreenCategory.LOADING -> LoadingCard()
                     ScreenCategory.ERROR -> {
@@ -222,53 +343,7 @@ private fun KeynearFoundationScreen(bridge: CoreBridge) {
                                 SnapshotContent(
                                     snapshot = previous,
                                     confirmUnpairDeviceId = confirmUnpairDeviceId,
-                                    onCycleVisibility = onCycle,
-                                    onRequestBluetoothPermissions = {
-                                        val missing = KeynearBleConstants.missingPermissions(
-                                            context,
-                                            Build.VERSION.SDK_INT,
-                                        )
-                                        if (missing.isNotEmpty()) {
-                                            permissionLauncher.launch(missing.toTypedArray())
-                                        }
-                                    },
-                                    onOpenBluetoothSettings = {
-                                        context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
-                                    },
-                                    onInitiatePairing = { addr ->
-                                        scope.launch {
-                                            withContext(Dispatchers.IO) {
-                                                KeynearBleManager.initiatePairing(context, addr)
-                                            }
-                                            uiState = withContext(Dispatchers.IO) { bridge.loadState() }
-                                        }
-                                    },
-                                    onApprovePairing = {
-                                        scope.launch {
-                                            withContext(Dispatchers.IO) {
-                                                KeynearBleManager.approveActivePairing(context)
-                                            }
-                                            uiState = withContext(Dispatchers.IO) { bridge.loadState() }
-                                        }
-                                    },
-                                    onRejectPairing = {
-                                        scope.launch {
-                                            withContext(Dispatchers.IO) {
-                                                KeynearBleManager.rejectActivePairing(context)
-                                            }
-                                            uiState = withContext(Dispatchers.IO) { bridge.loadState() }
-                                        }
-                                    },
-                                    onRequestUnpair = { deviceId -> confirmUnpairDeviceId = deviceId },
-                                    onCancelUnpair = { confirmUnpairDeviceId = null },
-                                    onConfirmUnpair = { deviceId ->
-                                        confirmUnpairDeviceId = null
-                                        scope.launch {
-                                            uiState = withContext(Dispatchers.IO) {
-                                                bridge.unpairDevice(deviceId)
-                                            }
-                                        }
-                                    },
+                                    actions = actions,
                                 )
                             }
                         }
@@ -279,53 +354,7 @@ private fun KeynearFoundationScreen(bridge: CoreBridge) {
                             SnapshotContent(
                                 snapshot = snapshot,
                                 confirmUnpairDeviceId = confirmUnpairDeviceId,
-                                onCycleVisibility = onCycle,
-                                onRequestBluetoothPermissions = {
-                                    val missing = KeynearBleConstants.missingPermissions(
-                                        context,
-                                        Build.VERSION.SDK_INT,
-                                    )
-                                    if (missing.isNotEmpty()) {
-                                        permissionLauncher.launch(missing.toTypedArray())
-                                    }
-                                },
-                                onOpenBluetoothSettings = {
-                                    context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
-                                },
-                                onInitiatePairing = { addr ->
-                                    scope.launch {
-                                        withContext(Dispatchers.IO) {
-                                            KeynearBleManager.initiatePairing(context, addr)
-                                        }
-                                        uiState = withContext(Dispatchers.IO) { bridge.loadState() }
-                                    }
-                                },
-                                onApprovePairing = {
-                                    scope.launch {
-                                        withContext(Dispatchers.IO) {
-                                            KeynearBleManager.approveActivePairing(context)
-                                        }
-                                        uiState = withContext(Dispatchers.IO) { bridge.loadState() }
-                                    }
-                                },
-                                onRejectPairing = {
-                                    scope.launch {
-                                        withContext(Dispatchers.IO) {
-                                            KeynearBleManager.rejectActivePairing(context)
-                                        }
-                                        uiState = withContext(Dispatchers.IO) { bridge.loadState() }
-                                    }
-                                },
-                                onRequestUnpair = { deviceId -> confirmUnpairDeviceId = deviceId },
-                                onCancelUnpair = { confirmUnpairDeviceId = null },
-                                onConfirmUnpair = { deviceId ->
-                                    confirmUnpairDeviceId = null
-                                    scope.launch {
-                                        uiState = withContext(Dispatchers.IO) {
-                                            bridge.unpairDevice(deviceId)
-                                        }
-                                    }
-                                },
+                                actions = actions,
                             )
                         }
                     }
@@ -478,6 +507,85 @@ private fun BluetoothWarningCard(
 }
 
 @Composable
+private fun LocalNetworkWarningCard(
+    status: LocalNetworkStatus,
+    message: String?,
+    onRequestPermission: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
+    val dark = isSystemInDarkTheme()
+    val warningBg = if (dark) Color(0xFF381C00) else Color(0xFFFFF6D3)
+    val warningFg = if (dark) Color(0xFFFFEAA5) else Color(0xFF863300)
+    val palette = LocalKeynearPalette.current
+
+    val resolvedText = message ?: when (status) {
+        LocalNetworkStatus.MISSING_PERMISSION -> stringResource(R.string.lnp_missing_permission_body)
+        LocalNetworkStatus.BLOCKED_LNP -> stringResource(R.string.lnp_blocked_body)
+        LocalNetworkStatus.UNAVAILABLE -> "Local Wi-Fi network discovery is unavailable."
+        LocalNetworkStatus.READY -> ""
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(KeynearRadii.Xl),
+        colors = CardDefaults.cardColors(containerColor = warningBg),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(KeynearSpacing.Lg),
+            verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
+        ) {
+            Text(
+                text = stringResource(R.string.lnp_blocked_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = warningFg,
+            )
+            Text(
+                text = resolvedText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = warningFg,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm)) {
+                if (status == LocalNetworkStatus.MISSING_PERMISSION) {
+                    Button(
+                        onClick = onRequestPermission,
+                        modifier = Modifier.defaultMinSize(
+                            minWidth = KeynearSpacing.MinTouchTarget,
+                            minHeight = KeynearSpacing.MinTouchTarget,
+                        ),
+                        shape = RoundedCornerShape(KeynearRadii.Xl),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = palette.accent,
+                            contentColor = palette.onAccent,
+                        ),
+                    ) {
+                        Text(text = stringResource(R.string.action_allow_local_network))
+                    }
+                } else if (status == LocalNetworkStatus.BLOCKED_LNP) {
+                    Button(
+                        onClick = onOpenSettings,
+                        modifier = Modifier.defaultMinSize(
+                            minWidth = KeynearSpacing.MinTouchTarget,
+                            minHeight = KeynearSpacing.MinTouchTarget,
+                        ),
+                        shape = RoundedCornerShape(KeynearRadii.Xl),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = palette.accent,
+                            contentColor = palette.onAccent,
+                        ),
+                    ) {
+                        Text(text = stringResource(R.string.action_open_settings))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun PendingPairingCard(
     pending: PendingPairingUi,
     onApprove: () -> Unit,
@@ -554,18 +662,161 @@ private fun PendingPairingCard(
 }
 
 @Composable
+private fun ActiveTransfersCard(
+    transfers: List<TransferUi>,
+    onAccept: (String) -> Unit,
+    onDecline: (String) -> Unit,
+    onCancel: (String) -> Unit,
+) {
+    val palette = LocalKeynearPalette.current
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(KeynearRadii.TwoXl),
+        colors = CardDefaults.cardColors(containerColor = palette.surface),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(KeynearSpacing.Lg),
+            verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Md),
+        ) {
+            Text(
+                text = stringResource(R.string.active_transfers_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = palette.textPrimary,
+            )
+            if (transfers.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.no_active_transfers),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = palette.textSecondary,
+                )
+            } else {
+                transfers.forEach { transfer ->
+                    TransferRow(
+                        transfer = transfer,
+                        onAccept = { onAccept(transfer.transferId) },
+                        onDecline = { onDecline(transfer.transferId) },
+                        onCancel = { onCancel(transfer.transferId) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TransferRow(
+    transfer: TransferUi,
+    onAccept: () -> Unit,
+    onDecline: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val palette = LocalKeynearPalette.current
+    val dirLabel = if (transfer.direction == TransferDirectionUi.RECEIVE) "From" else "To"
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(KeynearRadii.Xl),
+        color = palette.surfaceTonal,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(KeynearSpacing.Md),
+            verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Xs),
+        ) {
+            Text(
+                text = transfer.summaryName,
+                style = MaterialTheme.typography.bodyLarge,
+                color = palette.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "$dirLabel ${transfer.peerDisplayName} · ${transfer.state.label()}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = palette.textSecondary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "${formatByteCount(transfer.transferredBytes)} / ${formatByteCount(transfer.totalBytes)}",
+                style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
+                color = palette.textMuted,
+            )
+            if (transfer.state == TransferStateUi.ACTIVE) {
+                if (transfer.totalBytes > 0L) {
+                    val fraction = (transfer.transferredBytes.toFloat() / transfer.totalBytes.toFloat()).coerceIn(0f, 1f)
+                    LinearProgressIndicator(
+                        progress = { fraction },
+                        modifier = Modifier.fillMaxWidth(),
+                        color = palette.accent,
+                        trackColor = palette.surface,
+                    )
+                } else {
+                    LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = palette.accent,
+                        trackColor = palette.surface,
+                    )
+                }
+            }
+            if (transfer.state == TransferStateUi.PENDING_CONSENT &&
+                transfer.direction == TransferDirectionUi.RECEIVE
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm)) {
+                    Button(
+                        onClick = onAccept,
+                        modifier = Modifier.defaultMinSize(
+                            minWidth = KeynearSpacing.MinTouchTarget,
+                            minHeight = KeynearSpacing.MinTouchTarget,
+                        ),
+                        shape = RoundedCornerShape(KeynearRadii.Xl),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = palette.accent,
+                            contentColor = palette.onAccent,
+                        ),
+                    ) {
+                        Text(text = stringResource(R.string.action_accept))
+                    }
+                    OutlinedButton(
+                        onClick = onDecline,
+                        modifier = Modifier.defaultMinSize(
+                            minWidth = KeynearSpacing.MinTouchTarget,
+                            minHeight = KeynearSpacing.MinTouchTarget,
+                        ),
+                        shape = RoundedCornerShape(KeynearRadii.Xl),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.action_decline),
+                            color = palette.textPrimary,
+                        )
+                    }
+                }
+            } else if (transfer.state == TransferStateUi.ACTIVE) {
+                OutlinedButton(
+                    onClick = onCancel,
+                    modifier = Modifier.defaultMinSize(
+                        minWidth = KeynearSpacing.MinTouchTarget,
+                        minHeight = KeynearSpacing.MinTouchTarget,
+                    ),
+                    shape = RoundedCornerShape(KeynearRadii.Xl),
+                ) {
+                    Text(
+                        text = stringResource(R.string.action_cancel),
+                        color = palette.textPrimary,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun SnapshotContent(
     snapshot: CoreSnapshot,
     confirmUnpairDeviceId: String?,
-    onCycleVisibility: () -> Unit,
-    onRequestBluetoothPermissions: () -> Unit,
-    onOpenBluetoothSettings: () -> Unit,
-    onInitiatePairing: (String) -> Unit,
-    onApprovePairing: () -> Unit,
-    onRejectPairing: () -> Unit,
-    onRequestUnpair: (String) -> Unit,
-    onCancelUnpair: () -> Unit,
-    onConfirmUnpair: (String) -> Unit,
+    actions: SnapshotActions,
 ) {
     val palette = LocalKeynearPalette.current
     val dark = isSystemInDarkTheme()
@@ -576,18 +827,34 @@ private fun SnapshotContent(
         BluetoothWarningCard(
             status = snapshot.bluetoothStatus,
             message = snapshot.warningMessage,
-            onRequestPermissions = onRequestBluetoothPermissions,
-            onOpenBluetoothSettings = onOpenBluetoothSettings,
+            onRequestPermissions = actions.onRequestBluetoothPermissions,
+            onOpenBluetoothSettings = actions.onOpenBluetoothSettings,
+        )
+    }
+
+    if (snapshot.localNetworkStatus != LocalNetworkStatus.READY) {
+        LocalNetworkWarningCard(
+            status = snapshot.localNetworkStatus,
+            message = snapshot.localNetworkMessage,
+            onRequestPermission = actions.onRequestLocalNetworkPermission,
+            onOpenSettings = actions.onOpenAppSettings,
         )
     }
 
     snapshot.pendingPairing?.let { pending ->
         PendingPairingCard(
             pending = pending,
-            onApprove = onApprovePairing,
-            onReject = onRejectPairing,
+            onApprove = actions.onApprovePairing,
+            onReject = actions.onRejectPairing,
         )
     }
+
+    ActiveTransfersCard(
+        transfers = snapshot.activeTransfers,
+        onAccept = actions.onAcceptTransfer,
+        onDecline = actions.onDeclineTransfer,
+        onCancel = actions.onCancelTransfer,
+    )
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -614,7 +881,7 @@ private fun SnapshotContent(
             )
             Spacer(modifier = Modifier.height(KeynearSpacing.Xs))
             Button(
-                onClick = onCycleVisibility,
+                onClick = actions.onCycleVisibility,
                 modifier = Modifier.defaultMinSize(
                     minWidth = KeynearSpacing.MinTouchTarget,
                     minHeight = KeynearSpacing.MinTouchTarget,
@@ -656,7 +923,7 @@ private fun SnapshotContent(
                 )
             } else {
                 snapshot.nearbyPeers.forEach { peer ->
-                    NearbyPeerRow(peer = peer, onPair = { onInitiatePairing(peer.address) })
+                    NearbyPeerRow(peer = peer, onPair = { actions.onInitiatePairing(peer.address) })
                 }
             }
         }
@@ -711,9 +978,12 @@ private fun SnapshotContent(
                         confirmingUnpair = confirmUnpairDeviceId == device.deviceId,
                         warningBg = warningBg,
                         warningFg = warningFg,
-                        onRequestUnpair = { onRequestUnpair(device.deviceId) },
-                        onCancelUnpair = onCancelUnpair,
-                        onConfirmUnpair = { onConfirmUnpair(device.deviceId) },
+                        onToggleAutoAccept = { enabled ->
+                            actions.onToggleAutoAccept(device.deviceId, enabled)
+                        },
+                        onRequestUnpair = { actions.onRequestUnpair(device.deviceId) },
+                        onCancelUnpair = actions.onCancelUnpair,
+                        onConfirmUnpair = { actions.onConfirmUnpair(device.deviceId) },
                     )
                 }
             }
@@ -814,6 +1084,7 @@ private fun PairedDeviceRow(
     confirmingUnpair: Boolean,
     warningBg: Color,
     warningFg: Color,
+    onToggleAutoAccept: (Boolean) -> Unit,
     onRequestUnpair: () -> Unit,
     onCancelUnpair: () -> Unit,
     onConfirmUnpair: () -> Unit,
@@ -858,6 +1129,34 @@ private fun PairedDeviceRow(
                     color = palette.textPrimary,
                 )
             }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.auto_accept_files_label),
+                style = MaterialTheme.typography.bodyMedium,
+                color = palette.textSecondary,
+                modifier = Modifier.weight(1f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Switch(
+                checked = device.autoAcceptFiles,
+                onCheckedChange = onToggleAutoAccept,
+                modifier = Modifier.defaultMinSize(
+                    minWidth = KeynearSpacing.MinTouchTarget,
+                    minHeight = KeynearSpacing.MinTouchTarget,
+                ),
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = palette.onAccent,
+                    checkedTrackColor = palette.accent,
+                    uncheckedTrackColor = palette.surfaceTonal,
+                ),
+            )
         }
 
         if (confirmingUnpair) {

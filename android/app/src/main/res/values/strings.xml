@@ -28,4 +28,26 @@
     <string name="action_allow_bluetooth">Allow Bluetooth</string>
     <string name="action_enable_bluetooth">Open Bluetooth settings</string>
     <string name="share_invalid_message">Unsupported share payload</string>
+    <string name="transfer_channel_name">File transfers</string>
+    <string name="transfer_channel_description">Incoming file consent, transfer completion, and local network alerts</string>
+    <string name="transfer_consent_title">Incoming file transfer</string>
+    <string name="transfer_complete_title">Transfer complete</string>
+    <string name="transfer_error_title">Transfer failed</string>
+    <string name="lnp_blocked_title">Local network access blocked</string>
+    <string name="lnp_blocked_body">Allow local network access so Keynear can discover paired devices on Wi-Fi.</string>
+    <string name="lnp_missing_permission_body">Local network permission is required to discover paired devices on Wi-Fi.</string>
+    <string name="action_accept">Accept</string>
+    <string name="action_decline">Decline</string>
+    <string name="action_send">Send</string>
+    <string name="action_close">Close</string>
+    <string name="action_allow_local_network">Allow local network</string>
+    <string name="action_open_settings">Open settings</string>
+    <string name="action_open_keynear">Open Keynear</string>
+    <string name="active_transfers_title">Active transfers</string>
+    <string name="no_active_transfers">No active transfers</string>
+    <string name="auto_accept_files_label">Auto-accept files</string>
+    <string name="share_title">Send with Keynear</string>
+    <string name="share_no_devices_body">Pair a device in Keynear before sending files or text.</string>
+    <string name="share_select_device_label">Choose a paired device</string>
+    <string name="share_sending_status">Sending transfer…</string>
 </resources>
