@@ -12,7 +12,7 @@ window.keynear-window.dark {
 
 .keynear-title {
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 700;
   color: #07132B;
 }
 
@@ -21,8 +21,8 @@ window.keynear-window.dark .keynear-title {
 }
 
 .keynear-heading {
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
   color: #07132B;
 }
 
@@ -50,19 +50,32 @@ window.keynear-window.dark .keynear-caption {
   color: #9A9AA6;
 }
 
+.kn-section-heading {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #3B4B5E;
+}
+
+window.keynear-window.dark .kn-section-heading {
+  color: #9A9AA6;
+}
+
 .keynear-card {
   background-color: #FAFBFD;
-  border-radius: 16px;
+  border-radius: 18px;
   padding: 16px;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 254, 0.9), 0 4px 12px rgba(5, 17, 47, 0.07);
 }
 
 window.keynear-window.dark .keynear-card {
   background-color: #161821;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 254, 0.08), 0 6px 14px rgba(0, 0, 0, 0.5);
 }
 
 .keynear-tonal {
   background-color: #E7EDF8;
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 12px;
 }
 
@@ -73,7 +86,7 @@ window.keynear-window.dark .keynear-tonal {
 .keynear-code {
   background-color: #E7EDF8;
   color: #07132B;
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 12px 16px;
   font-family: monospace;
   font-size: 28px;
@@ -89,7 +102,7 @@ window.keynear-window.dark .keynear-code {
 .keynear-warning {
   background-color: #FFF6D3;
   color: #863300;
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 12px;
 }
 
@@ -101,8 +114,8 @@ window.keynear-window.dark .keynear-warning {
 .keynear-error {
   background-color: #FFE7E7;
   color: #8B0016;
-  border-radius: 12px;
-  padding: 12px;
+  border-radius: 16px;
+  padding: 14px;
 }
 
 window.keynear-window.dark .keynear-error {
@@ -110,23 +123,35 @@ window.keynear-window.dark .keynear-error {
   color: #FFCFCF;
 }
 
+.kn-error-text {
+  color: #E84201;
+}
+
+window.keynear-window.dark .kn-error-text {
+  color: #FF8C66;
+}
+
+.kn-loading-text {
+  color: #0195D4;
+}
+
 button.keynear-primary {
   background-color: #004CED;
   color: #FFFFFE;
-  border-radius: 12px;
-  min-height: 44px;
-  min-width: 44px;
+  border-radius: 14px;
+  min-height: 48px;
+  min-width: 48px;
   padding: 8px 16px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 button.keynear-secondary {
   background-color: #E7EDF8;
   color: #07132B;
-  border-radius: 12px;
+  border-radius: 14px;
   min-height: 44px;
-  min-width: 44px;
+  min-width: 48px;
   padding: 8px 16px;
   font-size: 14px;
   font-weight: 600;
@@ -140,12 +165,12 @@ window.keynear-window.dark button.keynear-secondary {
 button.keynear-danger-btn {
   background-color: #FFE7E7;
   color: #8B0016;
-  border-radius: 12px;
-  min-height: 44px;
-  min-width: 44px;
+  border-radius: 14px;
+  min-height: 48px;
+  min-width: 48px;
   padding: 8px 16px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 window.keynear-window.dark button.keynear-danger-btn {
@@ -153,14 +178,278 @@ window.keynear-window.dark button.keynear-danger-btn {
   color: #FFCFCF;
 }
 
+button.kn-error-btn {
+  background-color: #E84201;
+  color: #FFFFFE;
+  border-radius: 14px;
+  min-height: 48px;
+  min-width: 48px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+button.kn-loading-btn {
+  background-color: #0195D4;
+  color: #FFFFFE;
+  border-radius: 14px;
+  min-height: 48px;
+  min-width: 48px;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 254, 0.35), 0 4px 10px rgba(0, 61, 207, 0.28);
+}
+
+button.kn-loading-tonal-btn {
+  background-color: #D1ECF7;
+  color: #00425F;
+  border-radius: 14px;
+  min-height: 48px;
+  min-width: 48px;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+window.keynear-window.dark button.kn-loading-tonal-btn {
+  background-color: #11364C;
+  color: #99D5EE;
+}
+
 button:focus-visible {
   outline: 2px solid #0172F9;
   outline-offset: 2px;
 }
 
+.kn-topbar {
+  background-color: #F0F4FA;
+  padding: 12px 16px;
+  min-height: 48px;
+}
+
+window.keynear-window.dark .kn-topbar {
+  background-color: #0B1016;
+}
+
+button.kn-back-btn {
+  background-color: #FAFBFD;
+  color: #07132B;
+  border-radius: 16px;
+  min-height: 48px;
+  min-width: 48px;
+  padding: 0;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 254, 0.9), 0 3px 8px rgba(5, 17, 47, 0.08);
+}
+
+window.keynear-window.dark button.kn-back-btn {
+  background-color: #161821;
+  color: #F7F6F7;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 254, 0.08), 0 4px 10px rgba(0, 0, 0, 0.45);
+}
+
+.kn-track-well {
+  background-color: #E7EDF8;
+  border-radius: 18px;
+  padding: 6px;
+  box-shadow: inset 0 2px 4px rgba(5, 17, 47, 0.1), inset 0 -1px 1px rgba(255, 255, 254, 0.85);
+}
+
+window.keynear-window.dark .kn-track-well {
+  background-color: #0D1018;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.55);
+}
+
+button.kn-seg-btn {
+  background-color: transparent;
+  color: #283950;
+  border-radius: 14px;
+  min-height: 48px;
+  min-width: 48px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+window.keynear-window.dark button.kn-seg-btn {
+  color: #DBD8DB;
+}
+
+button.kn-seg-btn-active {
+  background-color: #0195D4;
+  color: #FFFFFE;
+  border-radius: 14px;
+  min-height: 48px;
+  min-width: 48px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 254, 0.35), 0 4px 12px rgba(0, 61, 207, 0.3);
+}
+
+.kn-map-canvas {
+  background-color: #E7EEF9;
+  background-image: radial-gradient(circle at 50% 54%, rgba(255, 255, 254, 0.65) 0%, rgba(231, 238, 249, 0) 68%);
+  border-radius: 22px;
+  min-height: 360px;
+}
+
+window.keynear-window.dark .kn-map-canvas {
+  background-color: #080C12;
+  background-image: radial-gradient(circle at 50% 54%, rgba(0, 83, 226, 0.14) 0%, rgba(8, 12, 18, 0) 68%);
+}
+
+.kn-center-node-active {
+  background-color: #0195D4;
+  color: #FFFFFE;
+  border-radius: 9999px;
+  min-width: 64px;
+  min-height: 64px;
+  box-shadow: 0 6px 18px rgba(1, 149, 212, 0.38);
+}
+
+.kn-center-node-hidden {
+  background-color: #FAFBFD;
+  color: #07132B;
+  border-radius: 9999px;
+  min-width: 64px;
+  min-height: 64px;
+  box-shadow: 0 4px 12px rgba(5, 17, 47, 0.12);
+}
+
+window.keynear-window.dark .kn-center-node-hidden {
+  background-color: #161821;
+  color: #F7F6F7;
+}
+
+button.kn-peer-pin {
+  background-color: #FAFBFD;
+  color: #0195D4;
+  border-radius: 9999px;
+  min-width: 56px;
+  min-height: 56px;
+  padding: 0;
+  box-shadow: 0 5px 14px rgba(5, 17, 47, 0.12);
+}
+
+window.keynear-window.dark button.kn-peer-pin {
+  background-color: #161821;
+  color: #99D5EE;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55);
+}
+
+.kn-peer-pill {
+  background-color: #FAFBFD;
+  color: #07132B;
+  border-radius: 14px;
+  padding: 6px 12px;
+  box-shadow: 0 4px 12px rgba(5, 17, 47, 0.08);
+}
+
+window.keynear-window.dark .kn-peer-pill {
+  background-color: #161821;
+  color: #F7F6F7;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.55);
+}
+
+.kn-bottom-sheet {
+  background-color: #FAFBFD;
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  padding: 12px 16px;
+  box-shadow: inset 0 2px 1px rgba(255, 255, 254, 0.95), 0 -6px 20px rgba(5, 17, 47, 0.08);
+}
+
+window.keynear-window.dark .kn-bottom-sheet {
+  background-color: #161821;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 254, 0.08), 0 -8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.kn-sheet-handle {
+  background-color: #CADBEE;
+  border-radius: 9999px;
+  min-width: 48px;
+  min-height: 6px;
+}
+
+window.keynear-window.dark .kn-sheet-handle {
+  background-color: #474756;
+}
+
+.kn-loading-tonal-badge {
+  background-color: #D1ECF7;
+  color: #00425F;
+  border-radius: 14px;
+  padding: 4px 10px;
+}
+
+window.keynear-window.dark .kn-loading-tonal-badge {
+  background-color: #11364C;
+  color: #99D5EE;
+}
+
+button.kn-selection-tile {
+  background-color: #FAFBFD;
+  color: #07132B;
+  border-radius: 18px;
+  min-height: 112px;
+  min-width: 120px;
+  padding: 16px;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 254, 0.95), 0 5px 12px rgba(5, 17, 47, 0.08);
+}
+
+window.keynear-window.dark button.kn-selection-tile {
+  background-color: #161821;
+  color: #F7F6F7;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 254, 0.08), 0 6px 14px rgba(0, 0, 0, 0.55);
+}
+
+button.kn-selection-tile-active {
+  background-color: #D1ECF7;
+  color: #00425F;
+  border-radius: 18px;
+  min-height: 112px;
+  min-width: 120px;
+  padding: 16px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+window.keynear-window.dark button.kn-selection-tile-active {
+  background-color: #11364C;
+  color: #99D5EE;
+}
+
+.kn-queue-row {
+  background-color: #E7EDF8;
+  border-radius: 14px;
+  padding: 10px 12px;
+  min-height: 52px;
+}
+
+window.keynear-window.dark .kn-queue-row {
+  background-color: #1E202B;
+}
+
+.kn-chip {
+  background-color: #E7EDF8;
+  color: #07132B;
+  border-radius: 14px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+window.keynear-window.dark .kn-chip {
+  background-color: #1E202B;
+  color: #F7F6F7;
+}
+
 .keynear-transfer-row {
   background-color: #E7EDF8;
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 12px;
 }
 
@@ -170,7 +459,7 @@ window.keynear-window.dark .keynear-transfer-row {
 
 switch.keynear-switch {
   min-height: 44px;
-  min-width: 44px;
+  min-width: 58px;
   background-color: #DEE6F6;
   border-radius: 24px;
 }
@@ -180,7 +469,7 @@ window.keynear-window.dark switch.keynear-switch {
 }
 
 switch.keynear-switch:checked {
-  background-color: #004CED;
+  background-color: #0195D4;
 }
 
 switch:focus-visible {
@@ -199,20 +488,81 @@ window.keynear-window.dark progressbar.keynear-progress > trough {
 }
 
 progressbar.keynear-progress > trough > progress {
-  background-color: #004CED;
+  background-color: #0195D4;
   border-radius: 8px;
   min-height: 8px;
 }
 
 entry.keynear-entry {
-  min-height: 44px;
-  border-radius: 12px;
-  padding: 6px 12px;
-  background-color: #FAFBFD;
+  min-height: 48px;
+  border-radius: 14px;
+  padding: 6px 14px;
+  background-color: #E8EEFA;
   color: #07132B;
+  box-shadow: inset 0 2px 4px rgba(5, 17, 47, 0.1);
 }
 
 window.keynear-window.dark entry.keynear-entry {
-  background-color: #161821;
+  background-color: #090E14;
+  color: #F7F6F7;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.55);
+}
+
+.kn-bottom-nav {
+  background-color: #F0F4FA;
+  padding: 8px 12px;
+}
+
+window.keynear-window.dark .kn-bottom-nav {
+  background-color: #0B1016;
+}
+
+button.kn-nav-btn {
+  background-color: transparent;
+  border-radius: 16px;
+  min-height: 54px;
+  min-width: 64px;
+  padding: 4px 12px;
+}
+
+.kn-nav-pill-active {
+  background-color: #D1ECF7;
+  color: #00425F;
+  border-radius: 9999px;
+  min-width: 64px;
+  min-height: 36px;
+  padding: 6px 18px;
+}
+
+window.keynear-window.dark .kn-nav-pill-active {
+  background-color: #11364C;
+  color: #99D5EE;
+}
+
+.kn-nav-pill-inactive {
+  background-color: transparent;
+  color: #3B4B5E;
+  border-radius: 9999px;
+  min-width: 40px;
+  min-height: 36px;
+  padding: 6px 12px;
+}
+
+window.keynear-window.dark .kn-nav-pill-inactive {
+  color: #9A9AA6;
+}
+
+.kn-snackbar-pill {
+  background-color: #0F223E;
+  color: #FFFFFE;
+  border-radius: 14px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+}
+
+window.keynear-window.dark .kn-snackbar-pill {
+  background-color: #1E202B;
   color: #F7F6F7;
 }
