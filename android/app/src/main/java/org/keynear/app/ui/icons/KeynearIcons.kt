@@ -15,7 +15,12 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.dp
+import org.keynear.app.ui.theme.KeynearSpacing
 import org.keynear.app.ui.theme.LocalKeynearPalette
+
+private val ChevronIconSize = 20.dp
+private val DefaultStrokeWidth = 2f
+
 
 private data class LucideRect(
     val x: Float,
@@ -35,7 +40,7 @@ private data class LucideCircle(
 private fun LucideSvgIcon(
     modifier: Modifier,
     tint: Color,
-    strokeWidth: Float = 2f,
+    strokeWidth: Float = DefaultStrokeWidth,
     pathStrings: List<String> = emptyList(),
     rects: List<LucideRect> = emptyList(),
     circles: List<LucideCircle> = emptyList(),
@@ -74,9 +79,9 @@ private fun LucideSvgIcon(
 
 @Composable
 fun IconInbox(
-    modifier: Modifier = Modifier.size(24.dp),
+    modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -91,9 +96,9 @@ fun IconInbox(
 
 @Composable
 fun IconSend(
-    modifier: Modifier = Modifier.size(24.dp),
+    modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -108,9 +113,9 @@ fun IconSend(
 
 @Composable
 fun IconSliders(
-    modifier: Modifier = Modifier.size(24.dp),
+    modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -132,9 +137,9 @@ fun IconSliders(
 
 @Composable
 fun IconArrowLeft(
-    modifier: Modifier = Modifier.size(24.dp),
+    modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -149,9 +154,9 @@ fun IconArrowLeft(
 
 @Composable
 fun IconChevronRight(
-    modifier: Modifier = Modifier.size(20.dp),
+    modifier: Modifier = Modifier.size(ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.textMuted,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -163,9 +168,9 @@ fun IconChevronRight(
 
 @Composable
 fun IconChevronDown(
-    modifier: Modifier = Modifier.size(20.dp),
+    modifier: Modifier = Modifier.size(ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.textMuted,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -177,9 +182,9 @@ fun IconChevronDown(
 
 @Composable
 fun IconChevronUp(
-    modifier: Modifier = Modifier.size(20.dp),
+    modifier: Modifier = Modifier.size(ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.textMuted,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -191,9 +196,9 @@ fun IconChevronUp(
 
 @Composable
 fun IconLaptop(
-    modifier: Modifier = Modifier.size(24.dp),
+    modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -208,9 +213,9 @@ fun IconLaptop(
 
 @Composable
 fun IconSmartphone(
-    modifier: Modifier = Modifier.size(24.dp),
+    modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -223,9 +228,9 @@ fun IconSmartphone(
 
 @Composable
 fun IconFile(
-    modifier: Modifier = Modifier.size(24.dp),
+    modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -243,9 +248,9 @@ fun IconFile(
 
 @Composable
 fun IconFolder(
-    modifier: Modifier = Modifier.size(24.dp),
+    modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -259,9 +264,9 @@ fun IconFolder(
 
 @Composable
 fun IconClipboard(
-    modifier: Modifier = Modifier.size(24.dp),
+    modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -276,9 +281,9 @@ fun IconClipboard(
 
 @Composable
 fun IconPlus(
-    modifier: Modifier = Modifier.size(24.dp),
+    modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -290,9 +295,9 @@ fun IconPlus(
 
 @Composable
 fun IconEyeOff(
-    modifier: Modifier = Modifier.size(16.dp),
+    modifier: Modifier = Modifier.size(KeynearSpacing.Lg),
     tint: Color = LocalKeynearPalette.current.textSecondary,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -309,9 +314,9 @@ fun IconEyeOff(
 
 @Composable
 fun IconShieldCheck(
-    modifier: Modifier = Modifier.size(16.dp),
+    modifier: Modifier = Modifier.size(KeynearSpacing.Lg),
     tint: Color = LocalKeynearPalette.current.textSecondary,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -326,9 +331,9 @@ fun IconShieldCheck(
 
 @Composable
 fun IconRadio(
-    modifier: Modifier = Modifier.size(16.dp),
+    modifier: Modifier = Modifier.size(KeynearSpacing.Lg),
     tint: Color = LocalKeynearPalette.current.textSecondary,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -346,9 +351,9 @@ fun IconRadio(
 
 @Composable
 fun IconAlertTriangle(
-    modifier: Modifier = Modifier.size(20.dp),
+    modifier: Modifier = Modifier.size(ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.onDangerTonal,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -364,9 +369,9 @@ fun IconAlertTriangle(
 
 @Composable
 fun IconClose(
-    modifier: Modifier = Modifier.size(20.dp),
+    modifier: Modifier = Modifier.size(ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.error,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -378,9 +383,9 @@ fun IconClose(
 
 @Composable
 fun IconCheck(
-    modifier: Modifier = Modifier.size(16.dp),
+    modifier: Modifier = Modifier.size(KeynearSpacing.Lg),
     tint: Color = LocalKeynearPalette.current.onLoadingTonal,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -392,9 +397,9 @@ fun IconCheck(
 
 @Composable
 fun IconRefreshCw(
-    modifier: Modifier = Modifier.size(20.dp),
+    modifier: Modifier = Modifier.size(ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -411,9 +416,9 @@ fun IconRefreshCw(
 
 @Composable
 fun IconTrash2(
-    modifier: Modifier = Modifier.size(20.dp),
+    modifier: Modifier = Modifier.size(ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.error,
-    strokeWidthDp: Float = 2f,
+    strokeWidthDp: Float = DefaultStrokeWidth,
 ) {
     LucideSvgIcon(
         modifier = modifier,

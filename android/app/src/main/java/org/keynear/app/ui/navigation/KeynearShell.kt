@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -37,7 +38,23 @@ import org.keynear.app.ui.icons.IconSend
 import org.keynear.app.ui.icons.IconSliders
 import org.keynear.app.ui.theme.KeynearRadii
 import org.keynear.app.ui.theme.KeynearShapes
+import org.keynear.app.ui.theme.KeynearSpacing
+import org.keynear.app.ui.theme.KeynearTypeSizes
 import org.keynear.app.ui.theme.LocalKeynearPalette
+
+private val ActivePillWidth = 64.dp
+private val BadgeInset = 6.dp
+private val BadgeOffsetX = 3.dp
+private val BadgeOffsetY = (-3).dp
+private val BadgeRadius = 5.dp
+private val ContentGap = 10.dp
+private val InactivePillWidth = 40.dp
+private val NavIconSize = 20.dp
+private val NavItemVerticalPadding = 2.dp
+private val NavPillHeight = 36.dp
+private val NavPillRadius = 18.dp
+private val SnackbarTextSize = 13.sp
+
 
 enum class KeynearTab(val label: String) {
     RECEIVE("Receive"),
@@ -126,14 +143,14 @@ fun KeynearTopAppBar(
                 .clip(KeynearShapes.TopBar)
                 .background(palette.canvas)
                 .statusBarsPadding()
-                .height(64.dp)
-                .padding(horizontal = 16.dp),
+                .height(ActivePillWidth)
+                .padding(horizontal = KeynearSpacing.Lg),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Md),
         ) {
             if (subScreen != null) {
                 TactileSurface(
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier.size(KeynearSpacing.MinTouchTarget),
                     shape = KeynearShapes.Card,
                     containerColor = palette.surface,
                     tone = TactileTone.SURFACE,
@@ -141,10 +158,10 @@ fun KeynearTopAppBar(
                     onClick = onBack,
                 ) {
                     Box(
-                        modifier = Modifier.size(48.dp),
+                        modifier = Modifier.size(KeynearSpacing.MinTouchTarget),
                         contentAlignment = Alignment.Center,
                     ) {
-                        IconArrowLeft(modifier = Modifier.size(24.dp), tint = palette.textPrimary)
+                        IconArrowLeft(modifier = Modifier.size(KeynearSpacing.Xl), tint = palette.textPrimary)
                     }
                 }
             }
@@ -152,7 +169,7 @@ fun KeynearTopAppBar(
             Text(
                 text = title,
                 color = palette.textPrimary,
-                fontSize = 24.sp,
+                fontSize = KeynearTypeSizes.Title,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = (-0.6).sp,
                 maxLines = 1,
@@ -175,7 +192,7 @@ fun KeynearBottomNav(
             .fillMaxWidth()
             .background(palette.canvas)
             .navigationBarsPadding()
-            .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+            .padding(start = KeynearSpacing.Sm, end = KeynearSpacing.Sm, top = KeynearSpacing.Sm, bottom = KeynearSpacing.Sm),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Row(
@@ -186,7 +203,7 @@ fun KeynearBottomNav(
             KeynearTab.entries.forEach { tab ->
                 val active = subScreen == null && activeTab == tab
                 val pillWidth by animateDpAsState(
-                    targetValue = if (active) 64.dp else 40.dp,
+                    targetValue = if (active) ActivePillWidth else InactivePillWidth,
                     label = "navPillWidth",
                 )
                 val tint by animateColorAsState(
@@ -197,54 +214,59 @@ fun KeynearBottomNav(
                     modifier = Modifier
                         .weight(1f)
                         .clickable(role = Role.Tab) { onSelectTab(tab) }
-                        .padding(vertical = 2.dp),
+                        .padding(vertical = NavItemVerticalPadding),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(BadgeInset),
                 ) {
                     Box(
                         modifier = Modifier
                             .width(pillWidth)
-                            .height(36.dp),
+                            .height(NavPillHeight),
                         contentAlignment = Alignment.Center,
                     ) {
                         if (active) {
                             TactileSurface(
                                 modifier = Modifier
                                     .width(pillWidth)
-                                    .height(36.dp),
+                                    .height(NavPillHeight),
                                 shape = CircleShape,
                                 containerColor = palette.loadingTonal,
                                 tone = TactileTone.TONAL,
-                                cornerRadius = 18.dp,
+                                cornerRadius = NavPillRadius,
                             ) {
-                                Box(modifier = Modifier.width(pillWidth).height(36.dp))
+                                Box(modifier = Modifier.width(pillWidth).height(NavPillHeight))
                             }
                         }
-                        when (tab) {
-                            KeynearTab.RECEIVE -> IconInbox(modifier = Modifier.size(20.dp), tint = tint)
-                            KeynearTab.SEND -> IconSend(modifier = Modifier.size(20.dp), tint = tint)
-                            KeynearTab.SETTINGS -> IconSliders(modifier = Modifier.size(20.dp), tint = tint)
-                        }
-                        if (tab == KeynearTab.SETTINGS && missingPermissionsCount > 0) {
-                            TactileSurface(
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(top = 4.dp, end = 6.dp)
-                                    .size(10.dp),
-                                shape = CircleShape,
-                                containerColor = palette.error,
-                                tone = TactileTone.TONAL,
-                                cornerRadius = 5.dp,
-                                isCircle = true,
-                            ) {
-                                Box(modifier = Modifier.size(10.dp))
+                        Box(
+                            modifier = Modifier.size(NavIconSize),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            when (tab) {
+                                KeynearTab.RECEIVE -> IconInbox(modifier = Modifier.size(NavIconSize), tint = tint)
+                                KeynearTab.SEND -> IconSend(modifier = Modifier.size(NavIconSize), tint = tint)
+                                KeynearTab.SETTINGS -> IconSliders(modifier = Modifier.size(NavIconSize), tint = tint)
+                            }
+                            if (tab == KeynearTab.SETTINGS && missingPermissionsCount > 0) {
+                                TactileSurface(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = BadgeOffsetX, y = BadgeOffsetY)
+                                        .size(ContentGap),
+                                    shape = CircleShape,
+                                    containerColor = palette.error,
+                                    tone = TactileTone.TONAL,
+                                    cornerRadius = BadgeRadius,
+                                    isCircle = true,
+                                ) {
+                                    Box(modifier = Modifier.size(ContentGap))
+                                }
                             }
                         }
                     }
                     Text(
                         text = tab.label,
                         color = if (active) palette.textPrimary else palette.textMuted,
-                        fontSize = 12.sp,
+                        fontSize = KeynearTypeSizes.Caption,
                         fontWeight = FontWeight.Bold,
                     )
                 }
@@ -260,7 +282,7 @@ fun KeynearSnackbarHost(message: String?) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 12.dp),
+            .padding(horizontal = KeynearSpacing.Xl, vertical = KeynearSpacing.Md),
         contentAlignment = Alignment.Center,
     ) {
         TactileSurface(
@@ -272,9 +294,9 @@ fun KeynearSnackbarHost(message: String?) {
             Text(
                 text = message,
                 color = palette.onSnackbar,
-                fontSize = 13.sp,
+                fontSize = SnackbarTextSize,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                modifier = Modifier.padding(horizontal = KeynearSpacing.Lg, vertical = ContentGap),
             )
         }
     }

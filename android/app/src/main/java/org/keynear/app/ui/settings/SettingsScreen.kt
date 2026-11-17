@@ -45,7 +45,19 @@ import org.keynear.app.ui.navigation.KeynearActions
 import org.keynear.app.ui.theme.KeynearLayout
 import org.keynear.app.ui.theme.KeynearRadii
 import org.keynear.app.ui.theme.KeynearShapes
+import org.keynear.app.ui.theme.KeynearSpacing
+import org.keynear.app.ui.theme.KeynearTypeSizes
 import org.keynear.app.ui.theme.LocalKeynearPalette
+
+private val ActionMinHeight = 44.dp
+private val ChipMinWidth = 50.dp
+private val CompactGap = 6.dp
+private val ContentGap = 10.dp
+private val ControlIconSize = 20.dp
+private val FieldHeight = 38.dp
+private val RowIconSize = 14.dp
+private val ValueTextSize = 19.sp
+
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -78,7 +90,7 @@ fun SettingsScreen(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
                 ) {
                     Text(
                         text = if (permissions.missingPermissionsCount > 0) {
@@ -87,10 +99,10 @@ fun SettingsScreen(
                             "Allowed"
                         },
                         color = if (permissions.missingPermissionsCount > 0) palette.error else palette.textMuted,
-                        fontSize = 14.sp,
+                        fontSize = KeynearTypeSizes.Description,
                         fontWeight = FontWeight.Bold,
                     )
-                    IconChevronRight(modifier = Modifier.size(20.dp), tint = palette.textMuted)
+                    IconChevronRight(modifier = Modifier.size(ControlIconSize), tint = palette.textMuted)
                 }
             }
             SettingRow(
@@ -107,14 +119,14 @@ fun SettingsScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .heightIn(min = 44.dp)
-                            .padding(horizontal = 16.dp),
+                            .heightIn(min = ActionMinHeight)
+                            .padding(horizontal = KeynearSpacing.Lg),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             text = config.incomingDirectory,
                             color = palette.textPrimary,
-                            fontSize = 12.sp,
+                            fontSize = KeynearTypeSizes.Caption,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -176,18 +188,18 @@ fun SettingsScreen(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
                 ) {
                     Text(
                         text = config.ignoredMimeTypes.size.toString(),
                         color = palette.textMuted,
-                        fontSize = 14.sp,
+                        fontSize = KeynearTypeSizes.Description,
                         fontWeight = FontWeight.Bold,
                     )
                     if (mimeExpanded) {
-                        IconChevronUp(modifier = Modifier.size(20.dp), tint = palette.textMuted)
+                        IconChevronUp(modifier = Modifier.size(ControlIconSize), tint = palette.textMuted)
                     } else {
-                        IconChevronDown(modifier = Modifier.size(20.dp), tint = palette.textMuted)
+                        IconChevronDown(modifier = Modifier.size(ControlIconSize), tint = palette.textMuted)
                     }
                 }
             }
@@ -196,13 +208,13 @@ fun SettingsScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                        .padding(start = KeynearSpacing.Lg, end = KeynearSpacing.Lg, top = KeynearSpacing.Xs, bottom = KeynearSpacing.Lg),
+                    verticalArrangement = Arrangement.spacedBy(RowIconSize),
                 ) {
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
+                        verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
                     ) {
                         config.ignoredMimeTypes.forEach { mime ->
                             TactileSurface(
@@ -213,15 +225,15 @@ fun SettingsScreen(
                             ) {
                                 Row(
                                     modifier = Modifier
-                                        .heightIn(min = 38.dp)
-                                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                                        .heightIn(min = FieldHeight)
+                                        .padding(horizontal = RowIconSize, vertical = CompactGap),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
                                 ) {
                                     Text(
                                         text = mime,
                                         color = palette.textPrimary,
-                                        fontSize = 12.sp,
+                                        fontSize = KeynearTypeSizes.Caption,
                                         fontWeight = FontWeight.SemiBold,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
@@ -242,11 +254,11 @@ fun SettingsScreen(
                                         },
                                     ) {
                                         Box(
-                                            modifier = Modifier.padding(4.dp),
+                                            modifier = Modifier.padding(KeynearSpacing.Xs),
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             IconClose(
-                                                modifier = Modifier.size(16.dp),
+                                                modifier = Modifier.size(KeynearSpacing.Lg),
                                                 tint = palette.error,
                                             )
                                         }
@@ -259,7 +271,7 @@ fun SettingsScreen(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(ContentGap),
                     ) {
                         RecessedInput(
                             value = mimeInput,
@@ -271,7 +283,7 @@ fun SettingsScreen(
                             label = "Add",
                             primary = false,
                             enabled = mimeInput.trim().isNotEmpty(),
-                            minHeight = 50.dp,
+                            minHeight = ChipMinWidth,
                             onClick = {
                                 val nextMime = mimeInput.trim()
                                 if (nextMime.isNotEmpty() && !config.ignoredMimeTypes.contains(nextMime)) {
@@ -326,7 +338,7 @@ fun SettingsScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(KeynearSpacing.Sm))
     }
 }
 
@@ -366,39 +378,39 @@ fun PermissionsScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(10.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                    .padding(ContentGap),
+                verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
             ) {
                 rows.forEach { (title, sub, actionPair) ->
                     val (granted, onClick) = actionPair
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(14.dp),
+                            .padding(RowIconSize),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Md),
                     ) {
                         Column(
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Xs),
                         ) {
                             Text(
                                 text = title,
                                 color = palette.textPrimary,
-                                fontSize = 16.sp,
+                                fontSize = KeynearTypeSizes.Body,
                                 fontWeight = FontWeight.Bold,
                             )
                             Text(
                                 text = sub,
                                 color = palette.textMuted,
-                                fontSize = 12.sp,
-                                lineHeight = 19.sp,
+                                fontSize = KeynearTypeSizes.Caption,
+                                lineHeight = ValueTextSize,
                             )
                         }
                         ActionButton(
                             label = if (granted) "Allowed" else "Allow",
                             primary = !granted,
-                            minHeight = 48.dp,
+                            minHeight = KeynearSpacing.MinTouchTarget,
                             onClick = onClick,
                         )
                     }

@@ -7,6 +7,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,6 +40,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -55,11 +57,35 @@ import org.keynear.app.core.TransferStateUi
 import org.keynear.app.core.TransferUi
 import org.keynear.app.core.formatBytes
 import org.keynear.app.ui.navigation.KeynearActions
+import org.keynear.app.ui.theme.KeynearElevation
 import org.keynear.app.ui.theme.KeynearLayout
 import org.keynear.app.ui.theme.KeynearRadii
 import org.keynear.app.ui.theme.KeynearShapes
+import org.keynear.app.ui.theme.KeynearSpacing
+import org.keynear.app.ui.theme.KeynearTypeSizes
 import org.keynear.app.ui.theme.LocalKeynearPalette
 import kotlin.math.abs
+
+private val ActionButtonHorizontalPadding = 20.dp
+private val ControlMinHeight = 52.dp
+private val SwitchTrackWidth = 58.dp
+private val CaptionLetterSpacing = 0.8.sp
+private val CodeLetterSpacing = 4.sp
+private val CompactGap = 6.dp
+private val ContentGap = 10.dp
+private val DefaultElevation = 5.dp
+private val SelectionTileMinHeight = 128.dp
+private val SwitchDragThreshold = 18.dp
+private val SwitchMinWidth = 62.dp
+private val SwitchThumbRadius = 13.dp
+private val SwitchThumbSize = 26.dp
+private val SwitchTrackHeight = 34.dp
+private val SwitchTrackRadius = 17.dp
+private val TextSubtitleGap = 2.dp
+private val TransferActionMinHeight = 44.dp
+private val DisabledContainerAlpha = 0.45f
+private val DisabledContentAlpha = 0.65f
+
 
 enum class TactileTone {
     SURFACE,
@@ -84,83 +110,29 @@ private data class InsetShadowSpec(
     val color: Color,
 )
 
-private fun outerShadowSpecs(tone: TactileTone, isDark: Boolean): List<ShadowSpec> = when (tone) {
-    TactileTone.SURFACE -> if (isDark) {
-        listOf(
-            ShadowSpec(6.dp, 11.2.dp, (-3).dp, Color(0x73000000)),
-            ShadowSpec(2.dp, 2.6.dp, (-1).dp, Color(0x40000000)),
-        )
-    } else {
-        listOf(
-            ShadowSpec(5.dp, 9.5.dp, (-3).dp, Color(0x1405112F)),
-            ShadowSpec(2.dp, 2.6.dp, (-1).dp, Color(0x0A05112F)),
-        )
+private fun outerShadowSpecs(tone: TactileTone, isDark: Boolean): List<ShadowSpec> {
+    val specs = when (tone) {
+        TactileTone.SURFACE -> if (isDark) KeynearElevation.OuterSurfaceDark else KeynearElevation.OuterSurfaceLight
+        TactileTone.TONAL -> if (isDark) KeynearElevation.OuterTonalDark else KeynearElevation.OuterTonalLight
+        TactileTone.ACCENT -> if (isDark) KeynearElevation.OuterAccentDark else KeynearElevation.OuterAccentLight
+        TactileTone.SHEET -> if (isDark) KeynearElevation.OuterSheetDark else KeynearElevation.OuterSheetLight
+        TactileTone.THUMB -> if (isDark) KeynearElevation.OuterThumbDark else KeynearElevation.OuterThumbLight
+        TactileTone.INSET, TactileTone.NONE -> KeynearElevation.OuterNone
     }
-    TactileTone.TONAL -> if (isDark) {
-        listOf(ShadowSpec(4.dp, 7.8.dp, (-2).dp, Color(0x5E000000)))
-    } else {
-        listOf(ShadowSpec(3.dp, 6.dp, (-2).dp, Color(0x1205112F)))
-    }
-    TactileTone.ACCENT -> if (isDark) {
-        listOf(ShadowSpec(6.dp, 13.dp, (-3).dp, Color(0x5E0053E2)))
-    } else {
-        listOf(ShadowSpec(6.dp, 11.2.dp, (-3).dp, Color(0x52003DCF)))
-    }
-    TactileTone.SHEET -> if (isDark) {
-        listOf(ShadowSpec((-8).dp, 19.5.dp, (-4).dp, Color(0x80000000)))
-    } else {
-        listOf(ShadowSpec((-6).dp, 16.5.dp, (-4).dp, Color(0x1405112F)))
-    }
-    TactileTone.THUMB -> if (isDark) {
-        listOf(ShadowSpec(2.dp, 4.3.dp, 0.dp, Color(0x7A000000)))
-    } else {
-        listOf(ShadowSpec(2.dp, 3.6.dp, 0.dp, Color(0x3805112F)))
-    }
-    TactileTone.INSET, TactileTone.NONE -> emptyList()
+    return specs.map { ShadowSpec(it.offsetY, it.blurRadius, it.spread, it.color) }
 }
 
-private fun insetShadowSpecs(tone: TactileTone, isDark: Boolean): List<InsetShadowSpec> = when (tone) {
-    TactileTone.SURFACE -> if (isDark) listOf(
-        InsetShadowSpec(1.5.dp, 0.9.dp, Color(0x14FFFFFE)),
-        InsetShadowSpec((-2).dp, 2.6.dp, Color(0x80000000)),
-    ) else listOf(
-        InsetShadowSpec(1.5.dp, 0.9.dp, Color(0xF2FFFFFE)),
-        InsetShadowSpec((-2).dp, 1.8.dp, Color(0x0F05112F)),
-    )
-    TactileTone.TONAL -> if (isDark) listOf(
-        InsetShadowSpec(1.5.dp, 0.9.dp, Color(0x12FFFFFE)),
-        InsetShadowSpec((-1.5).dp, 1.8.dp, Color(0x73000000)),
-    ) else listOf(
-        InsetShadowSpec(1.5.dp, 0.9.dp, Color(0xCCFFFFFE)),
-        InsetShadowSpec((-1.5).dp, 1.5.dp, Color(0x1405112F)),
-    )
-    TactileTone.ACCENT -> if (isDark) listOf(
-        InsetShadowSpec(1.8.dp, 1.1.dp, Color(0x52FFFFFE)),
-        InsetShadowSpec((-2.5).dp, 2.6.dp, Color(0x80000000)),
-    ) else listOf(
-        InsetShadowSpec(1.8.dp, 1.1.dp, Color(0x70FFFFFE)),
-        InsetShadowSpec((-2.5).dp, 2.6.dp, Color(0x61000269)),
-    )
-    TactileTone.SHEET -> if (isDark) listOf(
-        InsetShadowSpec(1.5.dp, 0.9.dp, Color(0x17FFFFFE)),
-    ) else listOf(
-        InsetShadowSpec(2.dp, 1.1.dp, Color(0xF2FFFFFE)),
-    )
-    TactileTone.THUMB -> if (isDark) listOf(
-        InsetShadowSpec(1.5.dp, 0.9.dp, Color(0xE6FFFFFE)),
-        InsetShadowSpec((-1.5).dp, 1.2.dp, Color(0x40000000)),
-    ) else listOf(
-        InsetShadowSpec(1.5.dp, 0.9.dp, Color(0xFFFFFFFF)),
-        InsetShadowSpec((-1.5).dp, 1.2.dp, Color(0x2605112F)),
-    )
-    TactileTone.INSET -> if (isDark) listOf(
-        InsetShadowSpec(2.2.dp, 3.2.dp, Color(0x99000000)),
-        InsetShadowSpec((-1.2).dp, 0.9.dp, Color(0x1FFFFFFE)),
-    ) else listOf(
-        InsetShadowSpec(2.2.dp, 2.6.dp, Color(0x2405112F)),
-        InsetShadowSpec((-1.2).dp, 0.9.dp, Color(0xE6FFFFFE)),
-    )
-    TactileTone.NONE -> emptyList()
+private fun insetShadowSpecs(tone: TactileTone, isDark: Boolean): List<InsetShadowSpec> {
+    val specs = when (tone) {
+        TactileTone.SURFACE -> if (isDark) KeynearElevation.InsetSurfaceDark else KeynearElevation.InsetSurfaceLight
+        TactileTone.TONAL -> if (isDark) KeynearElevation.InsetTonalDark else KeynearElevation.InsetTonalLight
+        TactileTone.ACCENT -> if (isDark) KeynearElevation.InsetAccentDark else KeynearElevation.InsetAccentLight
+        TactileTone.SHEET -> if (isDark) KeynearElevation.InsetSheetDark else KeynearElevation.InsetSheetLight
+        TactileTone.THUMB -> if (isDark) KeynearElevation.InsetThumbDark else KeynearElevation.InsetThumbLight
+        TactileTone.INSET -> if (isDark) KeynearElevation.InsetInsetDark else KeynearElevation.InsetInsetLight
+        TactileTone.NONE -> KeynearElevation.InsetNone
+    }
+    return specs.map { InsetShadowSpec(it.offsetY, it.blurRadius, it.color) }
 }
 
 fun Modifier.tactileShadow(
@@ -272,7 +244,7 @@ fun TactileSurface(
     modifier: Modifier = Modifier,
     shape: Shape = KeynearShapes.Card,
     containerColor: Color = LocalKeynearPalette.current.surface,
-    shadowElevation: Dp = 5.dp,
+    shadowElevation: Dp = DefaultElevation,
     tone: TactileTone = if (shadowElevation == 0.dp) TactileTone.NONE else TactileTone.SURFACE,
     isAccent: Boolean = false,
     cornerRadius: Dp = KeynearRadii.TwoXl,
@@ -302,10 +274,10 @@ fun SectionHeading(
     Text(
         text = title.uppercase(),
         color = palette.textMuted,
-        fontSize = 12.sp,
+        fontSize = KeynearTypeSizes.Caption,
         fontWeight = FontWeight.Bold,
-        letterSpacing = 0.8.sp,
-        modifier = modifier.padding(horizontal = 4.dp),
+        letterSpacing = CaptionLetterSpacing,
+        modifier = modifier.padding(horizontal = KeynearSpacing.Xs),
     )
 }
 
@@ -321,40 +293,63 @@ fun KeynearSwitch(
         label = "switchTrack",
     )
     val thumbOffset by animateDpAsState(
-        targetValue = if (checked) 24.dp else 0.dp,
+        targetValue = if (checked) KeynearSpacing.Xl else 0.dp,
         label = "switchThumb",
     )
     val trackTone = if (checked) TactileTone.ACCENT else TactileTone.INSET
 
     Box(
         modifier = modifier
-            .defaultMinSize(minWidth = 62.dp, minHeight = 52.dp)
+            .defaultMinSize(minWidth = SwitchMinWidth, minHeight = ControlMinHeight)
+            .pointerInput(checked, onCheckedChange) {
+                var dragOffset = 0f
+                detectHorizontalDragGestures(
+                    onDragStart = { dragOffset = 0f },
+                    onHorizontalDrag = { change, dragAmount ->
+                        change.consume()
+                        dragOffset += dragAmount
+                        val threshold = SwitchDragThreshold.toPx()
+                        when {
+                            dragOffset > threshold && !checked -> {
+                                onCheckedChange(true)
+                                dragOffset = 0f
+                            }
+                            dragOffset < -threshold && checked -> {
+                                onCheckedChange(false)
+                                dragOffset = 0f
+                            }
+                        }
+                    },
+                    onDragEnd = { dragOffset = 0f },
+                    onDragCancel = { dragOffset = 0f },
+                )
+            }
             .clickable(role = Role.Switch) { onCheckedChange(!checked) },
         contentAlignment = Alignment.CenterEnd,
     ) {
         Box(
             modifier = Modifier
-                .width(58.dp)
-                .height(34.dp)
+                .width(SwitchTrackWidth)
+                .height(SwitchTrackHeight)
                 .tactileShadow(
                     tone = trackTone,
                     isDark = palette.isDark,
-                    cornerRadius = 17.dp,
+                    cornerRadius = SwitchTrackRadius,
                 )
                 .clip(CircleShape)
                 .background(trackColor)
-                .tactileCushion(tone = trackTone, isDark = palette.isDark, cornerRadius = 17.dp)
-                .padding(4.dp),
+                .tactileCushion(tone = trackTone, isDark = palette.isDark, cornerRadius = SwitchTrackRadius)
+                .padding(KeynearSpacing.Xs),
             contentAlignment = Alignment.CenterStart,
         ) {
             Box(
                 modifier = Modifier
                     .offset(x = thumbOffset)
-                    .size(26.dp)
+                    .size(SwitchThumbSize)
                     .tactileShadow(
                         tone = TactileTone.THUMB,
                         isDark = palette.isDark,
-                        cornerRadius = 13.dp,
+                        cornerRadius = SwitchThumbRadius,
                         isCircle = true,
                     )
                     .clip(CircleShape)
@@ -362,7 +357,7 @@ fun KeynearSwitch(
                     .tactileCushion(
                         tone = TactileTone.THUMB,
                         isDark = palette.isDark,
-                        cornerRadius = 13.dp,
+                        cornerRadius = SwitchThumbRadius,
                         isCircle = true,
                     ),
             )
@@ -384,7 +379,7 @@ fun SelectionTile(
     val textColor = if (active) palette.onLoadingTonal else palette.textPrimary
 
     TactileSurface(
-        modifier = modifier.heightIn(min = 128.dp),
+        modifier = modifier.heightIn(min = SelectionTileMinHeight),
         shape = KeynearShapes.Card,
         containerColor = bg,
         tone = if (active) TactileTone.TONAL else TactileTone.SURFACE,
@@ -394,17 +389,17 @@ fun SelectionTile(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 128.dp)
+                .heightIn(min = SelectionTileMinHeight)
                 .padding(KeynearLayout.CardPaddingLarge),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
             icon(iconColor)
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(KeynearSpacing.Md))
             Text(
                 text = label,
                 color = textColor,
-                fontSize = 16.sp,
+                fontSize = KeynearTypeSizes.Body,
                 fontWeight = FontWeight.Bold,
             )
         }
@@ -462,25 +457,25 @@ fun SettingRow(
     Row(
         modifier = baseModifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Md),
     ) {
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(end = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
+                .padding(end = KeynearSpacing.Sm),
+            verticalArrangement = Arrangement.spacedBy(TextSubtitleGap),
         ) {
             Text(
                 text = title,
                 color = palette.textPrimary,
-                fontSize = 16.sp,
+                fontSize = KeynearTypeSizes.Body,
                 fontWeight = FontWeight.SemiBold,
             )
             if (!subtitle.isNullOrBlank()) {
                 Text(
                     text = subtitle,
                     color = palette.textMuted,
-                    fontSize = 12.sp,
+                    fontSize = KeynearTypeSizes.Caption,
                 )
             }
         }
@@ -498,7 +493,7 @@ fun ActionButton(
     errorTonal: Boolean = false,
     tonalSurface: Boolean = false,
     enabled: Boolean = true,
-    minHeight: Dp = 48.dp,
+    minHeight: Dp = KeynearSpacing.MinTouchTarget,
     leadingIcon: (@Composable (Color) -> Unit)? = null,
 ) {
     val palette = LocalKeynearPalette.current
@@ -510,13 +505,13 @@ fun ActionButton(
         else -> palette.loadingTonal
     }
     val content = when {
-        danger || primary -> Color(0xFFFFFFFE)
+        danger || primary -> palette.onAccent
         errorTonal -> palette.onDangerAction
         tonalSurface -> palette.textPrimary
         else -> palette.onLoadingTonal
     }
-    val effectiveContainer = if (enabled) container else container.copy(alpha = 0.45f)
-    val effectiveContent = if (enabled) content else content.copy(alpha = 0.65f)
+    val effectiveContainer = if (enabled) container else container.copy(alpha = DisabledContainerAlpha)
+    val effectiveContent = if (enabled) content else content.copy(alpha = DisabledContentAlpha)
     val buttonTone = when {
         !enabled -> TactileTone.NONE
         primary -> TactileTone.ACCENT
@@ -535,18 +530,18 @@ fun ActionButton(
         Row(
             modifier = Modifier
                 .heightIn(min = minHeight)
-                .padding(horizontal = 20.dp, vertical = 10.dp),
+                .padding(horizontal = ActionButtonHorizontalPadding, vertical = ContentGap),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (leadingIcon != null) {
                 leadingIcon(effectiveContent)
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(KeynearSpacing.Sm))
             }
             Text(
                 text = label,
                 color = effectiveContent,
-                fontSize = 14.sp,
+                fontSize = KeynearTypeSizes.Description,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -566,7 +561,7 @@ fun RecessedInput(
     val palette = LocalKeynearPalette.current
     Box(
         modifier = modifier
-            .heightIn(min = 52.dp)
+            .heightIn(min = ControlMinHeight)
             .clip(KeynearShapes.Xl)
             .background(palette.input)
             .tactileCushion(
@@ -574,14 +569,14 @@ fun RecessedInput(
                 isDark = palette.isDark,
                 cornerRadius = KeynearRadii.Xl,
             )
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = KeynearSpacing.Lg, vertical = KeynearSpacing.Md),
         contentAlignment = Alignment.CenterStart,
     ) {
         if (value.isEmpty()) {
             Text(
                 text = placeholder,
                 color = palette.textMuted,
-                fontSize = 16.sp,
+                fontSize = KeynearTypeSizes.Body,
             )
         }
         BasicTextField(
@@ -591,7 +586,7 @@ fun RecessedInput(
             cursorBrush = SolidColor(palette.loading),
             textStyle = TextStyle(
                 color = palette.textPrimary,
-                fontSize = 16.sp,
+                fontSize = KeynearTypeSizes.Body,
                 fontWeight = FontWeight.Medium,
             ),
             modifier = Modifier.fillMaxWidth(),
@@ -628,21 +623,21 @@ fun TransportWarningBanner(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = KeynearSpacing.Lg, vertical = KeynearSpacing.Md),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(ContentGap),
         ) {
             Text(
                 text = msg,
                 color = palette.onWarningTonal,
-                fontSize = 12.sp,
+                fontSize = KeynearTypeSizes.Caption,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.weight(1f),
             )
             Text(
                 text = ctaLabel,
                 color = palette.onWarningTonal,
-                fontSize = 12.sp,
+                fontSize = KeynearTypeSizes.Caption,
                 fontWeight = FontWeight.Bold,
             )
         }
@@ -666,30 +661,30 @@ fun PendingPairingBanner(
     ) {
         Column(
             modifier = Modifier.padding(KeynearLayout.CardPadding),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
         ) {
             Text(
                 text = "PAIR WITH ${prompt.peerName.uppercase()}",
                 color = palette.textMuted,
-                fontSize = 12.sp,
+                fontSize = KeynearTypeSizes.Caption,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 0.8.sp,
+                letterSpacing = CaptionLetterSpacing,
             )
             Text(
                 text = prompt.verificationCode,
                 color = palette.textPrimary,
-                fontSize = 24.sp,
+                fontSize = KeynearTypeSizes.Title,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 4.sp,
+                letterSpacing = CodeLetterSpacing,
             )
             Text(
                 text = "Confirm this code matches (${prompt.remainingSecs}s)",
                 color = palette.textMuted,
-                fontSize = 12.sp,
+                fontSize = KeynearTypeSizes.Caption,
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
             ) {
                 ActionButton(
                     label = "Decline",
@@ -726,20 +721,20 @@ fun ActiveTransfersStrip(
     ) {
         Column(
             modifier = Modifier.padding(KeynearLayout.CardPadding),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(ContentGap),
         ) {
             transfers.take(2).forEach { tx ->
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(CompactGap)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = tx.summaryName,
                                 color = palette.textPrimary,
-                                fontSize = 14.sp,
+                                fontSize = KeynearTypeSizes.Description,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -748,7 +743,7 @@ fun ActiveTransfersStrip(
                             Text(
                                 text = "$dir ${tx.peerDisplayName} · ${formatBytes(tx.totalBytes)}",
                                 color = palette.textMuted,
-                                fontSize = 12.sp,
+                                fontSize = KeynearTypeSizes.Caption,
                             )
                         }
                         when (tx.state) {
@@ -757,13 +752,13 @@ fun ActiveTransfersStrip(
                                     label = "Decline",
                                     onClick = { onDecline(tx.transferId) },
                                     errorTonal = true,
-                                    minHeight = 44.dp,
+                                    minHeight = TransferActionMinHeight,
                                 )
                                 ActionButton(
                                     label = "Accept",
                                     onClick = { onAccept(tx.transferId) },
                                     primary = true,
-                                    minHeight = 44.dp,
+                                    minHeight = TransferActionMinHeight,
                                 )
                             }
                             TransferStateUi.ACTIVE -> {
@@ -771,7 +766,7 @@ fun ActiveTransfersStrip(
                                     label = "Cancel",
                                     onClick = { onCancel(tx.transferId) },
                                     errorTonal = true,
-                                    minHeight = 44.dp,
+                                    minHeight = TransferActionMinHeight,
                                 )
                             }
                             else -> {}
@@ -784,7 +779,7 @@ fun ActiveTransfersStrip(
                         progress = { fraction },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(6.dp)
+                            .height(CompactGap)
                             .clip(CircleShape),
                         color = palette.loading,
                         trackColor = palette.switchTrackOff,

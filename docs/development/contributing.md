@@ -26,7 +26,8 @@ Shared visual tokens (`Plus Jakarta Sans`, light/dark palettes, typography scale
 ## Quality Scripts and CI
 
 - `scripts/project/check.sh`: Runs `cargo fmt --check`, `cargo clippy`, `cargo test --workspace`, and `scripts/validation/repo-check.sh`.
-- `scripts/validation/repo-check.sh`: Verifies `.editorconfig`, `.gitignore` hygiene, and absence of committed secrets or `.env` files.
+- `scripts/validation/repo-check.sh`: Verifies `.editorconfig`, `.gitignore` hygiene, absence of committed secrets or `.env` files, and runs `scripts/validation/ui-ux-check.sh`.
+- `scripts/validation/ui-ux-check.sh`: Checks design-token parity against `design/tokens.json` and scans Android Kotlin/XML, GTK4 CSS, and Rust UI/tray/notification sources for hardcoded colors, dimensions, shapes, typography, motion, opacity, user-facing strings, and touch-target/accessibility violations.
 - `scripts/validation/commit-msg.sh`: Enforces `<prefix>: <imperative summary>` commit subjects within 80 characters.
 - `scripts/export/export-docs.sh`: Exports documentation and `proto3` schemas deterministically to `exports/`.
 - `.github/workflows/quality.yml`: Executes Rust checks, `nix flake check --no-build`, and Android `./gradlew testDebugUnitTest assembleDebug`.

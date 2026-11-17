@@ -41,7 +41,21 @@ import org.keynear.app.ui.navigation.KeynearActions
 import org.keynear.app.ui.theme.KeynearLayout
 import org.keynear.app.ui.theme.KeynearRadii
 import org.keynear.app.ui.theme.KeynearShapes
+import org.keynear.app.ui.theme.KeynearSpacing
+import org.keynear.app.ui.theme.KeynearTypeSizes
 import org.keynear.app.ui.theme.LocalKeynearPalette
+
+private val ActionIconSize = 20.dp
+private val ContentGap = 10.dp
+private val ControlMinHeight = 52.dp
+private val DetailRowMinHeight = 54.dp
+private val DeviceNameSize = 18.sp
+private val HeaderIconSize = 56.dp
+private val RowIconSize = 14.dp
+private val SectionIconSize = 28.dp
+private val TextSubtitleGap = 2.dp
+private val ValueSize = 22.sp
+
 
 @Composable
 fun DeviceDetailScreen(
@@ -61,7 +75,7 @@ fun DeviceDetailScreen(
             Text(
                 text = "Device no longer paired.",
                 color = palette.textMuted,
-                fontSize = 14.sp,
+                fontSize = KeynearTypeSizes.Description,
             )
         }
         return
@@ -94,21 +108,21 @@ fun DeviceDetailScreen(
                     .fillMaxWidth()
                     .padding(KeynearLayout.CardPaddingLarge),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Lg),
             ) {
                 TactileSurface(
-                    modifier = Modifier.size(56.dp),
+                    modifier = Modifier.size(HeaderIconSize),
                     shape = KeynearShapes.Xl,
                     containerColor = if (device.isOnline) palette.loadingTonal else palette.surfaceTonal,
                     tone = TactileTone.TONAL,
                     cornerRadius = KeynearRadii.Xl,
                 ) {
-                    Box(modifier = Modifier.size(56.dp), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.size(HeaderIconSize), contentAlignment = Alignment.Center) {
                         val iconTint = if (device.isOnline) palette.onLoadingTonal else palette.textMuted
                         if (device.role == DeviceRoleUi.DESKTOP) {
-                            IconLaptop(modifier = Modifier.size(28.dp), tint = iconTint)
+                            IconLaptop(modifier = Modifier.size(SectionIconSize), tint = iconTint)
                         } else {
-                            IconSmartphone(modifier = Modifier.size(28.dp), tint = iconTint)
+                            IconSmartphone(modifier = Modifier.size(SectionIconSize), tint = iconTint)
                         }
                     }
                 }
@@ -116,7 +130,7 @@ fun DeviceDetailScreen(
                     Text(
                         text = device.displayName,
                         color = palette.textPrimary,
-                        fontSize = 18.sp,
+                        fontSize = DeviceNameSize,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -124,7 +138,7 @@ fun DeviceDetailScreen(
                     Text(
                         text = "${if (device.isOnline) "Connected via Wi-Fi" else "Bluetooth standby"} (${device.pairedAt})",
                         color = palette.textMuted,
-                        fontSize = 14.sp,
+                        fontSize = KeynearTypeSizes.Description,
                     )
                 }
             }
@@ -141,19 +155,19 @@ fun DeviceDetailScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(KeynearLayout.CardPaddingLarge),
-                verticalArrangement = Arrangement.spacedBy(20.dp),
+                verticalArrangement = Arrangement.spacedBy(ActionIconSize),
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm)) {
                     Text(
                         text = "Computer name",
                         color = palette.textSecondary,
-                        fontSize = 14.sp,
+                        fontSize = KeynearTypeSizes.Description,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(ContentGap),
                     ) {
                         RecessedInput(
                             value = renameDraft,
@@ -165,7 +179,7 @@ fun DeviceDetailScreen(
                             label = "Save",
                             primary = true,
                             enabled = renameDraft.trim().isNotEmpty(),
-                            minHeight = 52.dp,
+                            minHeight = ControlMinHeight,
                             onClick = { actions.onRenameDevice(device.deviceId, renameDraft) },
                         )
                     }
@@ -174,24 +188,24 @@ fun DeviceDetailScreen(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Md),
                 ) {
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(end = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                            .padding(end = KeynearSpacing.Sm),
+                        verticalArrangement = Arrangement.spacedBy(TextSubtitleGap),
                     ) {
                         Text(
                             text = "Auto-accept files",
                             color = palette.textPrimary,
-                            fontSize = 16.sp,
+                            fontSize = KeynearTypeSizes.Body,
                             fontWeight = FontWeight.Bold,
                         )
                         Text(
                             text = "Save files from ${device.displayName} without asking",
                             color = palette.textMuted,
-                            fontSize = 12.sp,
+                            fontSize = KeynearTypeSizes.Caption,
                         )
                     }
                     KeynearSwitch(
@@ -203,8 +217,8 @@ fun DeviceDetailScreen(
                 }
 
                 Column(
-                    modifier = Modifier.padding(top = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.padding(top = KeynearSpacing.Xs),
+                    verticalArrangement = Arrangement.spacedBy(RowIconSize),
                 ) {
                     MetadataLine(label = "Key fingerprint", value = device.publicKeyFingerprint)
                     MetadataLine(
@@ -219,11 +233,11 @@ fun DeviceDetailScreen(
             }
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Md)) {
             TactileSurface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 54.dp),
+                    .heightIn(min = DetailRowMinHeight),
                 shape = KeynearShapes.Xl,
                 containerColor = palette.surface,
                 tone = TactileTone.SURFACE,
@@ -233,17 +247,17 @@ fun DeviceDetailScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 54.dp)
-                        .padding(horizontal = 20.dp),
+                        .heightIn(min = DetailRowMinHeight)
+                        .padding(horizontal = ActionIconSize),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                 ) {
-                    IconRefreshCw(modifier = Modifier.size(20.dp), tint = palette.textPrimary)
-                    Spacer(modifier = Modifier.size(10.dp))
+                    IconRefreshCw(modifier = Modifier.size(ActionIconSize), tint = palette.textPrimary)
+                    Spacer(modifier = Modifier.size(ContentGap))
                     Text(
                         text = "Reset Bluetooth bond",
                         color = palette.textPrimary,
-                        fontSize = 14.sp,
+                        fontSize = KeynearTypeSizes.Description,
                         fontWeight = FontWeight.Bold,
                     )
                 }
@@ -253,7 +267,7 @@ fun DeviceDetailScreen(
                 TactileSurface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 54.dp),
+                        .heightIn(min = DetailRowMinHeight),
                     shape = KeynearShapes.Xl,
                     containerColor = palette.surface,
                     tone = TactileTone.SURFACE,
@@ -263,17 +277,17 @@ fun DeviceDetailScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 54.dp)
-                            .padding(horizontal = 20.dp),
+                            .heightIn(min = DetailRowMinHeight)
+                            .padding(horizontal = ActionIconSize),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center,
                     ) {
-                        IconTrash2(modifier = Modifier.size(20.dp), tint = palette.error)
-                        Spacer(modifier = Modifier.size(10.dp))
+                        IconTrash2(modifier = Modifier.size(ActionIconSize), tint = palette.error)
+                        Spacer(modifier = Modifier.size(ContentGap))
                         Text(
                             text = "Remove device",
                             color = palette.error,
-                            fontSize = 14.sp,
+                            fontSize = KeynearTypeSizes.Description,
                             fontWeight = FontWeight.Bold,
                         )
                     }
@@ -290,30 +304,30 @@ fun DeviceDetailScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(KeynearLayout.CardPaddingLarge),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Lg),
                     ) {
                         Text(
                             text = "Remove ${device.displayName}? You will need to confirm a new 6-digit code on both devices to pair again.",
                             color = palette.onDangerTonal,
-                            fontSize = 14.sp,
+                            fontSize = KeynearTypeSizes.Description,
                             fontWeight = FontWeight.SemiBold,
-                            lineHeight = 22.sp,
+                            lineHeight = ValueSize,
                         )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Md),
                         ) {
                             ActionButton(
                                 label = "Remove device",
                                 danger = true,
-                                minHeight = 52.dp,
+                                minHeight = ControlMinHeight,
                                 onClick = { actions.onConfirmUnpair(device.deviceId) },
                                 modifier = Modifier.weight(1f),
                             )
                             ActionButton(
                                 label = "Cancel",
                                 tonalSurface = true,
-                                minHeight = 52.dp,
+                                minHeight = ControlMinHeight,
                                 onClick = actions.onCancelUnpair,
                                 modifier = Modifier.weight(1f),
                             )
@@ -323,7 +337,7 @@ fun DeviceDetailScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(KeynearSpacing.Sm))
     }
 }
 
@@ -338,12 +352,12 @@ private fun MetadataLine(label: String, value: String) {
         Text(
             text = label,
             color = palette.textMuted,
-            fontSize = 14.sp,
+            fontSize = KeynearTypeSizes.Description,
         )
         Text(
             text = value,
             color = palette.textSecondary,
-            fontSize = 12.sp,
+            fontSize = KeynearTypeSizes.Caption,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

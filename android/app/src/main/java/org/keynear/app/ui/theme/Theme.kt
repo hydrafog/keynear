@@ -22,7 +22,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 
 val LocalKeynearPalette = staticCompositionLocalOf { LightKeynearPalette }
@@ -60,31 +59,31 @@ val KeynearTypography = Typography(
         fontFamily = PlusJakartaSansFallback,
         fontWeight = FontWeight.SemiBold,
         fontSize = KeynearTypeSizes.Title,
-        lineHeight = 30.sp,
+        lineHeight = KeynearLineHeights.Title,
     ),
     titleMedium = TextStyle(
         fontFamily = PlusJakartaSansFallback,
         fontWeight = FontWeight.SemiBold,
         fontSize = KeynearTypeSizes.Heading,
-        lineHeight = 26.sp,
+        lineHeight = KeynearLineHeights.Heading,
     ),
     bodyLarge = TextStyle(
         fontFamily = PlusJakartaSansFallback,
         fontWeight = FontWeight.Normal,
         fontSize = KeynearTypeSizes.Body,
-        lineHeight = 24.sp,
+        lineHeight = KeynearLineHeights.Body,
     ),
     bodyMedium = TextStyle(
         fontFamily = PlusJakartaSansFallback,
         fontWeight = FontWeight.Normal,
         fontSize = KeynearTypeSizes.Description,
-        lineHeight = 20.sp,
+        lineHeight = KeynearLineHeights.Description,
     ),
     labelMedium = TextStyle(
         fontFamily = PlusJakartaSansFallback,
         fontWeight = FontWeight.Medium,
         fontSize = KeynearTypeSizes.Caption,
-        lineHeight = 16.sp,
+        lineHeight = KeynearLineHeights.Caption,
     ),
 )
 

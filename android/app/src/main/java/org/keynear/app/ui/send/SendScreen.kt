@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.compose.ui.window.Dialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,7 +51,19 @@ import org.keynear.app.ui.navigation.KeynearActions
 import org.keynear.app.ui.theme.KeynearLayout
 import org.keynear.app.ui.theme.KeynearRadii
 import org.keynear.app.ui.theme.KeynearShapes
+import org.keynear.app.ui.theme.KeynearSpacing
+import org.keynear.app.ui.theme.KeynearTypeSizes
 import org.keynear.app.ui.theme.LocalKeynearPalette
+
+private val ActionIconSize = 20.dp
+private val ButtonHeight = 40.dp
+private val ContentGap = 10.dp
+private val QueueHeaderHeight = 38.dp
+private val RowIconSize = 14.dp
+private val RowMinHeight = 56.dp
+private val TargetRowMinHeight = 68.dp
+private val TextSubtitleGap = 2.dp
+
 
 @Composable
 fun SendScreen(
@@ -88,14 +101,14 @@ fun SendScreen(
                         onClick = actions.onPickFiles,
                         modifier = Modifier.weight(1f),
                     ) { tint ->
-                        IconFile(modifier = Modifier.size(32.dp), tint = tint)
+                        IconFile(modifier = Modifier.size(KeynearSpacing.TwoXl), tint = tint)
                     }
                     SelectionTile(
                         label = "Folder",
                         onClick = actions.onPickFolder,
                         modifier = Modifier.weight(1f),
                     ) { tint ->
-                        IconFolder(modifier = Modifier.size(32.dp), tint = tint)
+                        IconFolder(modifier = Modifier.size(KeynearSpacing.TwoXl), tint = tint)
                     }
                 }
                 Row(
@@ -107,52 +120,70 @@ fun SendScreen(
                         onClick = actions.onStageClipboard,
                         modifier = Modifier.weight(1f),
                     ) { tint ->
-                        IconClipboard(modifier = Modifier.size(32.dp), tint = tint)
+                        IconClipboard(modifier = Modifier.size(KeynearSpacing.TwoXl), tint = tint)
                     }
                     SelectionTile(
                         label = "Text",
-                        active = textComposerOpen,
-                        onClick = { textComposerOpen = !textComposerOpen },
+                        onClick = { textComposerOpen = true },
                         modifier = Modifier.weight(1f),
                     ) { tint ->
-                        IconPlus(modifier = Modifier.size(32.dp), tint = tint)
+                        IconPlus(modifier = Modifier.size(KeynearSpacing.TwoXl), tint = tint)
                     }
                 }
             }
         }
 
         if (textComposerOpen) {
-            TactileSurface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = KeynearShapes.Card,
-                containerColor = palette.surface,
-                tone = TactileTone.SURFACE,
-                cornerRadius = KeynearRadii.TwoXl,
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(KeynearLayout.CardPadding),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+            Dialog(onDismissRequest = { textComposerOpen = false }) {
+                TactileSurface(
+                    shape = KeynearShapes.Card,
+                    containerColor = palette.surface,
+                    tone = TactileTone.SURFACE,
+                    cornerRadius = KeynearRadii.TwoXl,
                 ) {
-                    RecessedInput(
-                        value = textDraft,
-                        onValueChange = { textDraft = it },
-                        placeholder = "Paste URL or note",
-                        modifier = Modifier.weight(1f),
-                    )
-                    ActionButton(
-                        label = "Add",
-                        primary = true,
-                        enabled = textDraft.isNotBlank(),
-                        minHeight = 52.dp,
-                        onClick = {
-                            actions.onStageTextSnippet(textDraft)
-                            textDraft = ""
-                            textComposerOpen = false
-                        },
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(KeynearLayout.CardPadding),
+                        verticalArrangement = Arrangement.spacedBy(ContentGap),
+                    ) {
+                        Text(
+                            text = "Add text",
+                            color = palette.textPrimary,
+                            fontSize = KeynearTypeSizes.Heading,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        RecessedInput(
+                            value = textDraft,
+                            onValueChange = { textDraft = it },
+                            placeholder = "Paste URL or note",
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(ContentGap),
+                        ) {
+                            ActionButton(
+                                label = "Cancel",
+                                onClick = {
+                                    textDraft = ""
+                                    textComposerOpen = false
+                                },
+                                modifier = Modifier.weight(1f),
+                            )
+                            ActionButton(
+                                label = "Add",
+                                primary = true,
+                                enabled = textDraft.isNotBlank(),
+                                onClick = {
+                                    actions.onStageTextSnippet(textDraft)
+                                    textDraft = ""
+                                    textComposerOpen = false
+                                },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -166,19 +197,19 @@ fun SendScreen(
         ) {
             Column(
                 modifier = Modifier.padding(KeynearLayout.CardPadding),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(ContentGap),
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(38.dp)
-                        .padding(horizontal = 2.dp),
+                        .height(QueueHeaderHeight)
+                        .padding(horizontal = TextSubtitleGap),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = "${queue.size} item(s) (${formatBytes(totalBytes)})",
                         color = palette.textPrimary,
-                        fontSize = 14.sp,
+                        fontSize = KeynearTypeSizes.Description,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f),
                     )
@@ -187,7 +218,7 @@ fun SendScreen(
                             label = "Clear all",
                             onClick = actions.onClearQueue,
                             errorTonal = true,
-                            minHeight = 38.dp,
+                            minHeight = QueueHeaderHeight,
                         )
                     }
                 }
@@ -196,7 +227,7 @@ fun SendScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp)
+                            .height(RowMinHeight)
                             .clip(KeynearShapes.Xl)
                             .background(palette.trackWell)
                             .tactileCushion(
@@ -204,24 +235,24 @@ fun SendScreen(
                                 isDark = palette.isDark,
                                 cornerRadius = KeynearRadii.Xl,
                             )
-                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                            .padding(horizontal = RowIconSize, vertical = KeynearSpacing.Sm),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(ContentGap),
                     ) {
                         IconFile(
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(ActionIconSize),
                             tint = palette.textMuted,
                         )
                         Text(
                             text = "No items selected",
                             color = palette.textMuted,
-                            fontSize = 14.sp,
+                            fontSize = KeynearTypeSizes.Description,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
                 } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm)) {
                         queue.forEach { item ->
                             TactileSurface(
                                 modifier = Modifier.fillMaxWidth(),
@@ -233,33 +264,33 @@ fun SendScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(56.dp)
-                                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                                        .height(RowMinHeight)
+                                        .padding(horizontal = RowIconSize, vertical = KeynearSpacing.Sm),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(ContentGap),
                                 ) {
                                     when (item.kind) {
                                         SendItemKind.FOLDER -> IconFolder(
-                                            modifier = Modifier.size(20.dp),
+                                            modifier = Modifier.size(ActionIconSize),
                                             tint = palette.textSecondary,
                                         )
                                         SendItemKind.CLIPBOARD -> IconClipboard(
-                                            modifier = Modifier.size(20.dp),
+                                            modifier = Modifier.size(ActionIconSize),
                                             tint = palette.textSecondary,
                                         )
                                         SendItemKind.TEXT -> IconPlus(
-                                            modifier = Modifier.size(20.dp),
+                                            modifier = Modifier.size(ActionIconSize),
                                             tint = palette.textSecondary,
                                         )
                                         SendItemKind.FILE -> IconFile(
-                                            modifier = Modifier.size(20.dp),
+                                            modifier = Modifier.size(ActionIconSize),
                                             tint = palette.textSecondary,
                                         )
                                     }
                                     Text(
                                         text = item.name,
                                         color = palette.textPrimary,
-                                        fontSize = 14.sp,
+                                        fontSize = KeynearTypeSizes.Description,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.weight(1f),
@@ -267,10 +298,10 @@ fun SendScreen(
                                     Text(
                                         text = formatBytes(item.sizeBytes),
                                         color = palette.textMuted,
-                                        fontSize = 12.sp,
+                                        fontSize = KeynearTypeSizes.Caption,
                                     )
                                     TactileSurface(
-                                        modifier = Modifier.size(40.dp),
+                                        modifier = Modifier.size(ButtonHeight),
                                         shape = KeynearShapes.Xl,
                                         containerColor = palette.errorAction,
                                         tone = TactileTone.TONAL,
@@ -278,11 +309,11 @@ fun SendScreen(
                                         onClick = { actions.onRemoveQueueItem(item.id) },
                                     ) {
                                         Box(
-                                            modifier = Modifier.size(40.dp),
+                                            modifier = Modifier.size(ButtonHeight),
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             IconClose(
-                                                modifier = Modifier.size(20.dp),
+                                                modifier = Modifier.size(ActionIconSize),
                                                 tint = palette.error,
                                             )
                                         }
@@ -315,14 +346,14 @@ fun SendScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(min = 68.dp)
-                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                .heightIn(min = TargetRowMinHeight)
+                                .padding(horizontal = RowIconSize, vertical = KeynearSpacing.Md),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Md),
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(48.dp)
+                                    .size(KeynearSpacing.MinTouchTarget)
                                     .clip(KeynearShapes.Xl)
                                     .background(palette.trackWell)
                                     .tactileCushion(
@@ -333,14 +364,14 @@ fun SendScreen(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 IconLaptop(
-                                    modifier = Modifier.size(24.dp),
+                                    modifier = Modifier.size(KeynearSpacing.Xl),
                                     tint = palette.textMuted,
                                 )
                             }
                             Text(
                                 text = "No paired devices",
                                 color = palette.textMuted,
-                                fontSize = 14.sp,
+                                fontSize = KeynearTypeSizes.Description,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -350,38 +381,38 @@ fun SendScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .heightIn(min = 68.dp)
-                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    .heightIn(min = TargetRowMinHeight)
+                                    .padding(horizontal = RowIconSize, vertical = KeynearSpacing.Md),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Md),
                             ) {
                                 TactileSurface(
-                                    modifier = Modifier.size(48.dp),
+                                    modifier = Modifier.size(KeynearSpacing.MinTouchTarget),
                                     shape = KeynearShapes.Xl,
                                     containerColor = palette.surfaceTonal,
                                     tone = TactileTone.TONAL,
                                     cornerRadius = KeynearRadii.Xl,
                                 ) {
                                     Box(
-                                        modifier = Modifier.size(48.dp),
+                                        modifier = Modifier.size(KeynearSpacing.MinTouchTarget),
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         val iconTint = palette.textSecondary
                                         if (device.role == DeviceRoleUi.DESKTOP) {
-                                            IconLaptop(modifier = Modifier.size(24.dp), tint = iconTint)
+                                            IconLaptop(modifier = Modifier.size(KeynearSpacing.Xl), tint = iconTint)
                                         } else {
-                                            IconSmartphone(modifier = Modifier.size(24.dp), tint = iconTint)
+                                            IconSmartphone(modifier = Modifier.size(KeynearSpacing.Xl), tint = iconTint)
                                         }
                                     }
                                 }
                                 Column(
                                     modifier = Modifier.weight(1f),
-                                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                                    verticalArrangement = Arrangement.spacedBy(TextSubtitleGap),
                                 ) {
                                     Text(
                                         text = device.displayName,
                                         color = palette.textPrimary,
-                                        fontSize = 16.sp,
+                                        fontSize = KeynearTypeSizes.Body,
                                         fontWeight = FontWeight.Bold,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
@@ -389,7 +420,7 @@ fun SendScreen(
                                     Text(
                                         text = if (device.isOnline) "Connected via Wi-Fi" else "Bluetooth standby",
                                         color = palette.textMuted,
-                                        fontSize = 12.sp,
+                                        fontSize = KeynearTypeSizes.Caption,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                     )
@@ -398,9 +429,9 @@ fun SendScreen(
                                     label = "Send",
                                     primary = idx == 0,
                                     enabled = queue.isNotEmpty(),
-                                    minHeight = 48.dp,
+                                    minHeight = KeynearSpacing.MinTouchTarget,
                                     leadingIcon = { tint ->
-                                        IconSend(modifier = Modifier.size(16.dp), tint = tint)
+                                        IconSend(modifier = Modifier.size(KeynearSpacing.Lg), tint = tint)
                                     },
                                     onClick = { actions.onSendQueueToPeer(device) },
                                 )
@@ -411,6 +442,6 @@ fun SendScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(KeynearSpacing.Sm))
     }
 }

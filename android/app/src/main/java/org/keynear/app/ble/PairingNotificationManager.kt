@@ -24,7 +24,6 @@ import org.keynear.app.core.TransferUi
 import org.keynear.app.core.computeTransferProgressModel
 import org.keynear.app.core.formatByteCount
 import org.keynear.app.service.KeynearForegroundService
-import org.keynear.app.ui.theme.KeynearTokenHex
 
 object PairingNotificationManager {
     const val CHANNEL_ID = "keynear_pairing"
@@ -175,8 +174,8 @@ object PairingNotificationManager {
         openPending: PendingIntent,
         cancelPending: PendingIntent,
     ): Notification {
-        val accentColor = (KeynearTokenHex.ACCENT_BLUE_600 and 0xFFFFFFFFL).toInt()
-        val focusColor = (KeynearTokenHex.FOCUS_BLUE_500 and 0xFFFFFFFFL).toInt()
+        val accentColor = 0xFF004CED.toInt()
+        val focusColor = 0xFF0172F9.toInt()
         val prepareEnd = model.segmentWeights[0]
         val transferEnd = prepareEnd + model.segmentWeights[1]
         val progressStyle = Notification.ProgressStyle()
