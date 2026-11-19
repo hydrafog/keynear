@@ -1602,15 +1602,70 @@ mod tests {
             test_mod_findings = [f for f in findings if f.file_path.endswith("bad.rs") and f.line >= 12]
             self.assertEqual(test_mod_findings, [])
 
+    def test_baseline_allows_existing_and_fails_on_regressions(self) -> None:
+        base_findings = [
+            Finding("DIM-001", "dimensions", "a.kt", 10, "msg", "10.dp"),
+            Finding("DIM-001", "dimensions", "a.kt", 20, "msg", "20.dp"),
+        ]
+        counts = build_baseline_counts(base_findings)
+        regs, baselined, resolved = apply_baseline(base_findings, counts)
+        self.assertEqual(regs, [])
+        self.assertEqual(baselined, 2)
+        self.assertEqual(resolved, 0)
 
-def format_text_report(findings: list[Finding]) -> str:
+        reg_findings = base_findings + [Finding("DIM-001", "dimensions", "a.kt", 30, "msg", "30.dp")]
+        regs, baselined, resolved = apply_baseline(reg_findings, counts)
+        self.assertEqual(len(regs), 1)
+        self.assertEqual(regs[0].line, 30)
+        self.assertEqual(baselined, 2)
+
+        fewer_findings = [base_findings[0]]
+        regs, baselined, resolved = apply_baseline(fewer_findings, counts)
+        self.assertEqual(regs, [])
+        self.assertEqual(baselined, 1)
+        self.assertEqual(resolved, 1)
+
+
+def build_baseline_counts(findings: list[Finding]) -> dict[str, dict[str, int]]:
+    counts: dict[str, dict[str, int]] = {}
+    for f in findings:
+        file_map = counts.setdefault(f.file_path, {})
+        file_map[f.rule_id] = file_map.get(f.rule_id, 0) + 1
+    return {fp: dict(sorted(rules.items())) for fp, rules in sorted(counts.items())}
+
+
+def apply_baseline(findings: list[Finding], baseline_counts: dict[str, dict[str, int]]) -> tuple[list[Finding], int, int]:
+    grouped: dict[tuple[str, str], list[Finding]] = {}
+    for f in findings:
+        grouped.setdefault((f.file_path, f.rule_id), []).append(f)
+
+    regressions: list[Finding] = []
+    baselined = 0
+    for (fp, rid), items in sorted(grouped.items()):
+        allowed = int(baseline_counts.get(fp, {}).get(rid, 0))
+        if len(items) > allowed:
+            baselined += allowed
+            regressions.extend(items[allowed:])
+        else:
+            baselined += len(items)
+
+    baseline_total = sum(sum(rules.values()) for rules in baseline_counts.values())
+    resolved = max(0, baseline_total - baselined)
+    regressions.sort(key=lambda f: (f.file_path, f.line, f.rule_id))
+    return regressions, baselined, resolved
+
+
+def format_text_report(findings: list[Finding], baselined: int = 0, resolved: int = 0) -> str:
     if not findings:
+        if baselined or resolved:
+            return f"ui-ux-check: OK (0 new findings; {baselined} baselined, {resolved} resolved)"
         return "ui-ux-check: OK (0 findings)"
     by_cat: dict[str, int] = {}
     for f in findings:
         by_cat[f.category] = by_cat.get(f.category, 0) + 1
     summary = ", ".join(f"{cat}={count}" for cat, count in sorted(by_cat.items()))
-    lines = [f"ui-ux-check: FAILED ({len(findings)} findings: {summary})"]
+    prefix = "new " if baselined or resolved else ""
+    lines = [f"ui-ux-check: FAILED ({len(findings)} {prefix}findings: {summary})"]
     for f in findings:
         lines.append(f"  [{f.rule_id}] {f.file_path}:{f.line}: {f.message}")
         if f.snippet:
@@ -1625,6 +1680,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2], help="Repository root directory")
     parser.add_argument("--category", action="append", choices=ALL_CATEGORIES, help="Run/report only selected category (repeatable)")
     parser.add_argument("--exclude-category", action="append", choices=ALL_CATEGORIES, help="Exclude category (repeatable)")
+    parser.add_argument("--baseline", type=Path, help="Path to baseline JSON file; only fail on findings exceeding baseline counts")
+    parser.add_argument("--update-baseline", type=Path, help="Write current finding counts to baseline JSON file and exit 0")
     parser.add_argument("--format", choices=("text", "json"), default="text", help="Output format")
     parser.add_argument("--warn-only", action="store_true", help="Report findings without non-zero exit status")
     parser.add_argument("--list-rules", action="store_true", help="List all rule IDs and exit")
@@ -1645,15 +1702,36 @@ def main(argv: list[str] | None = None) -> int:
     exclude_categories = set(args.exclude_category) if args.exclude_category else None
     findings = run_checks(args.root.resolve(), categories=categories, exclude_categories=exclude_categories)
 
+    if args.update_baseline:
+        baseline_payload = {
+            "version": 1,
+            "counts": build_baseline_counts(findings),
+        }
+        args.update_baseline.write_text(json.dumps(baseline_payload, indent=2) + "\n", encoding="utf-8")
+        print(f"ui-ux-check: updated baseline {args.update_baseline} ({len(findings)} findings)")
+        return 0
+
+    baselined = 0
+    resolved = 0
+    if args.baseline:
+        if not args.baseline.is_file():
+            print(f"ui-ux-check: baseline file not found: {args.baseline}", file=sys.stderr)
+            return 1
+        raw_baseline = json.loads(args.baseline.read_text(encoding="utf-8"))
+        baseline_counts = raw_baseline.get("counts", {})
+        findings, baselined, resolved = apply_baseline(findings, baseline_counts)
+
     if args.format == "json":
         payload = {
             "ok": len(findings) == 0,
             "total": len(findings),
+            "baselined": baselined,
+            "resolved": resolved,
             "findings": [f.__dict__ for f in findings],
         }
         print(json.dumps(payload, indent=2))
     else:
-        print(format_text_report(findings))
+        print(format_text_report(findings, baselined=baselined, resolved=resolved))
 
     if findings and not args.warn_only:
         return 1

@@ -31,7 +31,7 @@ if git grep -nE "BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY" -- . ':!.prototype/' >/d
   exit 1
 fi
 
-bash "$repo_root/scripts/validation/ui-ux-check.sh"
+bash "$repo_root/scripts/validation/ui-ux-check.sh" --baseline "$repo_root/scripts/validation/ui-ux-baseline.json"
 
 echo "repo-check: OK"
 
