@@ -66,6 +66,9 @@ impl SimpleComponent for SettingsModel {
     ) -> ComponentParts<Self> {
         let mut model = SettingsModel::from_init(init);
         model.root_window = Some(root.clone());
+        if model.ipc_socket_path.is_some() {
+            crate::portal::refresh_from_daemon(&mut model, false);
+        }
         install_css(&root, model.dark_theme);
 
         {

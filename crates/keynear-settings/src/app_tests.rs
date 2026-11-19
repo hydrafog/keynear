@@ -116,3 +116,57 @@ fn prototype_tabs_send_queue_and_settings_persist() {
 
     let _ = fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn portal_and_state_surface_max_ipc_mimes_error() {
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("clock")
+        .as_nanos();
+    let dir = std::env::temp_dir().join(format!("keynear-settings-mimes-{nonce}"));
+    fs::create_dir_all(&dir).expect("mkdir");
+    let cfg_path = dir.join("config.toml");
+    let cfg = DaemonConfig {
+        ignored_mime_types: (0..128)
+            .map(|idx| format!("application/x-custom-{idx}"))
+            .collect(),
+        ..Default::default()
+    };
+    cfg.save_to_path(&cfg_path).expect("save cfg");
+
+    let mut model = SettingsModel::from_init(SettingsInit {
+        config: cfg,
+        config_path: Some(cfg_path),
+        everyone_remaining_secs: None,
+        error_message: None,
+        warning_message: None,
+        transfer_error: None,
+        paired_devices: Vec::new(),
+        nearby_peers: Vec::new(),
+        transfers: Vec::new(),
+        send_paths: Vec::new(),
+        selected_send_device_id: None,
+        send_picker_active: false,
+        device_store: PairedDeviceStore::new(dir.join("devices.toml")),
+        secret_store: None,
+        ipc_socket_path: Some(dir.join("missing-daemon.sock")),
+    });
+
+    model.apply_msg(SettingsMsg::UpdateMimeInput(
+        "application/x-overflow".to_string(),
+    ));
+    model.apply_msg(SettingsMsg::AddIgnoredMime);
+    assert_eq!(model.ignored_mime_types().len(), 128);
+    assert!(model.error_message().is_some());
+
+    model.apply_msg(SettingsMsg::RemoveIgnoredMime(
+        "application/x-custom-0".to_string(),
+    ));
+    assert_eq!(model.ignored_mime_types().len(), 127);
+    assert!(
+        model.error_message().is_some(),
+        "IPC socket error from persist_config must surface instead of being swallowed"
+    );
+
+    let _ = fs::remove_dir_all(&dir);
+}

@@ -276,7 +276,12 @@ pub(crate) fn persist_config(model: &mut SettingsModel) {
             Ok(IpcResponse::Error { message }) => {
                 model.error_message = Some(message);
             }
-            Ok(_) | Err(_) => {}
+            Ok(other) => {
+                model.error_message = Some(format!("Unexpected daemon IPC response: {other:?}"));
+            }
+            Err(err) => {
+                model.error_message = Some(format!("Failed to persist config to daemon: {err}"));
+            }
         }
     }
 }
@@ -298,7 +303,12 @@ pub(crate) fn sync_visibility(model: &mut SettingsModel, mode: VisibilityMode) {
             Ok(IpcResponse::Error { message }) => {
                 model.error_message = Some(message);
             }
-            Ok(_) | Err(_) => {}
+            Ok(other) => {
+                model.error_message = Some(format!("Unexpected daemon IPC response: {other:?}"));
+            }
+            Err(err) => {
+                model.error_message = Some(format!("Failed to persist config to daemon: {err}"));
+            }
         }
     }
 }
@@ -335,6 +345,21 @@ pub(crate) fn refresh_from_daemon(model: &mut SettingsModel, surface_error: bool
                 ));
             }
             return;
+        }
+    }
+    match ipc::send_request_to(sock_path, &IpcRequest::GetConfig) {
+        Ok(IpcResponse::Config(cfg)) => {
+            model.incoming_directory = cfg.incoming_directory.clone();
+            model.config = cfg;
+        }
+        Ok(IpcResponse::Error { message }) => {
+            model.transfer_error = Some(message);
+        }
+        Ok(_) => {}
+        Err(err) => {
+            if surface_error {
+                model.transfer_error = Some(err.to_string());
+            }
         }
     }
     match ipc::send_request_to(sock_path, &IpcRequest::ListTransfers) {

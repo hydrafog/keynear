@@ -600,8 +600,15 @@ impl SettingsModel {
             SettingsMsg::ToggleMimeExpanded => self.mime_editor_open = !self.mime_editor_open,
             SettingsMsg::UpdateMimeInput(raw) => self.new_mime_input = raw,
             SettingsMsg::AddIgnoredMime => {
+                const MAX_IPC_MIMES: usize = 128;
                 let trimmed = self.new_mime_input.trim().to_string();
                 if !trimmed.is_empty() && !self.config.ignored_mime_types.contains(&trimmed) {
+                    if self.config.ignored_mime_types.len() >= MAX_IPC_MIMES {
+                        self.error_message = Some(format!(
+                            "Ignored MIME list cannot exceed {MAX_IPC_MIMES} entries."
+                        ));
+                        return;
+                    }
                     self.config.ignored_mime_types.push(trimmed);
                     self.new_mime_input.clear();
                     self.error_message = None;

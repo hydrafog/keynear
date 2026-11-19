@@ -1,4 +1,5 @@
 mod ble;
+mod clipboard;
 mod ipc;
 mod notifications;
 mod service;

@@ -8,6 +8,8 @@ use ksni::TrayMethods;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, warn};
 
+const COPY_LATEST_OTP_LABEL: &str = "Copy latest OTP";
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TrayCommand {
     SetVisibility(VisibilityMode),
@@ -16,6 +18,7 @@ pub enum TrayCommand {
     CancelTransfer(String),
     SetAutoAcceptFromPaired(bool),
     SetDeviceAutoAccept { device_id: String, enabled: bool },
+    CopyLatestOtp,
     LaunchSettings,
     LaunchSendPicker { device_id: Option<String> },
 }
@@ -25,6 +28,7 @@ pub struct TrayState {
     pub visibility_mode: VisibilityMode,
     pub everyone_remaining_secs: Option<u64>,
     pub auto_accept_from_paired: bool,
+    pub has_latest_otp: bool,
     pub paired_devices: Vec<PairedDevice>,
     pub transfers: Vec<TransferSession>,
     pub mdns_degraded: bool,
@@ -40,6 +44,7 @@ pub struct TrayMenuSnapshot {
     pub paired_device_labels: Vec<String>,
     pub transfer_labels: Vec<String>,
     pub auto_accept_from_paired: bool,
+    pub has_latest_otp: bool,
 }
 
 pub fn format_everyone_label(mode: VisibilityMode, remaining_secs: Option<u64>) -> String {
@@ -115,6 +120,7 @@ pub fn build_tray_snapshot(state: &TrayState) -> TrayMenuSnapshot {
         paired_device_labels,
         transfer_labels,
         auto_accept_from_paired: state.auto_accept_from_paired,
+        has_latest_otp: state.has_latest_otp,
     }
 }
 
@@ -379,6 +385,17 @@ impl ksni::Tray for KeynearTray {
             }
             .into(),
         );
+        items.push(
+            StandardItem {
+                label: COPY_LATEST_OTP_LABEL.to_string(),
+                enabled: self.state.has_latest_otp,
+                activate: Box::new(|this: &mut Self| {
+                    let _ = this.cmd_tx.send(TrayCommand::CopyLatestOtp);
+                }),
+                ..Default::default()
+            }
+            .into(),
+        );
         items.push(MenuItem::Separator);
         items.push(
             StandardItem {
@@ -435,6 +452,7 @@ mod tests {
             visibility_mode: VisibilityMode::EveryoneNearby,
             everyone_remaining_secs: Some(125),
             auto_accept_from_paired: true,
+            has_latest_otp: true,
             paired_devices: vec![PairedDevice {
                 device_id: "pixel-9".to_string(),
                 display_name: "Pixel 9".to_string(),
@@ -457,6 +475,7 @@ mod tests {
         assert_eq!(snapshot.title, "Keynear — Everyone (02:05)");
         assert_eq!(snapshot.paired_device_labels, vec!["Pixel 9 (auto-accept)"]);
         assert!(!snapshot.needs_attention);
+        assert!(snapshot.has_latest_otp);
     }
 
     #[test]
@@ -465,6 +484,7 @@ mod tests {
             visibility_mode: VisibilityMode::PairedOnly,
             everyone_remaining_secs: None,
             auto_accept_from_paired: false,
+            has_latest_otp: false,
             paired_devices: Vec::new(),
             transfers: vec![TransferSession {
                 transfer_id: "tx-7".to_string(),

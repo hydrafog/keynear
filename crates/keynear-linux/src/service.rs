@@ -6,8 +6,9 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 use keynear_core::{
-    default_config_dir, parse_endpoint_id_bytes, v1, DaemonConfig, KeynearError, MdnsDiscovery,
-    Oo7SecretStore, OrionNodeConfig, OrionQuicNode, PairedDeviceStore, SecretStore, TransferEngine,
+    default_config_dir, parse_endpoint_id_bytes, read_stream_kind, v1, ClipboardEngine,
+    ClipboardItem, ClipboardPolicy, DaemonConfig, KeynearError, MdnsDiscovery, Oo7SecretStore,
+    OrionNodeConfig, OrionQuicNode, PairedDeviceStore, QuicStreamKind, SecretStore, TransferEngine,
     TransferState, VisibilityMode, EVERYONE_NEARBY_TIMEOUT_SECS,
 };
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -16,8 +17,10 @@ use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::{mpsc, watch, Mutex, Notify};
 use tokio::time::Instant;
 use tracing::{info, warn};
+use zeroize::Zeroizing;
 
 use crate::ble::{BleDriverParams, BlePeerDriver, DEFAULT_CAPABILITY_FLAGS};
+use crate::clipboard::{start_clipboard_monitor, ClipboardChange, ClipboardMonitorHandle};
 use crate::ipc::{
     daemon_socket_path, decode_request, encode_response, prepare_daemon_socket_dir,
     set_daemon_socket_permissions, DaemonStatus, IpcRequest, IpcResponse, MAX_IPC_FRAME_BYTES,
@@ -39,6 +42,7 @@ pub struct RuntimeOptions {
     pub enable_ipc: bool,
     pub enable_tray: bool,
     pub enable_notifications: bool,
+    pub enable_clipboard: bool,
     pub config_path: Option<PathBuf>,
     pub ipc_socket_path: Option<PathBuf>,
     pub quic_bind_addr: Option<SocketAddr>,
@@ -56,6 +60,7 @@ impl Default for RuntimeOptions {
             enable_ipc: true,
             enable_tray: true,
             enable_notifications: true,
+            enable_clipboard: true,
             config_path: None,
             ipc_socket_path: None,
             quic_bind_addr: None,
@@ -144,6 +149,7 @@ impl DaemonRuntime {
     {
         config.validate()?;
         let (visibility_tx, visibility_rx) = watch::channel(config.visibility_mode);
+        let (config_watch_tx, config_watch_rx) = watch::channel(config.clone());
         let initial_mode = config.visibility_mode;
         let config_state = Arc::new(Mutex::new(config.clone()));
         let config_path = options.config_path.clone();
@@ -166,6 +172,22 @@ impl DaemonRuntime {
             PathBuf::from(&config.incoming_directory),
             config.auto_accept_from_paired,
         ));
+        let (incoming_clip_tx, mut incoming_clip_rx) = mpsc::unbounded_channel::<ClipboardItem>();
+        let clipboard_engine = Arc::new(ClipboardEngine::with_incoming_sender(
+            ClipboardPolicy::from(config),
+            incoming_clip_tx,
+        ));
+        let (clip_change_tx, mut clip_change_rx) = mpsc::unbounded_channel::<ClipboardChange>();
+        let clipboard_handle = if options.enable_clipboard {
+            start_clipboard_monitor(config_watch_rx, clip_change_tx)
+        } else {
+            ClipboardMonitorHandle::headless()
+        };
+        info!(
+            event = "clipboard_monitor_ready",
+            backend = clipboard_handle.backend().as_str()
+        );
+        let latest_otp: Arc<Mutex<Option<Zeroizing<String>>>> = Arc::new(Mutex::new(None));
         let known_peers = Arc::new(Mutex::new(HashSet::new()));
 
         let quic_node = if let Some(ref secrets) = secret_store {
@@ -266,6 +288,7 @@ impl DaemonRuntime {
         if let Some(ref node) = quic_node {
             let accept_node = Arc::clone(node);
             let accept_engine = Arc::clone(&transfer_engine);
+            let accept_clipboard = Arc::clone(&clipboard_engine);
             let accept_store = device_store.clone();
             let accept_secrets = secret_store.clone();
             let accept_known = Arc::clone(&known_peers);
@@ -285,10 +308,41 @@ impl DaemonRuntime {
                                 warn!(event = "peer_sync_on_accept_failed", error = %err);
                             }
                             let conn_engine = Arc::clone(&accept_engine);
+                            let conn_clipboard = Arc::clone(&accept_clipboard);
                             tokio::spawn(async move {
-                                let _ = conn_engine
-                                    .handle_incoming_connection(peer_device_id, conn)
-                                    .await;
+                                while let Ok((send, mut recv)) = conn.accept_bi().await {
+                                    match read_stream_kind(&mut recv).await {
+                                        Ok(
+                                            kind @ (QuicStreamKind::RawFileChunk
+                                            | QuicStreamKind::StoredZipArchive),
+                                        ) => {
+                                            let eng = Arc::clone(&conn_engine);
+                                            let peer = peer_device_id.clone();
+                                            tokio::spawn(async move {
+                                                let _ = eng
+                                                    .handle_incoming_stream_with_kind(
+                                                        &peer, kind, send, recv,
+                                                    )
+                                                    .await;
+                                            });
+                                        }
+                                        Ok(
+                                            kind @ (QuicStreamKind::Control
+                                            | QuicStreamKind::ClipboardBlob),
+                                        ) => {
+                                            let clip = Arc::clone(&conn_clipboard);
+                                            let peer = peer_device_id.clone();
+                                            tokio::spawn(async move {
+                                                let _ = clip
+                                                    .handle_incoming_stream_with_kind(
+                                                        &peer, kind, send, recv,
+                                                    )
+                                                    .await;
+                                            });
+                                        }
+                                        Err(_) => break,
+                                    }
+                                }
                             });
                         }
                         Ok(None) => break,
@@ -296,6 +350,90 @@ impl DaemonRuntime {
                             warn!(event = "quic_accept_failed", error = %err);
                         }
                     }
+                }
+            }));
+
+            let out_node = Arc::clone(node);
+            let out_clip = Arc::clone(&clipboard_engine);
+            let out_store = device_store.clone();
+            tasks.push(tokio::spawn(async move {
+                while let Some(change) = clip_change_rx.recv().await {
+                    let peers = out_store.load().unwrap_or_default();
+                    match change {
+                        ClipboardChange::Text { mime_type, text } => {
+                            for peer in peers {
+                                if let Err(err) = out_clip
+                                    .send_clipboard_payload(
+                                        &out_node,
+                                        &peer.device_id,
+                                        &mime_type,
+                                        text.as_bytes(),
+                                        false,
+                                    )
+                                    .await
+                                {
+                                    if !matches!(err, KeynearError::UnauthorizedPeer(_)) {
+                                        warn!(
+                                            event = "clipboard_send_failed",
+                                            peer_device_id = %peer.device_id,
+                                            error = %err
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                        ClipboardChange::ImageOffer {
+                            offered_mimes,
+                            render,
+                        } => match out_clip.register_delayed_offer(
+                            offered_mimes,
+                            true,
+                            false,
+                            0,
+                            render,
+                        ) {
+                            Ok(offer) => {
+                                for peer in peers {
+                                    if let Err(err) = out_clip
+                                        .send_delayed_offer(&out_node, &peer.device_id, &offer)
+                                        .await
+                                    {
+                                        if !matches!(err, KeynearError::UnauthorizedPeer(_)) {
+                                            warn!(
+                                                event = "clipboard_offer_send_failed",
+                                                peer_device_id = %peer.device_id,
+                                                error = %err
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                            Err(err) => {
+                                warn!(event = "clipboard_offer_rejected", error = %err);
+                            }
+                        },
+                    }
+                }
+            }));
+        }
+
+        {
+            let in_clip_engine = Arc::clone(&clipboard_engine);
+            let in_node = quic_node.clone();
+            let in_handle = clipboard_handle.clone();
+            let in_otp = Arc::clone(&latest_otp);
+            let in_refresh = Arc::clone(&refresh_notify);
+            tasks.push(tokio::spawn(async move {
+                while let Some(item) = incoming_clip_rx.recv().await {
+                    apply_incoming_clipboard_item(
+                        item,
+                        &in_clip_engine,
+                        in_node.as_deref(),
+                        &in_handle,
+                        &in_otp,
+                        &in_refresh,
+                    )
+                    .await;
                 }
             }));
         }
@@ -390,6 +528,7 @@ impl DaemonRuntime {
             visibility_tx: visibility_tx.clone(),
             visibility_rx: visibility_rx.clone(),
             config_state: Arc::clone(&config_state),
+            config_watch_tx: config_watch_tx.clone(),
             config_path: config_path.clone(),
             everyone_nearby_timeout: options.everyone_nearby_timeout,
             everyone_deadline: Arc::clone(&everyone_deadline),
@@ -399,6 +538,9 @@ impl DaemonRuntime {
             secret_store: secret_store.clone(),
             quic_node: quic_node.clone(),
             transfer_engine: Arc::clone(&transfer_engine),
+            clipboard_engine: Arc::clone(&clipboard_engine),
+            clipboard_handle: clipboard_handle.clone(),
+            latest_otp: Arc::clone(&latest_otp),
             known_peers: Arc::clone(&known_peers),
             mdns_degraded,
             mdns: mdns.clone(),
@@ -530,10 +672,12 @@ impl DaemonRuntime {
             _ = revert_timer => {}
         }
 
+        clipboard_handle.shutdown();
         if let Some(handle) = tray_handle {
             handle.shutdown().await;
         }
         drop(shared_ctx);
+        drop(config_watch_tx);
         drop(lan_watch_tx);
         drop(visibility_tx);
         for handle in tasks {
@@ -575,6 +719,7 @@ struct IpcDispatchContext {
     visibility_tx: watch::Sender<VisibilityMode>,
     visibility_rx: watch::Receiver<VisibilityMode>,
     config_state: Arc<Mutex<DaemonConfig>>,
+    config_watch_tx: watch::Sender<DaemonConfig>,
     config_path: Option<PathBuf>,
     everyone_nearby_timeout: Duration,
     everyone_deadline: Arc<Mutex<Option<Instant>>>,
@@ -584,6 +729,9 @@ struct IpcDispatchContext {
     secret_store: Option<Arc<dyn SecretStore>>,
     quic_node: Option<Arc<OrionQuicNode>>,
     transfer_engine: Arc<TransferEngine>,
+    clipboard_engine: Arc<ClipboardEngine>,
+    clipboard_handle: ClipboardMonitorHandle,
+    latest_otp: Arc<Mutex<Option<Zeroizing<String>>>>,
     known_peers: Arc<Mutex<HashSet<String>>>,
     mdns_degraded: bool,
     mdns: Option<Arc<MdnsDiscovery>>,
@@ -730,6 +878,9 @@ async fn apply_daemon_config(
         .set_auto_accept_from_paired(new_config.auto_accept_from_paired);
     ctx.transfer_engine
         .set_incoming_directory(PathBuf::from(&new_config.incoming_directory))?;
+    ctx.clipboard_engine
+        .set_policy(ClipboardPolicy::from(new_config));
+    let _ = ctx.config_watch_tx.send(new_config.clone());
     *ctx.everyone_deadline.lock().await =
         if new_config.visibility_mode == VisibilityMode::EveryoneNearby {
             Some(Instant::now() + ctx.everyone_nearby_timeout)
@@ -754,6 +905,7 @@ async fn build_tray_state(ctx: &IpcDispatchContext) -> TrayState {
     let deadline = *ctx.everyone_deadline.lock().await;
     let everyone_remaining_secs = compute_remaining_secs(visibility_mode, deadline);
     let auto_accept_from_paired = ctx.config_state.lock().await.auto_accept_from_paired;
+    let has_latest_otp = ctx.latest_otp.lock().await.is_some();
     let paired_devices = ctx.device_store.load().unwrap_or_default();
     let transfers = ctx.transfer_engine.list_transfers();
     let mdns_degraded = ctx
@@ -765,9 +917,72 @@ async fn build_tray_state(ctx: &IpcDispatchContext) -> TrayState {
         visibility_mode,
         everyone_remaining_secs,
         auto_accept_from_paired,
+        has_latest_otp,
         paired_devices,
         transfers,
         mdns_degraded,
+    }
+}
+
+async fn apply_incoming_clipboard_item(
+    item: ClipboardItem,
+    clipboard_engine: &ClipboardEngine,
+    quic_node: Option<&OrionQuicNode>,
+    clipboard_handle: &ClipboardMonitorHandle,
+    latest_otp: &Mutex<Option<Zeroizing<String>>>,
+    refresh_notify: &Notify,
+) {
+    if item.is_image_offer {
+        let policy = clipboard_engine.policy();
+        if !policy.clipboard_sync_enabled || !policy.clipboard_images_enabled {
+            return;
+        }
+        let Some(node) = quic_node else {
+            return;
+        };
+        match clipboard_engine
+            .fetch_clipboard_image(node, &item.peer_device_id, &item.offer_id, &item.mime_type)
+            .await
+        {
+            Ok(fetched) => {
+                if let Err(err) = clipboard_handle
+                    .write_clipboard_async(&fetched.mime_type, &fetched.data)
+                    .await
+                {
+                    warn!(event = "clipboard_apply_image_failed", error = %err);
+                }
+            }
+            Err(err) => {
+                warn!(event = "clipboard_fetch_image_failed", error = %err);
+            }
+        }
+        return;
+    }
+
+    if item.is_otp {
+        if let Ok(code) = std::str::from_utf8(&item.data) {
+            let trimmed = code.trim();
+            if !trimmed.is_empty() {
+                let mut guard = latest_otp.lock().await;
+                *guard = Some(Zeroizing::new(trimmed.to_string()));
+                drop(guard);
+                refresh_notify.notify_waiters();
+                if let Err(err) = clipboard_handle
+                    .write_clipboard_async("text/plain;charset=utf-8", trimmed.as_bytes())
+                    .await
+                {
+                    warn!(event = "clipboard_apply_otp_failed", error = %err);
+                }
+                return;
+            }
+        }
+    }
+
+    if let Err(err) = clipboard_handle
+        .write_clipboard_async(&item.mime_type, &item.data)
+        .await
+    {
+        warn!(event = "clipboard_apply_failed", error = %err);
     }
 }
 
@@ -805,6 +1020,18 @@ async fn handle_tray_command(cmd: TrayCommand, ctx: &IpcDispatchContext) {
                 }
                 Err(err) => {
                     warn!(event = "tray_device_toggle_failed", error = %err);
+                }
+            }
+        }
+        TrayCommand::CopyLatestOtp => {
+            let otp = ctx.latest_otp.lock().await.clone();
+            if let Some(code) = otp {
+                if let Err(err) = ctx
+                    .clipboard_handle
+                    .write_clipboard_async("text/plain;charset=utf-8", code.as_bytes())
+                    .await
+                {
+                    warn!(event = "copy_latest_otp_failed", error = %err);
                 }
             }
         }
@@ -1135,6 +1362,7 @@ mod tests {
             enable_ipc: false,
             enable_tray: false,
             enable_notifications: false,
+            enable_clipboard: false,
             quic_bind_addr: Some("127.0.0.1:0".parse().expect("loopback")),
             ..Default::default()
         };
@@ -1201,6 +1429,7 @@ mod tests {
             enable_ipc: false,
             enable_tray: false,
             enable_notifications: false,
+            enable_clipboard: false,
             ..Default::default()
         };
 
@@ -1270,6 +1499,7 @@ mod tests {
                         enable_ipc: true,
                         enable_tray: false,
                         enable_notifications: false,
+                        enable_clipboard: false,
                         ipc_socket_path: Some(bob_sock),
                         quic_bind_addr: Some("127.0.0.1:0".parse().expect("addr")),
                         ..Default::default()
@@ -1300,6 +1530,7 @@ mod tests {
                         enable_ipc: true,
                         enable_tray: false,
                         enable_notifications: false,
+                        enable_clipboard: false,
                         ipc_socket_path: Some(alice_sock),
                         quic_bind_addr: Some("127.0.0.1:0".parse().expect("addr")),
                         ..Default::default()
@@ -1478,6 +1709,7 @@ mod tests {
                         enable_ipc: true,
                         enable_tray: false,
                         enable_notifications: false,
+                        enable_clipboard: false,
                         config_path: Some(cfg_path),
                         ipc_socket_path: Some(sock),
                         quic_bind_addr: Some("127.0.0.1:0".parse().expect("addr")),
@@ -1643,6 +1875,133 @@ mod tests {
             .await
             .expect("join runtime")
             .expect("runtime exit");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn latest_otp_stays_in_memory_only_and_enables_tray_action() {
+        let dir = temp_service_dir("otp-ram");
+        let incoming_dir = dir.join("incoming");
+        fs::create_dir_all(&incoming_dir).expect("mkdir");
+        let config_path = dir.join("config.toml");
+        let mut initial_config = DaemonConfig {
+            incoming_directory: incoming_dir.display().to_string(),
+            ..Default::default()
+        };
+        initial_config
+            .save_to_path(&config_path)
+            .expect("save config");
+
+        let device_store = PairedDeviceStore::new(dir.join("devices.toml"));
+        let (visibility_tx, visibility_rx) = watch::channel(initial_config.visibility_mode);
+        let (config_watch_tx, _config_watch_rx) = watch::channel(initial_config.clone());
+        let clipboard_engine =
+            Arc::new(ClipboardEngine::new(ClipboardPolicy::from(&initial_config)));
+        let clipboard_handle = ClipboardMonitorHandle::headless();
+        let latest_otp = Arc::new(Mutex::new(None));
+        let refresh_notify = Arc::new(Notify::new());
+
+        let ctx = IpcDispatchContext {
+            local_device_id: "host-linux".to_string(),
+            visibility_tx,
+            visibility_rx,
+            config_state: Arc::new(Mutex::new(initial_config.clone())),
+            config_watch_tx,
+            config_path: Some(config_path.clone()),
+            everyone_nearby_timeout: Duration::from_secs(60),
+            everyone_deadline: Arc::new(Mutex::new(None)),
+            deadline_notify: Arc::new(Notify::new()),
+            refresh_notify: Arc::clone(&refresh_notify),
+            device_store,
+            secret_store: None,
+            quic_node: None,
+            transfer_engine: Arc::new(TransferEngine::new(incoming_dir, false)),
+            clipboard_engine: Arc::clone(&clipboard_engine),
+            clipboard_handle: clipboard_handle.clone(),
+            latest_otp: Arc::clone(&latest_otp),
+            known_peers: Arc::new(Mutex::new(HashSet::new())),
+            mdns_degraded: false,
+            mdns: None,
+        };
+
+        assert!(!build_tray_state(&ctx).await.has_latest_otp);
+
+        apply_incoming_clipboard_item(
+            ClipboardItem {
+                id: "otp-1".to_string(),
+                peer_device_id: "pixel-9".to_string(),
+                mime_type: "text/plain;charset=utf-8".to_string(),
+                data: b"847291".to_vec(),
+                is_otp: true,
+                is_image_offer: false,
+                offer_id: String::new(),
+                offered_mimes: Vec::new(),
+            },
+            &clipboard_engine,
+            None,
+            &clipboard_handle,
+            &latest_otp,
+            &refresh_notify,
+        )
+        .await;
+
+        assert!(build_tray_state(&ctx).await.has_latest_otp);
+        assert_eq!(
+            latest_otp.lock().await.as_deref().map(String::as_str),
+            Some("847291")
+        );
+
+        apply_incoming_clipboard_item(
+            ClipboardItem {
+                id: "otp-2".to_string(),
+                peer_device_id: "pixel-9".to_string(),
+                mime_type: "text/plain;charset=utf-8".to_string(),
+                data: b"654321".to_vec(),
+                is_otp: true,
+                is_image_offer: false,
+                offer_id: String::new(),
+                offered_mimes: Vec::new(),
+            },
+            &clipboard_engine,
+            None,
+            &clipboard_handle,
+            &latest_otp,
+            &refresh_notify,
+        )
+        .await;
+
+        assert_eq!(
+            latest_otp.lock().await.as_deref().map(String::as_str),
+            Some("654321")
+        );
+        handle_tray_command(TrayCommand::CopyLatestOtp, &ctx).await;
+
+        let status = build_daemon_status(&ctx).await.expect("status");
+        let status_debug = format!("{status:?}");
+        assert!(!status_debug.contains("847291"));
+        assert!(!status_debug.contains("654321"));
+
+        initial_config
+            .ignored_mime_types
+            .push("application/x-custom-secret".to_string());
+        let resp = dispatch_ipc_request(
+            IpcRequest::UpdateConfig {
+                config: initial_config,
+            },
+            &ctx,
+        )
+        .await;
+        assert!(matches!(resp, IpcResponse::Config(_)));
+        assert!(!clipboard_engine.can_accept_mimes(
+            &["application/x-custom-secret".to_string()],
+            false,
+            false
+        ));
+
+        let saved_toml = fs::read_to_string(&config_path).expect("read config.toml");
+        assert!(!saved_toml.contains("847291"));
+        assert!(!saved_toml.contains("654321"));
+
         let _ = fs::remove_dir_all(&dir);
     }
 
