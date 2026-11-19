@@ -4,7 +4,7 @@ use gtk4::prelude::*;
 use relm4::ComponentSender;
 
 use crate::state::{ActiveTab, SettingsModel, SettingsMsg};
-use crate::views::{lucide_icon, LucideIcon};
+use crate::views::components::{lucide_icon, LucideIcon};
 
 pub(crate) const STYLE_CSS: &str = include_str!("../../assets/style.css");
 

@@ -1,12 +1,12 @@
 use gtk4::pango::EllipsizeMode;
 use gtk4::prelude::*;
-use keynear_core::{DeviceRole, PairedDevice};
+use keynear_protocol::{DeviceRole, PairedDevice};
 use relm4::ComponentSender;
 
 use crate::state::{
     format_bytes, role_label, SendItemKind, SendQueueItem, SettingsModel, SettingsMsg,
 };
-use crate::views::{clear_box_children, lucide_icon, LucideIcon};
+use crate::views::components::{clear_box_children, lucide_icon, LucideIcon};
 
 pub(crate) struct SendTabParts {
     pub(crate) root: gtk4::ScrolledWindow,

@@ -1,0 +1,86 @@
+config:
+  validation: true
+  warningsAsErrors: true
+
+naming:
+  FunctionNaming:
+    active: true
+    ignoreAnnotated:
+      - "Composable"
+  PackageNaming:
+    active: true
+
+complexity:
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 25
+    thresholdInClasses: 20
+    thresholdInInterfaces: 20
+    thresholdInObjects: 25
+    ignorePrivate: true
+  LongParameterList:
+    active: true
+    allowedFunctionParameters: 10
+    allowedConstructorParameters: 10
+    ignoreAnnotated:
+      - "Composable"
+  LongMethod:
+    active: true
+    allowedLines: 140
+  CyclomaticComplexMethod:
+    active: true
+    allowedComplexity: 25
+  NestedBlockDepth:
+    active: true
+    allowedDepth: 5
+
+style:
+  MagicNumber:
+    active: true
+    ignoreNumbers:
+      - "-1"
+      - "0"
+      - "1"
+      - "2"
+      - "3"
+      - "4"
+      - "8"
+      - "10"
+      - "16"
+      - "24"
+      - "32"
+      - "60"
+      - "100"
+    ignoreHashCodeFunction: true
+    ignorePropertyDeclaration: true
+    ignoreConstantDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreEnums: true
+  ReturnCount:
+    active: true
+    max: 6
+  MaxLineLength:
+    active: true
+    maxLineLength: 140
+  ThrowsCount:
+    active: true
+    max: 4
+  UnusedPrivateFunction:
+    active: true
+  UnusedPrivateProperty:
+    active: true
+  ForbiddenComment:
+    active: true
+    comments:
+      - value: "NOCOMMIT"
+        reason: "Remove temporary debug markers before commit."
+      - value: "STOPSHIP"
+        reason: "Resolve shipping blockers before merge."
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: false
+
+coroutines:
+  active: true
+

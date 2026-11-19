@@ -1,12 +1,11 @@
 use gtk4::gdk::Display;
 use gtk4::prelude::*;
-use keynear_core::VisibilityMode;
+use keynear_protocol::VisibilityMode;
 use relm4::{ComponentParts, ComponentSender, RelmApp, SimpleComponent};
 
 use crate::portal::{dispatch_send_for_device, spawn_portal_picker};
-#[cfg(not(test))]
-use crate::state::SettingsMsg;
 use crate::state::{format_bytes, format_countdown_short, ActiveTab, SubScreen};
+use crate::views::components::sync_switch;
 use crate::views::device_detail::{build_device_detail, update_device_detail, DeviceDetailParts};
 use crate::views::receive::{
     build_receive_tab, rebuild_radar_pins, rebuild_sheet_rows, rebuild_transfers_rows,
@@ -20,13 +19,9 @@ use crate::views::shell::{
     build_bottom_nav, build_snackbar, build_status_banner, build_top_bar, install_css,
     BottomNavParts, SnackbarParts, StatusBannerParts, TopBarParts,
 };
-use crate::views::sync_switch;
 
-#[cfg(test)]
 pub use crate::portal::file_uri_to_path;
-#[cfg(test)]
-pub use crate::state::{PendingPairingView, SettingsMsg};
-pub use crate::state::{SettingsInit, SettingsModel};
+pub use crate::state::{PendingPairingView, SettingsInit, SettingsModel, SettingsMsg};
 
 pub const STYLE_CSS: &str = include_str!("../assets/style.css");
 

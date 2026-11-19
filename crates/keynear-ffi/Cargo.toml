@@ -1,0 +1,31 @@
+[package]
+name = "keynear-ffi"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "keynear_core"
+crate-type = ["rlib", "cdylib"]
+
+[features]
+default = []
+bindgen-cli = ["uniffi/cli"]
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi_bindgen.rs"
+required-features = ["bindgen-cli"]
+
+[dependencies]
+hex.workspace = true
+keynear-core = { path = "../keynear-core" }
+keynear-protocol = { path = "../keynear-protocol" }
+prost.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+toml.workspace = true
+uniffi.workspace = true
+zeroize.workspace = true
+

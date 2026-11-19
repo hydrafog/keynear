@@ -8,12 +8,12 @@ import android.content.ComponentName
 import android.content.Context
 import android.os.Build
 import android.util.Log
-import org.keynear.app.ble.PairingNotificationManager
-import org.keynear.app.core.CoreClientProvider
-import org.keynear.app.core.CoreState
-import org.keynear.app.core.TransferDirectionUi
-import org.keynear.app.core.TransferStateUi
-import org.keynear.app.core.TransferUi
+import org.keynear.app.ble.PairingNotifier
+import org.keynear.app.bridge.CoreClientProvider
+import org.keynear.app.ui.model.CoreState
+import org.keynear.app.ui.model.TransferDirectionUi
+import org.keynear.app.ui.model.TransferStateUi
+import org.keynear.app.ui.model.TransferUi
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -28,12 +28,12 @@ class KeynearTransferJobService : JobService() {
         val initialTransfer = activeTransfersFromState(client.loadState()).firstOrNull()
             ?: placeholderTransfer()
 
-        val initialNotification = PairingNotificationManager.buildTransferProgressNotification(
+        val initialNotification = PairingNotifier.buildTransferProgressNotification(
             context = app,
             transfer = initialTransfer,
             sdkInt = Build.VERSION.SDK_INT,
         )
-        val initialNotificationId = PairingNotificationManager.progressNotificationId(initialTransfer.transferId)
+        val initialNotificationId = PairingNotifier.progressNotificationId(initialTransfer.transferId)
 
         if (Build.VERSION.SDK_INT >= 34) {
             runCatching {
@@ -66,19 +66,19 @@ class KeynearTransferJobService : JobService() {
                         return@runCatching
                     }
                     if (Build.VERSION.SDK_INT >= 34) {
-                        val updated = PairingNotificationManager.buildTransferProgressNotification(
+                        val updated = PairingNotifier.buildTransferProgressNotification(
                             context = app,
                             transfer = current,
                             sdkInt = Build.VERSION.SDK_INT,
                         )
                         setNotification(
                             params,
-                            PairingNotificationManager.progressNotificationId(current.transferId),
+                            PairingNotifier.progressNotificationId(current.transferId),
                             updated,
                             JOB_END_NOTIFICATION_POLICY_DETACH,
                         )
                     } else {
-                        PairingNotificationManager.showOrUpdateTransferProgress(app, current)
+                        PairingNotifier.showOrUpdateTransferProgress(app, current)
                     }
                 }.onFailure { err ->
                     Log.w(TAG, "job_poll_failed: ${err.message}")

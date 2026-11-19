@@ -1,0 +1,124 @@
+{
+  "version": 1,
+  "counts": {
+    "android/app/src/main/java/org/keynear/app/MainActivity.kt": {
+      "DIM-001": 4,
+      "SHP-001": 1,
+      "STR-001": 4,
+      "TYP-001": 1
+    },
+    "android/app/src/main/java/org/keynear/app/ble/PairingNotifier.kt": {
+      "STR-001": 1
+    },
+    "android/app/src/main/java/org/keynear/app/share/ShareActivity.kt": {
+      "DIM-001": 17,
+      "SHP-001": 11,
+      "STR-001": 10,
+      "TYP-001": 5
+    },
+    "android/app/src/main/java/org/keynear/app/ui/components/KeynearControls.kt": {
+      "DIM-001": 3,
+      "STR-001": 3
+    },
+    "android/app/src/main/java/org/keynear/app/ui/devices/DeviceDetailScreen.kt": {
+      "DIM-001": 8,
+      "STR-001": 11,
+      "TYP-001": 2
+    },
+    "android/app/src/main/java/org/keynear/app/ui/navigation/KeynearActivityHelpers.kt": {
+      "STR-001": 13
+    },
+    "android/app/src/main/java/org/keynear/app/ui/navigation/KeynearShell.kt": {
+      "DIM-001": 11,
+      "STR-001": 3,
+      "TYP-001": 2
+    },
+    "android/app/src/main/java/org/keynear/app/ui/receive/ReceiveScreen.kt": {
+      "DIM-001": 2
+    },
+    "android/app/src/main/java/org/keynear/app/ui/receive/ReceiveSections.kt": {
+      "DIM-001": 26,
+      "MOT-001": 5,
+      "OPA-001": 1,
+      "STR-001": 5,
+      "TYP-001": 1
+    },
+    "android/app/src/main/java/org/keynear/app/ui/send/SendScreen.kt": {
+      "DIM-001": 8,
+      "STR-001": 16
+    },
+    "android/app/src/main/java/org/keynear/app/ui/settings/SettingsScreen.kt": {
+      "DIM-001": 7,
+      "STR-001": 24,
+      "TYP-001": 1
+    },
+    "android/designsystem/src/main/java/org/keynear/designsystem/ControlsButtons.kt": {
+      "DIM-001": 4,
+      "OPA-001": 2
+    },
+    "android/designsystem/src/main/java/org/keynear/designsystem/ControlsCards.kt": {
+      "DIM-001": 2,
+      "TYP-001": 1
+    },
+    "android/designsystem/src/main/java/org/keynear/designsystem/ControlsIndicators.kt": {
+      "DIM-001": 10
+    },
+    "android/designsystem/src/main/java/org/keynear/designsystem/ControlsSheets.kt": {
+      "TYP-001": 2
+    },
+    "android/designsystem/src/main/java/org/keynear/designsystem/KeynearIcons.kt": {
+      "DIM-001": 1
+    },
+    "android/designsystem/src/main/java/org/keynear/designsystem/Theme.kt": {
+      "TOK-003": 1
+    },
+    "android/designsystem/src/main/java/org/keynear/designsystem/Tokens.kt": {
+      "TOK-002": 10
+    },
+    "crates/keynear-linux/src/tray.rs": {
+      "STR-003": 9
+    },
+    "crates/keynear-settings/assets/style.css": {
+      "COL-002": 151,
+      "DIM-002": 118,
+      "OPA-001": 1,
+      "TOK-004": 36,
+      "TYP-003": 38
+    },
+    "crates/keynear-settings/src/app.rs": {
+      "STR-003": 5
+    },
+    "crates/keynear-settings/src/lib.rs": {
+      "COL-003": 12
+    },
+    "crates/keynear-settings/src/views/device_detail.rs": {
+      "DIM-003": 21,
+      "STR-003": 11
+    },
+    "crates/keynear-settings/src/views/receive/mod.rs": {
+      "DIM-003": 12,
+      "STR-003": 2
+    },
+    "crates/keynear-settings/src/views/receive/radar.rs": {
+      "COL-003": 7,
+      "DIM-003": 17
+    },
+    "crates/keynear-settings/src/views/receive/sheet.rs": {
+      "A11Y-002": 1,
+      "DIM-003": 22,
+      "STR-003": 5
+    },
+    "crates/keynear-settings/src/views/send.rs": {
+      "DIM-003": 26,
+      "STR-003": 9
+    },
+    "crates/keynear-settings/src/views/settings.rs": {
+      "DIM-003": 22,
+      "STR-003": 19
+    },
+    "crates/keynear-settings/src/views/shell.rs": {
+      "DIM-003": 17,
+      "STR-003": 5
+    }
+  }
+}

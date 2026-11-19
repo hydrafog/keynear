@@ -2493,25 +2493,42 @@ dependencies = [
  "hkdf",
  "hmac",
  "iroh",
+ "keynear-protocol",
  "mdns-sd",
- "oo7",
  "prost",
- "prost-build",
  "rand 0.10.3",
  "rustls",
- "serde",
  "sha2 0.11.1",
  "snow",
  "subtle",
- "thiserror 2.0.21",
  "tokio",
- "toml",
  "tracing",
- "uniffi",
  "uuid",
  "x25519-dalek",
  "zeroize",
  "zip",
+]
+
+[[package]]
+name = "keynear-ffi"
+version = "0.5.0"
+dependencies = [
+ "hex",
+ "keynear-core",
+ "keynear-protocol",
+ "prost",
+ "thiserror 2.0.21",
+ "tokio",
+ "toml",
+ "uniffi",
+ "zeroize",
+]
+
+[[package]]
+name = "keynear-ipc"
+version = "0.5.0"
+dependencies = [
+ "keynear-protocol",
 ]
 
 [[package]]
@@ -2522,7 +2539,11 @@ dependencies = [
  "futures-util",
  "hex",
  "keynear-core",
+ "keynear-ipc",
+ "keynear-protocol",
  "ksni",
+ "oo7",
+ "rand 0.10.3",
  "serde",
  "sha2 0.11.1",
  "tokio",
@@ -2539,12 +2560,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "keynear-protocol"
+version = "0.5.0"
+dependencies = [
+ "prost",
+ "prost-build",
+ "serde",
+ "thiserror 2.0.21",
+ "tokio",
+ "toml",
+]
+
+[[package]]
 name = "keynear-settings"
 version = "0.5.0"
 dependencies = [
  "ashpd",
  "gtk4",
- "keynear-core",
+ "keynear-ipc",
+ "keynear-protocol",
  "relm4",
  "serde_json",
  "tokio",

@@ -15,5 +15,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "keynear"
-include(":app")
-
+include(":app", ":core-ffi", ":designsystem")

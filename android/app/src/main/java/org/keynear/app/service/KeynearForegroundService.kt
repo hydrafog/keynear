@@ -14,13 +14,14 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import org.keynear.app.R
 import org.keynear.app.ble.KeynearBleConstants
-import org.keynear.app.ble.KeynearBleManager
+import org.keynear.app.ble.BleScanner
+import org.keynear.app.ble.GattSession
 import org.keynear.app.clipboard.ClipboardReadActivity
-import org.keynear.app.core.CoreClientProvider
-import org.keynear.app.core.CoreState
-import org.keynear.app.core.TransferStateUi
-import org.keynear.app.core.VisibilityState
-import org.keynear.app.lan.LocalNetworkManager
+import org.keynear.app.bridge.CoreClientProvider
+import org.keynear.app.ui.model.CoreState
+import org.keynear.app.ui.model.TransferStateUi
+import org.keynear.app.ui.model.VisibilityState
+import org.keynear.app.data.LanManager
 import org.keynear.app.otp.SmsUserConsentManager
 import org.keynear.app.share.DirectShareManager
 import java.util.concurrent.ExecutorService
@@ -51,14 +52,14 @@ class KeynearForegroundService : Service() {
         ensureNotificationChannel()
 
         when (intent?.action) {
-            ACTION_PAIRING_APPROVE -> KeynearBleManager.approveActivePairing(applicationContext)
-            ACTION_PAIRING_REJECT -> KeynearBleManager.rejectActivePairing(applicationContext)
+            ACTION_PAIRING_APPROVE -> GattSession.approveActivePairing(applicationContext)
+            ACTION_PAIRING_REJECT -> GattSession.rejectActivePairing(applicationContext)
             ACTION_TRANSFER_ACCEPT -> {
                 val transferId = intent.getStringExtra(EXTRA_TRANSFER_ID)
                 if (!transferId.isNullOrBlank()) {
                     actionExecutor?.execute {
                         client.acceptIncomingTransferOrSync(applicationContext, transferId)
-                        KeynearBleManager.notifyUiRefresh()
+                        BleScanner.notifyUiRefresh()
                     }
                 }
             }
@@ -67,7 +68,7 @@ class KeynearForegroundService : Service() {
                 if (!transferId.isNullOrBlank()) {
                     actionExecutor?.execute {
                         client.declineTransfer(transferId)
-                        KeynearBleManager.notifyUiRefresh()
+                        BleScanner.notifyUiRefresh()
                     }
                 }
             }
@@ -76,7 +77,7 @@ class KeynearForegroundService : Service() {
                 if (!transferId.isNullOrBlank()) {
                     actionExecutor?.execute {
                         client.cancelTransfer(transferId)
-                        KeynearBleManager.notifyUiRefresh()
+                        BleScanner.notifyUiRefresh()
                     }
                 }
             }
@@ -136,12 +137,12 @@ class KeynearForegroundService : Service() {
             return START_NOT_STICKY
         }
 
-        KeynearBleManager.startOrSync(applicationContext, visibility)
+        BleScanner.startOrSync(applicationContext, visibility)
         val node = client.ensureOrionNode(applicationContext)
         val ep = node?.localLanEndpoint()
         if (ep != null) {
             val port = ep.socketAddrs.firstOrNull()?.substringAfterLast(':')?.toIntOrNull() ?: 0
-            LocalNetworkManager.startOrSync(
+            LanManager.startOrSync(
                 context = applicationContext,
                 localDeviceId = ep.deviceId,
                 endpointIdBytes = ep.endpointId,
@@ -161,7 +162,7 @@ class KeynearForegroundService : Service() {
                 runCatching {
                     val client = CoreClientProvider.getClient()
                     if (client.syncTransferStates(applicationContext)) {
-                        KeynearBleManager.notifyUiRefresh()
+                        BleScanner.notifyUiRefresh()
                     }
                     client.syncClipboardStates(applicationContext)
                     smsUserConsentManager?.startIfEnabled(client.isOtpPassthroughEnabled())
@@ -181,9 +182,9 @@ class KeynearForegroundService : Service() {
         actionExecutor = null
         smsUserConsentManager?.shutdown()
         smsUserConsentManager = null
-        LocalNetworkManager.stop(applicationContext)
+        LanManager.stop(applicationContext)
         CoreClientProvider.getClient().shutdownOrion()
-        KeynearBleManager.stopAdvertisingAndScanning(applicationContext)
+        BleScanner.stopAdvertisingAndScanning(applicationContext)
         super.onDestroy()
     }
 

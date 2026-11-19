@@ -28,26 +28,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.keynear.app.core.DaemonConfigUi
-import org.keynear.app.core.PermissionsChecklistState
-import org.keynear.app.ui.components.ActionButton
-import org.keynear.app.ui.components.KeynearSwitch
-import org.keynear.app.ui.components.RecessedInput
-import org.keynear.app.ui.components.SettingRow
-import org.keynear.app.ui.components.SettingsSection
-import org.keynear.app.ui.components.TactileSurface
-import org.keynear.app.ui.components.TactileTone
-import org.keynear.app.ui.icons.IconChevronDown
-import org.keynear.app.ui.icons.IconChevronRight
-import org.keynear.app.ui.icons.IconChevronUp
-import org.keynear.app.ui.icons.IconClose
+import org.keynear.app.ui.model.DaemonConfigUi
+import org.keynear.app.ui.model.PermissionsChecklistState
+import org.keynear.designsystem.ActionButton
+import org.keynear.designsystem.KeynearSwitch
+import org.keynear.designsystem.RecessedInput
+import org.keynear.designsystem.SettingRow
+import org.keynear.designsystem.SettingsSection
+import org.keynear.designsystem.TactileSurface
+import org.keynear.designsystem.TactileTone
+import org.keynear.designsystem.IconChevronDown
+import org.keynear.designsystem.IconChevronRight
+import org.keynear.designsystem.IconChevronUp
+import org.keynear.designsystem.IconClose
 import org.keynear.app.ui.navigation.KeynearActions
-import org.keynear.app.ui.theme.KeynearLayout
-import org.keynear.app.ui.theme.KeynearRadii
-import org.keynear.app.ui.theme.KeynearShapes
-import org.keynear.app.ui.theme.KeynearSpacing
-import org.keynear.app.ui.theme.KeynearTypeSizes
-import org.keynear.app.ui.theme.LocalKeynearPalette
+import org.keynear.designsystem.KeynearLayout
+import org.keynear.designsystem.KeynearRadii
+import org.keynear.designsystem.KeynearShapes
+import org.keynear.designsystem.KeynearSpacing
+import org.keynear.designsystem.KeynearTypeSizes
+import org.keynear.designsystem.LocalKeynearPalette
 
 private val ActionMinHeight = 44.dp
 private val ChipMinWidth = 50.dp

@@ -6,11 +6,11 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
-import org.keynear.app.core.CoreClientProvider
-import org.keynear.app.core.CoreState
-import org.keynear.app.core.MAX_CLIPBOARD_IMAGE_BYTES
-import org.keynear.app.core.shouldReadClipboardOnFocus
-import org.keynear.app.core.shouldSkipClipDescription
+import org.keynear.app.bridge.CoreClientProvider
+import org.keynear.app.ui.model.CoreState
+import org.keynear.app.bridge.MAX_CLIPBOARD_IMAGE_BYTES
+import org.keynear.app.bridge.shouldReadClipboardOnFocus
+import org.keynear.app.bridge.shouldSkipClipDescription
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.Executors
 

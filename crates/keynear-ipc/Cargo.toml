@@ -1,0 +1,10 @@
+[package]
+name = "keynear-ipc"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+keynear-protocol = { path = "../keynear-protocol" }
+

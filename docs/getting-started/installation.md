@@ -12,18 +12,18 @@ cd keynear
 nix develop -c cargo build --release -p keynear-linux -p keynear-settings
 ```
 
-Install the `keynear-linux` daemon, `keynear-settings` binaries onto `~/.local/bin`, validate settings tokens headlessly with `keynear-settings --validate`, install `systemd/keynear.service`, and optionally link the file-manager integrations under `integrations/`:
+Install the `keynear-linux` daemon, `keynear-settings` binaries onto `~/.local/bin`, validate settings tokens headlessly with `keynear-settings --validate`, install `packaging/linux/systemd/keynear.service`, and optionally link the file-manager integrations under `packaging/linux/integrations/`:
 
 ```bash
 install -Dm755 target/release/keynear-linux ~/.local/bin/keynear-linux
 install -Dm755 target/release/keynear-settings ~/.local/bin/keynear-settings
 ~/.local/bin/keynear-settings --validate
 mkdir -p ~/.config/systemd/user
-cp systemd/keynear.service ~/.config/systemd/user/keynear.service
+cp packaging/linux/systemd/keynear.service ~/.config/systemd/user/keynear.service
 
-install -Dm755 integrations/nautilus/send-via-keynear ~/.local/share/nautilus/scripts/Send\ via\ Keynear
-install -Dm644 integrations/dolphin/keynear-send.desktop ~/.local/share/kio/servicemenus/keynear-send.desktop
-install -Dm644 integrations/yazi/keynear.yazi/main.lua ~/.config/yazi/plugins/keynear.yazi/main.lua
+install -Dm755 packaging/linux/integrations/nautilus/send-via-keynear ~/.local/share/nautilus/scripts/Send\ via\ Keynear
+install -Dm644 packaging/linux/integrations/dolphin/keynear-send.desktop ~/.local/share/kio/servicemenus/keynear-send.desktop
+install -Dm644 packaging/linux/integrations/yazi/keynear.yazi/main.lua ~/.config/yazi/plugins/keynear.yazi/main.lua
 ```
 
 See [Linux systemd Deployment](../deployment/linux-systemd.md) for enabling and starting the user unit.

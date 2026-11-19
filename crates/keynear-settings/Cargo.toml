@@ -8,7 +8,8 @@ repository.workspace = true
 [dependencies]
 ashpd.workspace = true
 gtk4.workspace = true
-keynear-core = { path = "../keynear-core", features = ["linux-oo7"] }
+keynear-ipc = { path = "../keynear-ipc" }
+keynear-protocol = { path = "../keynear-protocol" }
 relm4.workspace = true
 tokio.workspace = true
 tracing.workspace = true

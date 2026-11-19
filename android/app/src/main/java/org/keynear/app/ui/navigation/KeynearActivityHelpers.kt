@@ -13,13 +13,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.keynear.app.ble.KeynearBleConstants
-import org.keynear.app.ble.KeynearBleManager
-import org.keynear.app.core.CoreBridge
-import org.keynear.app.core.CoreSnapshot
-import org.keynear.app.core.CoreState
-import org.keynear.app.core.VisibilityState
-import org.keynear.app.lan.LocalNetworkConstants
-import org.keynear.app.lan.LocalNetworkManager
+import org.keynear.app.ble.BleScanner
+import org.keynear.app.ble.GattSession
+import org.keynear.app.bridge.CoreBridge
+import org.keynear.app.ui.model.CoreSnapshot
+import org.keynear.app.ui.model.CoreState
+import org.keynear.app.ui.model.VisibilityState
+import org.keynear.app.data.LocalNetworkConstants
+import org.keynear.app.data.LanManager
 import org.keynear.app.service.KeynearForegroundService
 
 fun launchFirstResolvableActivity(
@@ -97,7 +98,7 @@ fun buildKeynearActions(
             val updated = withContext(Dispatchers.IO) { bridge.setVisibility(mode) }
             val vis = snapshotFromState(updated)?.visibility ?: mode
             withContext(Dispatchers.IO) {
-                KeynearBleManager.startOrSync(context, vis)
+                BleScanner.startOrSync(context, vis)
                 KeynearForegroundService.syncIfPermitted(context)
             }
             onStateUpdated(withContext(Dispatchers.IO) { bridge.loadState() })
@@ -123,7 +124,7 @@ fun buildKeynearActions(
             onLaunchPermissions(arrayOf(LocalNetworkConstants.PERMISSION_ACCESS_LOCAL_NETWORK))
         }
         scope.launch(Dispatchers.IO) {
-            LocalNetworkManager.requestPickerDiscovery(context)
+            LanManager.requestPickerDiscovery(context)
             onStateUpdated(bridge.loadState())
         }
     },
@@ -192,21 +193,21 @@ fun buildKeynearActions(
     },
     onInitiatePairing = { addr ->
         scope.launch {
-            withContext(Dispatchers.IO) { KeynearBleManager.initiatePairing(context, addr) }
+            withContext(Dispatchers.IO) { GattSession.initiatePairing(context, addr) }
             onStateUpdated(withContext(Dispatchers.IO) { bridge.loadState() })
             onShowSnackbar("Pairing requested")
         }
     },
     onApprovePairing = {
         scope.launch {
-            withContext(Dispatchers.IO) { KeynearBleManager.approveActivePairing(context) }
+            withContext(Dispatchers.IO) { GattSession.approveActivePairing(context) }
             onStateUpdated(withContext(Dispatchers.IO) { bridge.loadState() })
             onShowSnackbar("Device paired")
         }
     },
     onRejectPairing = {
         scope.launch {
-            withContext(Dispatchers.IO) { KeynearBleManager.rejectActivePairing(context) }
+            withContext(Dispatchers.IO) { GattSession.rejectActivePairing(context) }
             onStateUpdated(withContext(Dispatchers.IO) { bridge.loadState() })
             onShowSnackbar("Pairing declined")
         }

@@ -47,19 +47,20 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.keynear.app.ble.KeynearBleConstants
-import org.keynear.app.ble.KeynearBleManager
-import org.keynear.app.core.CoreBridge
-import org.keynear.app.core.CoreClientProvider
-import org.keynear.app.core.CoreSnapshot
-import org.keynear.app.core.CoreState
-import org.keynear.app.core.VisibilityState
-import org.keynear.app.core.evaluatePermissionsChecklist
-import org.keynear.app.lan.LocalNetworkManager
+import org.keynear.app.ble.BleScanner
+import org.keynear.app.ble.GattSession
+import org.keynear.app.bridge.CoreBridge
+import org.keynear.app.bridge.CoreClientProvider
+import org.keynear.app.ui.model.CoreSnapshot
+import org.keynear.app.ui.model.CoreState
+import org.keynear.app.ui.model.VisibilityState
+import org.keynear.app.ui.model.evaluatePermissionsChecklist
+import org.keynear.app.data.LanManager
 import org.keynear.app.otp.OtpConsentVerifier
 import org.keynear.app.otp.SmsUserConsentManager
 import org.keynear.app.service.KeynearForegroundService
-import org.keynear.app.ui.components.ActionButton
-import org.keynear.app.ui.components.TactileSurface
+import org.keynear.designsystem.ActionButton
+import org.keynear.designsystem.TactileSurface
 import org.keynear.app.ui.devices.DeviceDetailScreen
 import org.keynear.app.ui.navigation.buildKeynearActions
 import org.keynear.app.ui.navigation.enumerateTreeChildUris
@@ -73,8 +74,8 @@ import org.keynear.app.ui.receive.ReceiveScreen
 import org.keynear.app.ui.send.SendScreen
 import org.keynear.app.ui.settings.PermissionsScreen
 import org.keynear.app.ui.settings.SettingsScreen
-import org.keynear.app.ui.theme.KeynearTheme
-import org.keynear.app.ui.theme.LocalKeynearPalette
+import org.keynear.designsystem.KeynearTheme
+import org.keynear.designsystem.LocalKeynearPalette
 
 class MainActivity : ComponentActivity() {
     private var resumeTick by mutableIntStateOf(0)
@@ -157,7 +158,7 @@ private fun KeynearAppRoot(
         val loaded = withContext(Dispatchers.IO) { bridge.loadState() }
         val vis = snapshotFromState(loaded)?.visibility ?: VisibilityState.PAIRED_ONLY
         withContext(Dispatchers.IO) {
-            KeynearBleManager.startOrSync(context, vis)
+            BleScanner.startOrSync(context, vis)
             KeynearForegroundService.syncIfPermitted(context)
         }
         uiState = withContext(Dispatchers.IO) { bridge.loadState() }
@@ -254,14 +255,14 @@ private fun KeynearAppRoot(
         SmsUserConsentManager.setForegroundConsentLauncher { intent ->
             consentLauncher.launch(intent)
         }
-        KeynearBleManager.setUiRefreshListener {
+        BleScanner.setUiRefreshListener {
             scope.launch {
                 uiState = withContext(Dispatchers.IO) { bridge.loadState() }
             }
         }
         onDispose {
             SmsUserConsentManager.setForegroundConsentLauncher(null)
-            KeynearBleManager.setUiRefreshListener(null)
+            BleScanner.setUiRefreshListener(null)
         }
     }
 
@@ -273,7 +274,7 @@ private fun KeynearAppRoot(
             val nextVis = snapshotFromState(nextState)?.visibility
             if (prevVis == VisibilityState.EVERYONE_NEARBY && nextVis != null && nextVis != prevVis) {
                 withContext(Dispatchers.IO) {
-                    KeynearBleManager.startOrSync(context, nextVis)
+                    BleScanner.startOrSync(context, nextVis)
                     KeynearForegroundService.syncIfPermitted(context)
                 }
             }

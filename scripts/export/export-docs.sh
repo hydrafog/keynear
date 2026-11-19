@@ -4,7 +4,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
-out_dir="${1:-exports}"
+out_dir="${1:-out}"
 mkdir -p "$out_dir"
 out_file="$out_dir/export.md"
 

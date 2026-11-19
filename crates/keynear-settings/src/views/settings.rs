@@ -3,7 +3,7 @@ use gtk4::prelude::*;
 use relm4::ComponentSender;
 
 use crate::state::{SettingsModel, SettingsMsg};
-use crate::views::{clear_box_children, lucide_icon, LucideIcon};
+use crate::views::components::{clear_box_children, lucide_icon, LucideIcon};
 
 pub(crate) struct SettingsTabParts {
     pub(crate) root: gtk4::ScrolledWindow,

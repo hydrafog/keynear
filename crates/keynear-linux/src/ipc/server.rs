@@ -1,0 +1,84 @@
+use std::path::PathBuf;
+
+use keynear_ipc::{
+    decode_request, encode_response, prepare_daemon_socket_dir, set_daemon_socket_permissions,
+    IpcResponse, MAX_IPC_FRAME_BYTES,
+};
+use keynear_protocol::KeynearError;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::{UnixListener, UnixStream};
+use tokio::task::JoinHandle;
+use tracing::{info, warn};
+
+use super::handlers::{dispatch_ipc_request, IpcDispatchContext};
+
+pub(crate) async fn bind_and_serve_ipc(
+    sock_path: PathBuf,
+    ctx: IpcDispatchContext,
+    tasks: &mut Vec<JoinHandle<()>>,
+) -> Result<PathBuf, KeynearError> {
+    prepare_daemon_socket_dir(&sock_path)?;
+    let listener = UnixListener::bind(&sock_path)?;
+    set_daemon_socket_permissions(&sock_path)?;
+    info!(event = "ipc_listening", socket = %sock_path.display());
+
+    tasks.push(tokio::spawn(async move {
+        loop {
+            match listener.accept().await {
+                Ok((stream, _)) => {
+                    let req_ctx = ctx.clone();
+                    tokio::spawn(async move {
+                        if let Err(err) = handle_ipc_connection(stream, req_ctx).await {
+                            warn!(event = "ipc_request_failed", error = %err);
+                        }
+                    });
+                }
+                Err(err) => {
+                    warn!(event = "ipc_accept_failed", error = %err);
+                    break;
+                }
+            }
+        }
+    }));
+
+    Ok(sock_path)
+}
+
+pub(crate) async fn handle_ipc_connection(
+    mut stream: UnixStream,
+    ctx: IpcDispatchContext,
+) -> Result<(), KeynearError> {
+    let mut len_buf = [0u8; 4];
+    stream.read_exact(&mut len_buf).await?;
+    let frame_len = u32::from_be_bytes(len_buf) as usize;
+    if frame_len == 0 {
+        return Err(KeynearError::Protocol(
+            "IPC request frame length must be positive".to_string(),
+        ));
+    }
+    if frame_len > MAX_IPC_FRAME_BYTES {
+        return Err(KeynearError::FrameTooLarge {
+            size: frame_len,
+            max: MAX_IPC_FRAME_BYTES,
+        });
+    }
+    let mut payload = vec![0u8; frame_len];
+    stream.read_exact(&mut payload).await?;
+
+    let response = match decode_request(&payload) {
+        Ok(req) => dispatch_ipc_request(req, &ctx).await,
+        Err(err) => IpcResponse::Error {
+            message: err.to_string(),
+        },
+    };
+
+    let encoded = encode_response(&response)?;
+    let resp_len = u32::try_from(encoded.len()).map_err(|_| KeynearError::FrameTooLarge {
+        size: encoded.len(),
+        max: MAX_IPC_FRAME_BYTES,
+    })?;
+    stream.write_all(&resp_len.to_be_bytes()).await?;
+    stream.write_all(&encoded).await?;
+    stream.flush().await?;
+    Ok(())
+}

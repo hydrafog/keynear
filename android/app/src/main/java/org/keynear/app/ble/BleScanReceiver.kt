@@ -29,7 +29,7 @@ class BleScanReceiver : BroadcastReceiver() {
                 continue
             }
             val address = result.device?.address ?: continue
-            KeynearBleManager.onScanPayload(context.applicationContext, address, result.rssi, payload)
+            BleScanner.onScanPayload(context.applicationContext, address, result.rssi, payload)
         }
     }
 

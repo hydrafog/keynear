@@ -8,7 +8,7 @@ Use these checks to diagnose discovery, Noise XX pairing, keyring, local network
 - Verify that visibility is set to `Paired devices only` or `Everyone nearby` rather than `Hidden`. `Everyone nearby` reverts to `Paired devices only` after 10 minutes (`600` seconds).
 - When Android shows a Bluetooth warning banner, tap Allow Bluetooth to grant `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, and `BLUETOOTH_ADVERTISE`, or tap Open Bluetooth settings to power on the adapter.
 - If a Noise XX pairing prompt disappears before confirmation, the 120-second pairing window (`PAIRING_TIMEOUT_SECS`) elapsed. Start pairing again from Nearby peers.
-- On Linux build hosts (`keynear-core` with `--features linux-oo7`, `keynear-linux`, and `keynear-settings`), install `libdbus-1-dev` or enter `nix develop` when `dbus-sys` fails to link.
+- On Linux build hosts (`keynear-linux`, `keynear-settings`), install `libdbus-1-dev` or enter `nix develop` when `dbus-sys` fails to link.
 
 ## Keyring and Paired Device Recovery
 
@@ -18,9 +18,9 @@ Use these checks to diagnose discovery, Noise XX pairing, keyring, local network
 
 ## Android Local Network Access and File Transfers
 
-- On Android 17 and later (`SDK_INT >= 37`), `LocalNetworkManager` checks `ACCESS_LOCAL_NETWORK`, uses reflection-guarded `NsdManager.DiscoveryRequest` (`FLAG_SHOW_PICKER`), and watches `NetworkCallback.onBlockedStatusChanged` for `ANDROID_NETWORK_BLOCKED_REASON_LNP`. When local network access is blocked, tap Open settings in the Android warning banner or notification to allow local network access, then tap Retry.
+- On Android 17 and later (`SDK_INT >= 37`), `LanManager` checks `ACCESS_LOCAL_NETWORK`, uses reflection-guarded `NsdManager.DiscoveryRequest` (`FLAG_SHOW_PICKER`), and watches `NetworkCallback.onBlockedStatusChanged` for `ANDROID_NETWORK_BLOCKED_REASON_LNP`. When local network access is blocked, tap Open settings in the Android warning banner or notification to allow local network access, then tap Retry.
 - When multicast mDNS (`_keynear._udp.local.`) is unavailable on a restricted network or headless host (`mdns_degraded`), `keynear-linux` and Android fall back to exchanging ephemeral `LanEndpoint` coordinates over the encrypted BLE GATT characteristic `0xFE70` (`LAN_ENDPOINT_CHAR_UUID`).
-- If an Android download is cancelled or fails mid-transfer, `CoreClient` deletes the incomplete `MediaStore.Downloads` row (`IS_PENDING = 1`) and `OrionNodeHandle` closes the detached `OwnedFd` automatically.
+- If an Android download is cancelled or fails mid-transfer, `TransferRepo` deletes the incomplete `MediaStore.Downloads` row (`IS_PENDING = 1`) and `OrionNodeHandle` closes the detached `OwnedFd` automatically.
 - If the Android Quick Settings tile prompts to unlock the screen when switching to `Everyone nearby`, complete the device unlock (`unlockAndRun`); toggles between `Hidden` and `Paired devices only` apply without unlocking.
 - When transfers stall in the background on Android, expand the permissions onboarding card in `MainActivity` and tap Allow on `Allow background running` (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`) or open app battery settings.
 

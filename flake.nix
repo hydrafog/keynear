@@ -52,6 +52,10 @@
               clippy
               rust-analyzer
               cargo-ndk
+              cargo-audit
+              cargo-deny
+              cargo-llvm-cov
+              rustc.llvmPackages.llvm
               protobuf
               pkg-config
               jdk21
@@ -70,7 +74,7 @@
             ];
 
             shellHook = ''
-              for tool in cargo rustc protoc java gradle; do
+              for tool in cargo cargo-audit cargo-deny cargo-llvm-cov llvm-profdata llvm-cov rustc protoc java gradle; do
                 if ! command -v "$tool" >/dev/null 2>&1; then
                   echo "keynear devShell warning: missing tool '$tool'" >&2
                 fi

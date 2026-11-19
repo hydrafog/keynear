@@ -8,7 +8,7 @@ import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import org.keynear.app.R
 import org.keynear.app.clipboard.ClipboardReadActivity
-import org.keynear.app.core.usePendingIntentTileCollapse
+import org.keynear.app.bridge.usePendingIntentTileCollapse
 
 class ClipboardTileService : TileService() {
     override fun onStartListening() {

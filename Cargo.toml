@@ -1,7 +1,10 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/keynear-protocol",
     "crates/keynear-core",
+    "crates/keynear-ffi",
+    "crates/keynear-ipc",
     "crates/keynear-linux",
     "crates/keynear-settings",
 ]

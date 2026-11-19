@@ -5,7 +5,7 @@ import android.content.Intent
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.graphics.drawable.Icon
-import org.keynear.app.core.PairedDeviceUi
+import org.keynear.app.ui.model.PairedDeviceUi
 
 data class DirectShareTargetSpec(
     val shortcutId: String,

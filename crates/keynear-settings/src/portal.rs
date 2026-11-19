@@ -4,10 +4,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use gtk4::glib;
 use gtk4::prelude::*;
-use keynear_core::{remove_paired_device, validate_display_name, KeynearError, VisibilityMode};
+use keynear_ipc::{self as ipc, IpcRequest, IpcResponse};
+use keynear_protocol::{validate_display_name, KeynearError, VisibilityMode};
 use relm4::ComponentSender;
 
-use crate::ipc::{self, IpcRequest, IpcResponse};
 use crate::state::{SendItemKind, SendQueueItem, SettingsModel, SettingsMsg};
 
 static PORTAL_TOKIO_RT: OnceLock<Result<tokio::runtime::Runtime, String>> = OnceLock::new();
@@ -418,14 +418,37 @@ pub(crate) fn confirm_unpair_device(model: &mut SettingsModel, device_id: &str) 
         .find(|d| d.device_id == device_id)
         .map(|d| d.display_name.clone())
         .unwrap_or_else(|| "device".to_string());
-    if let Some(ref store) = model.secret_store {
-        if let Err(err) = remove_paired_device(&model.device_store, store.as_ref(), device_id) {
+    let mut daemon_handled = false;
+    if let Some(ref sock_path) = model.ipc_socket_path {
+        match ipc::send_request_to(
+            sock_path,
+            &IpcRequest::UnpairDevice {
+                device_id: device_id.to_string(),
+            },
+        ) {
+            Ok(IpcResponse::Unpaired { .. }) => {
+                daemon_handled = true;
+            }
+            Ok(IpcResponse::Error { message }) => {
+                model.error_message = Some(message);
+                return;
+            }
+            Ok(other) => {
+                model.error_message = Some(format!("Unexpected daemon IPC response: {other:?}"));
+                return;
+            }
+            Err(KeynearError::Transport(_)) => {}
+            Err(err) => {
+                model.error_message = Some(err.to_string());
+                return;
+            }
+        }
+    }
+    if !daemon_handled {
+        if let Err(err) = model.device_store.remove(device_id) {
             model.error_message = Some(err.to_string());
             return;
         }
-    } else if let Err(err) = model.device_store.remove(device_id) {
-        model.error_message = Some(err.to_string());
-        return;
     }
     model.paired_devices.retain(|d| d.device_id != device_id);
     if model.selected_send_device_id.as_deref() == Some(device_id) {

@@ -6,8 +6,8 @@ use rand::Rng;
 use x25519_dalek::{PublicKey, StaticSecret};
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
-use crate::error::KeynearError;
-use crate::model::{sanitize_device_id, PairedDevice, PairedDeviceStore};
+use keynear_protocol::error::KeynearError;
+use keynear_protocol::model::{sanitize_device_id, PairedDevice, PairedDeviceStore};
 
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct StaticKeypairRecord {
@@ -213,7 +213,7 @@ pub fn remove_paired_device(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::DeviceRole;
+    use keynear_protocol::model::DeviceRole;
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
 

@@ -4,10 +4,11 @@ import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import android.util.Log
 import org.keynear.app.R
-import org.keynear.app.ble.KeynearBleManager
-import org.keynear.app.core.CoreClientProvider
-import org.keynear.app.core.CoreState
-import org.keynear.app.core.VisibilityState
+import org.keynear.app.ble.BleScanner
+import org.keynear.app.ble.GattSession
+import org.keynear.app.bridge.CoreClientProvider
+import org.keynear.app.ui.model.CoreState
+import org.keynear.app.ui.model.VisibilityState
 
 enum class TileTransitionDecision {
     APPLY_DIRECTLY,
@@ -74,12 +75,12 @@ class KeynearTileService : TileService() {
         when (val result = CoreClientProvider.init(applicationContext).setVisibility(target)) {
             is CoreState.Empty -> {
                 applyVisibilityToTile(result.snapshot.visibility, result.snapshot.everyoneRemainingSecs)
-                KeynearBleManager.startOrSync(applicationContext, result.snapshot.visibility)
+                BleScanner.startOrSync(applicationContext, result.snapshot.visibility)
                 KeynearForegroundService.syncIfPermitted(applicationContext)
             }
             is CoreState.Ready -> {
                 applyVisibilityToTile(result.snapshot.visibility, result.snapshot.everyoneRemainingSecs)
-                KeynearBleManager.startOrSync(applicationContext, result.snapshot.visibility)
+                BleScanner.startOrSync(applicationContext, result.snapshot.visibility)
                 KeynearForegroundService.syncIfPermitted(applicationContext)
             }
             is CoreState.Error -> {

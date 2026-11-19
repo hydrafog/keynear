@@ -1,10 +1,7 @@
 package org.keynear.app.share
 
-import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.provider.OpenableColumns
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,7 +13,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -60,24 +56,44 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.IntentCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.keynear.app.MainActivity
-import org.keynear.app.core.CoreClientProvider
-import org.keynear.app.core.CoreSnapshot
-import org.keynear.app.core.CoreState
-import org.keynear.app.core.DeviceRoleUi
-import org.keynear.app.core.PairedDeviceUi
-import org.keynear.app.core.ShareValidationResult
-import org.keynear.app.core.TransferUi
-import org.keynear.app.core.formatBytes
-import org.keynear.app.core.validateShareIntent
-import org.keynear.app.ui.theme.KeynearRadii
-import org.keynear.app.ui.theme.KeynearSpacing
-import org.keynear.app.ui.theme.KeynearTheme
-import org.keynear.app.ui.theme.LocalKeynearPalette
+import org.keynear.app.bridge.CoreClientProvider
+import org.keynear.app.bridge.validateShareIntent
+import org.keynear.app.ui.model.CoreSnapshot
+import org.keynear.app.ui.model.CoreState
+import org.keynear.app.ui.model.DeviceRoleUi
+import org.keynear.app.ui.model.PairedDeviceUi
+import org.keynear.app.ui.model.ShareValidationResult
+import org.keynear.app.ui.model.TransferUi
+import org.keynear.app.ui.model.formatBytes
+import org.keynear.designsystem.KeynearRadii
+import org.keynear.designsystem.KeynearSpacing
+import org.keynear.designsystem.KeynearTheme
+import org.keynear.designsystem.KeynearTypeSizes
+import org.keynear.designsystem.LocalKeynearPalette
+
+private val SheetCornerTop = 28.dp
+private val SheetElevation = 16.dp
+private val HandleWidth = 36.dp
+private val HandleHeight = 4.dp
+private val CloseBadgeSize = 36.dp
+private val CardCornerRadius = 20.dp
+private val DeviceGridMaxHeight = 320.dp
+private val DeviceTileCornerRadius = 18.dp
+private val DeviceTileMinHeight = 96.dp
+private val DeviceIconContainerSize = 44.dp
+private val DeviceIconContainerRadius = 14.dp
+private val PillCorner = 999.dp
+private val SheetGap = 14.dp
+private val SectionGap = 10.dp
+private val HeaderTextSize = 19.sp
+private val EmptyHeaderSize = 15.sp
+private val SmallHeaderSize = 13.sp
+private val CaptionLetterSpacing = 0.8.sp
+private val MicroLabelSize = 11.sp
 
 class ShareActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -85,12 +101,9 @@ class ShareActivity : ComponentActivity() {
 
         val incoming = intent
         val action = incoming?.action
-        val streamUris = extractStreamUris(incoming, action)
+        val streamUris = IntentResolver.extractStreamUris(incoming, action)
         val sharedText = incoming?.getStringExtra(Intent.EXTRA_TEXT)
-        val preselectedDeviceId = DirectShareManager.extractDeviceId(
-            shortcutId = incoming?.getStringExtra(Intent.EXTRA_SHORTCUT_ID),
-            explicitDeviceId = incoming?.getStringExtra(DirectShareManager.EXTRA_TARGET_DEVICE_ID),
-        )
+        val preselectedDeviceId = IntentResolver.extractPreselectedDeviceId(incoming)
         val validation = validateShareIntent(action, streamUris, sharedText)
 
         when (validation) {
@@ -124,7 +137,7 @@ class ShareActivity : ComponentActivity() {
                 val devices = snapshot?.pairedDevices.orEmpty()
                 withContext(Dispatchers.IO) {
                     DirectShareManager.syncShortcuts(applicationContext, devices)
-                    totalSizeBytes = computeTotalShareBytes(applicationContext, streamUris, sharedText)
+                    totalSizeBytes = IntentResolver.computeTotalShareBytes(applicationContext, streamUris, sharedText)
                 }
             }
 
@@ -146,55 +159,6 @@ class ShareActivity : ComponentActivity() {
                     onClose = { finish() },
                 )
             }
-        }
-    }
-
-    private fun computeTotalShareBytes(
-        context: Context,
-        uris: List<String>,
-        sharedText: String?,
-    ): Long {
-        var total = 0L
-        uris.forEach { raw ->
-            runCatching {
-                context.contentResolver.query(
-                    Uri.parse(raw),
-                    arrayOf(OpenableColumns.SIZE),
-                    null,
-                    null,
-                    null,
-                )?.use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        val sizeIdx = cursor.getColumnIndex(OpenableColumns.SIZE)
-                        if (sizeIdx >= 0 && !cursor.isNull(sizeIdx)) {
-                            total += cursor.getLong(sizeIdx).coerceAtLeast(0L)
-                        }
-                    }
-                }
-            }
-        }
-        if (!sharedText.isNullOrBlank()) {
-            total += sharedText.trim().toByteArray(Charsets.UTF_8).size.toLong()
-        }
-        return total
-    }
-
-    private fun extractStreamUris(intent: Intent?, action: String?): List<String> {
-        if (intent == null) return emptyList()
-        return when (action) {
-            Intent.ACTION_SEND -> {
-                val single = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
-                if (single != null) listOf(single.toString()) else emptyList()
-            }
-            Intent.ACTION_SEND_MULTIPLE -> {
-                val multiple = IntentCompat.getParcelableArrayListExtra(
-                    intent,
-                    Intent.EXTRA_STREAM,
-                    Uri::class.java,
-                )
-                multiple?.map { it.toString() } ?: emptyList()
-            }
-            else -> emptyList()
         }
     }
 
@@ -225,288 +189,309 @@ private fun SharePickerScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(palette.scrim)
-            .clickable(
-                interactionSource = scrimInteraction,
-                indication = null,
-                onClick = onClose,
-            ),
+            .clickable(interactionSource = scrimInteraction, indication = null, onClick = onClose),
     ) {
         Surface(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .clickable(
-                    interactionSource = sheetInteraction,
-                    indication = null,
-                    onClick = {},
-                ),
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                .clickable(interactionSource = sheetInteraction, indication = null, onClick = {}),
+            shape = RoundedCornerShape(topStart = SheetCornerTop, topEnd = SheetCornerTop),
             color = palette.surface,
-            shadowElevation = 16.dp,
+            shadowElevation = SheetElevation,
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(horizontal = KeynearSpacing.Lg, vertical = 12.dp)
+                    .padding(horizontal = KeynearSpacing.Lg, vertical = KeynearSpacing.Md)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(SheetGap),
             ) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Box(
-                        modifier = Modifier
-                            .width(36.dp)
-                            .height(4.dp)
-                            .clip(RoundedCornerShape(999.dp))
-                            .background(palette.sheetHandle),
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        val headerTitle = when (validation) {
-                            is ShareValidationResult.Valid -> {
-                                "Share ${validation.itemCount} item${if (validation.itemCount == 1) "" else "s"}"
-                            }
-                            is ShareValidationResult.Invalid -> "Unable to share"
-                        }
-                        Text(
-                            text = headerTitle,
-                            fontSize = 19.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = palette.textPrimary,
-                        )
-                        val subtitle = when (validation) {
-                            is ShareValidationResult.Valid -> {
-                                if (totalSizeBytes > 0L) {
-                                    "${formatBytes(totalSizeBytes)} · Direct Share"
-                                } else {
-                                    "Direct Share"
+                ShareSheetHeader(validation = validation, totalSizeBytes = totalSizeBytes, onClose = onClose)
+                when (validation) {
+                    is ShareValidationResult.Invalid -> {
+                        ShareInvalidSection(reason = validation.reason, onOpenMain = onOpenMain, onClose = onClose)
+                    }
+                    is ShareValidationResult.Valid -> {
+                        ShareValidBody(
+                            sendError = sendError,
+                            sentTransfer = sentTransfer,
+                            pairedDevices = pairedDevices,
+                            preselectedDeviceId = preselectedDeviceId,
+                            sendingDeviceId = sendingDeviceId,
+                            onSelectPeer = { devId ->
+                                sendingDeviceId = devId
+                                sendError = null
+                                scope.launch {
+                                    val res = onSendToPeer(devId)
+                                    sendingDeviceId = null
+                                    res.onSuccess { session -> sentTransfer = session }
+                                        .onFailure { err -> sendError = err.message ?: "Unable to send" }
                                 }
-                            }
-                            is ShareValidationResult.Invalid -> validation.reason
-                        }
-                        Text(
-                            text = subtitle,
-                            fontSize = 12.sp,
-                            color = palette.textMuted,
+                            },
+                            onOpenMain = onOpenMain,
+                            onClose = onClose,
                         )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(KeynearSpacing.MinTouchTarget)
-                            .clip(CircleShape)
-                            .clickable(onClick = onClose),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Surface(
-                            modifier = Modifier.size(36.dp),
-                            shape = CircleShape,
-                            color = palette.surfaceTonal,
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                ShareCloseIcon(color = palette.error, size = 16.dp)
-                            }
-                        }
                     }
                 }
+            }
+        }
+    }
+}
 
-                if (validation is ShareValidationResult.Invalid) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(KeynearRadii.Xl),
-                        color = palette.errorTonal,
+@Composable
+private fun ShareSheetHeader(
+    validation: ShareValidationResult,
+    totalSizeBytes: Long,
+    onClose: () -> Unit,
+) {
+    val palette = LocalKeynearPalette.current
+    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .width(HandleWidth)
+                .height(HandleHeight)
+                .clip(RoundedCornerShape(PillCorner))
+                .background(palette.sheetHandle),
+        )
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            val headerTitle = when (validation) {
+                is ShareValidationResult.Valid ->
+                    "Share ${validation.itemCount} item${if (validation.itemCount == 1) "" else "s"}"
+                is ShareValidationResult.Invalid -> "Unable to share"
+            }
+            Text(
+                text = headerTitle,
+                fontSize = HeaderTextSize,
+                fontWeight = FontWeight.ExtraBold,
+                color = palette.textPrimary,
+            )
+            val subtitle = when (validation) {
+                is ShareValidationResult.Valid ->
+                    if (totalSizeBytes > 0L) "${formatBytes(totalSizeBytes)} · Direct Share" else "Direct Share"
+                is ShareValidationResult.Invalid -> validation.reason
+            }
+            Text(text = subtitle, fontSize = KeynearTypeSizes.Caption, color = palette.textMuted)
+        }
+        Box(
+            modifier = Modifier
+                .size(KeynearSpacing.MinTouchTarget)
+                .clip(CircleShape)
+                .clickable(onClick = onClose),
+            contentAlignment = Alignment.Center,
+        ) {
+            Surface(modifier = Modifier.size(CloseBadgeSize), shape = CircleShape, color = palette.surfaceTonal) {
+                Box(contentAlignment = Alignment.Center) {
+                    ShareCloseIcon(color = palette.error, size = KeynearSpacing.Lg)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShareInvalidSection(
+    reason: String,
+    onOpenMain: () -> Unit,
+    onClose: () -> Unit,
+) {
+    val palette = LocalKeynearPalette.current
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(KeynearRadii.Xl),
+        color = palette.errorTonal,
+    ) {
+        Text(
+            text = reason,
+            fontSize = SmallHeaderSize,
+            color = palette.onDangerTonal,
+            modifier = Modifier.padding(KeynearSpacing.Lg),
+        )
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(SectionGap),
+    ) {
+        Button(
+            onClick = onOpenMain,
+            modifier = Modifier
+                .weight(1f)
+                .defaultMinSize(minHeight = KeynearSpacing.MinTouchTarget),
+            shape = RoundedCornerShape(PillCorner),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = palette.loading,
+                contentColor = palette.onAccent,
+            ),
+        ) {
+            Text("Open Keynear", fontWeight = FontWeight.Bold)
+        }
+        OutlinedButton(
+            onClick = onClose,
+            modifier = Modifier.defaultMinSize(minHeight = KeynearSpacing.MinTouchTarget),
+            shape = RoundedCornerShape(PillCorner),
+        ) {
+            Text("Close", color = palette.textPrimary)
+        }
+    }
+}
+
+@Composable
+private fun ShareValidBody(
+    sendError: String?,
+    sentTransfer: TransferUi?,
+    pairedDevices: List<PairedDeviceUi>?,
+    preselectedDeviceId: String?,
+    sendingDeviceId: String?,
+    onSelectPeer: (String) -> Unit,
+    onOpenMain: () -> Unit,
+    onClose: () -> Unit,
+) {
+    val palette = LocalKeynearPalette.current
+    sendError?.let { msg ->
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(KeynearRadii.Xl),
+            color = palette.errorTonal,
+        ) {
+            Text(
+                text = msg,
+                fontSize = SmallHeaderSize,
+                color = palette.onDangerTonal,
+                modifier = Modifier.padding(KeynearSpacing.Md),
+            )
+        }
+    }
+
+    if (sentTransfer != null) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(CardCornerRadius),
+            color = palette.loadingTonal,
+        ) {
+            Column(
+                modifier = Modifier.padding(KeynearSpacing.Lg),
+                verticalArrangement = Arrangement.spacedBy(SectionGap),
+            ) {
+                Text(
+                    text = "Sending ${sentTransfer.summaryName} to ${sentTransfer.peerDisplayName}",
+                    fontSize = KeynearTypeSizes.Description,
+                    fontWeight = FontWeight.Bold,
+                    color = palette.onLoadingTonal,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm)) {
+                    Button(
+                        onClick = onOpenMain,
+                        modifier = Modifier
+                            .weight(1f)
+                            .defaultMinSize(minHeight = KeynearSpacing.MinTouchTarget),
+                        shape = RoundedCornerShape(PillCorner),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = palette.loading,
+                            contentColor = palette.onAccent,
+                        ),
                     ) {
-                        Text(
-                            text = validation.reason,
-                            fontSize = 13.sp,
-                            color = palette.onDangerTonal,
-                            modifier = Modifier.padding(KeynearSpacing.Lg),
-                        )
+                        Text("Open Keynear", fontWeight = FontWeight.Bold)
                     }
+                    OutlinedButton(
+                        onClick = onClose,
+                        modifier = Modifier.defaultMinSize(minHeight = KeynearSpacing.MinTouchTarget),
+                        shape = RoundedCornerShape(PillCorner),
+                    ) {
+                        Text("Done", color = palette.onLoadingTonal)
+                    }
+                }
+            }
+        }
+        return
+    }
+
+    Text(
+        text = "DIRECT SHARE VIA KEYNEAR",
+        fontSize = MicroLabelSize,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = CaptionLetterSpacing,
+        color = palette.textMuted,
+    )
+
+    when {
+        pairedDevices == null -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = KeynearSpacing.Xl),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(color = palette.loading)
+            }
+        }
+        pairedDevices.isEmpty() -> {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(CardCornerRadius),
+                color = palette.surfaceTonal,
+            ) {
+                Column(
+                    modifier = Modifier.padding(KeynearSpacing.Lg),
+                    verticalArrangement = Arrangement.spacedBy(SectionGap),
+                ) {
+                    Text(
+                        text = "No paired devices yet",
+                        fontSize = EmptyHeaderSize,
+                        fontWeight = FontWeight.Bold,
+                        color = palette.textPrimary,
+                    )
+                    Text(
+                        text = "Open Keynear to pair a nearby device before sharing.",
+                        fontSize = SmallHeaderSize,
+                        color = palette.textMuted,
+                    )
+                    Button(
+                        onClick = onOpenMain,
+                        modifier = Modifier.defaultMinSize(minHeight = KeynearSpacing.MinTouchTarget),
+                        shape = RoundedCornerShape(PillCorner),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = palette.loading,
+                            contentColor = palette.onAccent,
+                        ),
+                    ) {
+                        Text("Open Keynear", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+        else -> {
+            val rows = pairedDevices.chunked(2)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = DeviceGridMaxHeight),
+                verticalArrangement = Arrangement.spacedBy(SectionGap),
+            ) {
+                rows.forEach { pair ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(SectionGap),
                     ) {
-                        Button(
-                            onClick = onOpenMain,
-                            modifier = Modifier
-                                .weight(1f)
-                                .defaultMinSize(minHeight = KeynearSpacing.MinTouchTarget),
-                            shape = RoundedCornerShape(999.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = palette.loading,
-                                contentColor = palette.onAccent,
-                            ),
-                        ) {
-                            Text("Open Keynear", fontWeight = FontWeight.Bold)
-                        }
-                        OutlinedButton(
-                            onClick = onClose,
-                            modifier = Modifier.defaultMinSize(minHeight = KeynearSpacing.MinTouchTarget),
-                            shape = RoundedCornerShape(999.dp),
-                        ) {
-                            Text("Close", color = palette.textPrimary)
-                        }
-                    }
-                } else {
-                    sendError?.let { msg ->
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(KeynearRadii.Xl),
-                            color = palette.errorTonal,
-                        ) {
-                            Text(
-                                text = msg,
-                                fontSize = 13.sp,
-                                color = palette.onDangerTonal,
-                                modifier = Modifier.padding(KeynearSpacing.Md),
+                        pair.forEach { dev ->
+                            ShareDeviceTile(
+                                device = dev,
+                                highlighted = dev.deviceId == preselectedDeviceId,
+                                isSending = sendingDeviceId == dev.deviceId,
+                                enabled = sendingDeviceId == null,
+                                onClick = { onSelectPeer(dev.deviceId) },
+                                modifier = Modifier.weight(1f),
                             )
                         }
-                    }
-
-                    val confirmed = sentTransfer
-                    if (confirmed != null) {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(20.dp),
-                            color = palette.loadingTonal,
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(KeynearSpacing.Lg),
-                                verticalArrangement = Arrangement.spacedBy(10.dp),
-                            ) {
-                                Text(
-                                    text = "Sending ${confirmed.summaryName} to ${confirmed.peerDisplayName}",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = palette.onLoadingTonal,
-                                )
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Button(
-                                        onClick = onOpenMain,
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .defaultMinSize(minHeight = KeynearSpacing.MinTouchTarget),
-                                        shape = RoundedCornerShape(999.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = palette.loading,
-                                            contentColor = palette.onAccent,
-                                        ),
-                                    ) {
-                                        Text("Open Keynear", fontWeight = FontWeight.Bold)
-                                    }
-                                    OutlinedButton(
-                                        onClick = onClose,
-                                        modifier = Modifier.defaultMinSize(minHeight = KeynearSpacing.MinTouchTarget),
-                                        shape = RoundedCornerShape(999.dp),
-                                    ) {
-                                        Text("Done", color = palette.onLoadingTonal)
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        Text(
-                            text = "DIRECT SHARE VIA KEYNEAR",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.8.sp,
-                            color = palette.textMuted,
-                        )
-
-                        when {
-                            pairedDevices == null -> {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 24.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    CircularProgressIndicator(color = palette.loading)
-                                }
-                            }
-                            pairedDevices.isEmpty() -> {
-                                Surface(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(20.dp),
-                                    color = palette.surfaceTonal,
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(KeynearSpacing.Lg),
-                                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                                    ) {
-                                        Text(
-                                            text = "No paired devices yet",
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = palette.textPrimary,
-                                        )
-                                        Text(
-                                            text = "Open Keynear to pair a nearby device before sharing.",
-                                            fontSize = 13.sp,
-                                            color = palette.textMuted,
-                                        )
-                                        Button(
-                                            onClick = onOpenMain,
-                                            modifier = Modifier.defaultMinSize(minHeight = KeynearSpacing.MinTouchTarget),
-                                            shape = RoundedCornerShape(999.dp),
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = palette.loading,
-                                                contentColor = palette.onAccent,
-                                            ),
-                                        ) {
-                                            Text("Open Keynear", fontWeight = FontWeight.Bold)
-                                        }
-                                    }
-                                }
-                            }
-                            else -> {
-                                val rows = pairedDevices.chunked(2)
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .heightIn(max = 320.dp),
-                                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                                ) {
-                                    rows.forEach { pair ->
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                        ) {
-                                            pair.forEach { dev ->
-                                                ShareDeviceTile(
-                                                    device = dev,
-                                                    highlighted = dev.deviceId == preselectedDeviceId,
-                                                    isSending = sendingDeviceId == dev.deviceId,
-                                                    enabled = sendingDeviceId == null,
-                                                    onClick = {
-                                                        sendingDeviceId = dev.deviceId
-                                                        sendError = null
-                                                        scope.launch {
-                                                            val res = onSendToPeer(dev.deviceId)
-                                                            sendingDeviceId = null
-                                                            res.onSuccess { session ->
-                                                                sentTransfer = session
-                                                            }.onFailure { err ->
-                                                                sendError = err.message ?: "Unable to send"
-                                                            }
-                                                        }
-                                                    },
-                                                    modifier = Modifier.weight(1f),
-                                                )
-                                            }
-                                            if (pair.size == 1) {
-                                                Spacer(modifier = Modifier.weight(1f))
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                        if (pair.size == 1) {
+                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }
@@ -528,15 +513,15 @@ private fun ShareDeviceTile(
     Surface(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.defaultMinSize(minHeight = 96.dp),
-        shape = RoundedCornerShape(18.dp),
+        modifier = modifier.defaultMinSize(minHeight = DeviceTileMinHeight),
+        shape = RoundedCornerShape(DeviceTileCornerRadius),
         color = if (highlighted) palette.loadingTonal else palette.surfaceTonal,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(KeynearSpacing.Md),
+            verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -544,8 +529,8 @@ private fun ShareDeviceTile(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Surface(
-                    modifier = Modifier.size(44.dp),
-                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.size(DeviceIconContainerSize),
+                    shape = RoundedCornerShape(DeviceIconContainerRadius),
                     color = if (device.isOnline) palette.loadingTonal else palette.surface,
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -568,21 +553,19 @@ private fun ShareDeviceTile(
             Column {
                 Text(
                     text = device.displayName,
-                    fontSize = 14.sp,
+                    fontSize = KeynearTypeSizes.Description,
                     fontWeight = FontWeight.Bold,
                     color = palette.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = if (isSending) {
-                        "Starting..."
-                    } else if (device.isOnline) {
-                        "Ready · Wi-Fi"
-                    } else {
-                        "Standby"
+                    text = when {
+                        isSending -> "Starting..."
+                        device.isOnline -> "Ready · Wi-Fi"
+                        else -> "Standby"
                     },
-                    fontSize = 12.sp,
+                    fontSize = KeynearTypeSizes.Caption,
                     color = if (device.isOnline) palette.loading else palette.textMuted,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

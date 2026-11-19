@@ -5,18 +5,18 @@
 ## Android Permissions
 
 - `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, and `BLUETOOTH_ADVERTISE` support `0xFE6D` BLE presence advertisements, `BleScanReceiver` `PendingIntent` background scanning, Noise XX GATT pairing (`0xFE6E`/`0xFE6F`), and encrypted LAN endpoint exchange (`0xFE70`). Keynear never requests fine location.
-- `POST_NOTIFICATIONS` (API 33 and later) supports `PairingNotificationManager` 6-digit pairing prompts, incoming file transfer consent (`Accept`/`Decline`), live `ProgressStyle` / `NotificationCompat` transfer updates, completion/error alerts, local-network-blocked alerts, and silent `connectedDevice` continuity visibility.
+- `POST_NOTIFICATIONS` (API 33 and later) supports `PairingNotifier` 6-digit pairing prompts, incoming file transfer consent (`Accept`/`Decline`), live `ProgressStyle` / `NotificationCompat` transfer updates, completion/error alerts, local-network-blocked alerts, and silent `connectedDevice` continuity visibility.
 - `FOREGROUND_SERVICE` and `FOREGROUND_SERVICE_CONNECTED_DEVICE` keep `KeynearForegroundService` active for BLE and `OrionNodeHandle` transport after Bluetooth permissions are granted.
 - `RUN_USER_INITIATED_JOBS` allows `KeynearTransferJobService` to schedule `User-Initiated Data Transfer Jobs` (`setUserInitiated(true)` on API 34 and later) for active file transfers.
 - `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` lets the collapsible onboarding card in `MainActivity` invite users to exempt Keynear from OEM background restriction when needed.
 - `REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE` enables `KeynearCompanionDeviceService` hardware presence callbacks through `AssociationInfo` on API 33 to 35 and `ObservingDevicePresenceRequest` on API 36 and later.
-- `NEARBY_WIFI_DEVICES`, `ACCESS_LOCAL_NETWORK`, `ACCESS_NETWORK_STATE`, and `INTERNET` support local `NsdManager` (`_keynear._udp.`) LAN discovery and direct peer-to-peer `iroh` QUIC transfers without cloud relays. On `compileSdk = 36`, `LocalNetworkManager` checks `ACCESS_LOCAL_NETWORK`, guards `NsdManager.DiscoveryRequest` and `FLAG_SHOW_PICKER` behind `SDK_INT >= 37` reflection, and monitors `ConnectivityManager.NetworkCallback.onBlockedStatusChanged` (`ANDROID_NETWORK_BLOCKED_REASON_LNP`) to surface actionable settings and retry recovery.
+- `NEARBY_WIFI_DEVICES`, `ACCESS_LOCAL_NETWORK`, `ACCESS_NETWORK_STATE`, and `INTERNET` support local `NsdManager` (`_keynear._udp.`) LAN discovery and direct peer-to-peer `iroh` QUIC transfers without cloud relays. On `compileSdk = 36`, `LanManager` checks `ACCESS_LOCAL_NETWORK`, guards `NsdManager.DiscoveryRequest` and `FLAG_SHOW_PICKER` behind `SDK_INT >= 37` reflection, and monitors `ConnectivityManager.NetworkCallback.onBlockedStatusChanged` (`ANDROID_NETWORK_BLOCKED_REASON_LNP`) to surface actionable settings and retry recovery.
 
 ## Lockscreen and Desktop Portal Boundaries
 
 - `KeynearTileService` inspects `isLocked` before mutating visibility from Quick Settings: while locked, taps switch only between `Hidden` and `Paired devices only`, and activating `Everyone nearby` requires unlocking through `unlockAndRun`.
 - `keynear-settings` accesses user-chosen files, folders, and incoming download locations through `ashpd` (`xdg-desktop-portal`) file-chooser requests rather than ambient filesystem indexing.
-- File-manager context-menu integrations (`integrations/nautilus`, `integrations/dolphin`, `integrations/yazi`) invoke `keynear-settings --share --` with explicit option-end delimiters and verified path arguments.
+- File-manager context-menu integrations (`packaging/linux/integrations/nautilus`, `packaging/linux/integrations/dolphin`, `packaging/linux/integrations/yazi`) invoke `keynear-settings --share --` with explicit option-end delimiters and verified path arguments.
 
 ## Privacy and Licensing
 

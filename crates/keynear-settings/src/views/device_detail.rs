@@ -3,7 +3,7 @@ use gtk4::prelude::*;
 use relm4::ComponentSender;
 
 use crate::state::{role_label, SettingsModel, SettingsMsg, SubScreen};
-use crate::views::{lucide_icon, sync_switch, LucideIcon};
+use crate::views::components::{lucide_icon, sync_switch, LucideIcon};
 
 pub(crate) struct DeviceDetailParts {
     pub(crate) root: gtk4::ScrolledWindow,

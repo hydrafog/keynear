@@ -28,19 +28,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.keynear.app.core.DeviceRoleUi
-import org.keynear.app.core.PairedDeviceUi
-import org.keynear.app.ui.components.TactileSurface
-import org.keynear.app.ui.components.TactileTone
-import org.keynear.app.ui.icons.IconArrowLeft
-import org.keynear.app.ui.icons.IconInbox
-import org.keynear.app.ui.icons.IconSend
-import org.keynear.app.ui.icons.IconSliders
-import org.keynear.app.ui.theme.KeynearRadii
-import org.keynear.app.ui.theme.KeynearShapes
-import org.keynear.app.ui.theme.KeynearSpacing
-import org.keynear.app.ui.theme.KeynearTypeSizes
-import org.keynear.app.ui.theme.LocalKeynearPalette
+import org.keynear.app.ui.model.DeviceRoleUi
+import org.keynear.app.ui.model.PairedDeviceUi
+import org.keynear.designsystem.TactileSurface
+import org.keynear.designsystem.TactileTone
+import org.keynear.designsystem.IconArrowLeft
+import org.keynear.designsystem.IconInbox
+import org.keynear.designsystem.IconSend
+import org.keynear.designsystem.IconSliders
+import org.keynear.designsystem.KeynearRadii
+import org.keynear.designsystem.KeynearShapes
+import org.keynear.designsystem.KeynearSpacing
+import org.keynear.designsystem.KeynearTypeSizes
+import org.keynear.designsystem.LocalKeynearPalette
 
 private val ActivePillWidth = 64.dp
 private val BadgeInset = 6.dp
@@ -79,7 +79,7 @@ data class OrbitPinUi(
 )
 
 data class KeynearActions(
-    val onSetVisibility: (org.keynear.app.core.VisibilityState) -> Unit,
+    val onSetVisibility: (org.keynear.app.ui.model.VisibilityState) -> Unit,
     val onRequestBluetoothPermissions: () -> Unit,
     val onOpenBluetoothSettings: () -> Unit,
     val onRequestLocalNetworkPermission: () -> Unit,
@@ -106,7 +106,7 @@ data class KeynearActions(
     val onRemoveQueueItem: (String) -> Unit,
     val onClearQueue: () -> Unit,
     val onSendQueueToPeer: (PairedDeviceUi) -> Unit,
-    val onUpdateConfig: ((org.keynear.app.core.DaemonConfigUi) -> org.keynear.app.core.DaemonConfigUi) -> Unit,
+    val onUpdateConfig: ((org.keynear.app.ui.model.DaemonConfigUi) -> org.keynear.app.ui.model.DaemonConfigUi) -> Unit,
     val onPickSaveFolder: () -> Unit,
     val onOpenPermissions: () -> Unit,
     val onOpenDeviceDetail: (String) -> Unit,

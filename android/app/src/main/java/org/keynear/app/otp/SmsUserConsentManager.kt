@@ -21,8 +21,8 @@ import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.common.api.Status
 import org.keynear.app.MainActivity
 import org.keynear.app.R
-import org.keynear.app.core.CoreClientProvider
-import org.keynear.app.core.UniffiCoreClient
+import org.keynear.app.bridge.CoreClientProvider
+import org.keynear.app.bridge.UniffiCoreClient
 import java.security.MessageDigest
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors

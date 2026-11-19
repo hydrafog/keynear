@@ -26,24 +26,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.keynear.app.core.DeviceRoleUi
-import org.keynear.app.core.PairedDeviceUi
-import org.keynear.app.ui.components.ActionButton
-import org.keynear.app.ui.components.KeynearSwitch
-import org.keynear.app.ui.components.RecessedInput
-import org.keynear.app.ui.components.TactileSurface
-import org.keynear.app.ui.components.TactileTone
-import org.keynear.app.ui.icons.IconLaptop
-import org.keynear.app.ui.icons.IconRefreshCw
-import org.keynear.app.ui.icons.IconSmartphone
-import org.keynear.app.ui.icons.IconTrash2
+import org.keynear.app.ui.model.DeviceRoleUi
+import org.keynear.app.ui.model.PairedDeviceUi
+import org.keynear.designsystem.ActionButton
+import org.keynear.designsystem.KeynearSwitch
+import org.keynear.designsystem.RecessedInput
+import org.keynear.designsystem.TactileSurface
+import org.keynear.designsystem.TactileTone
+import org.keynear.designsystem.IconLaptop
+import org.keynear.designsystem.IconRefreshCw
+import org.keynear.designsystem.IconSmartphone
+import org.keynear.designsystem.IconTrash2
 import org.keynear.app.ui.navigation.KeynearActions
-import org.keynear.app.ui.theme.KeynearLayout
-import org.keynear.app.ui.theme.KeynearRadii
-import org.keynear.app.ui.theme.KeynearShapes
-import org.keynear.app.ui.theme.KeynearSpacing
-import org.keynear.app.ui.theme.KeynearTypeSizes
-import org.keynear.app.ui.theme.LocalKeynearPalette
+import org.keynear.designsystem.KeynearLayout
+import org.keynear.designsystem.KeynearRadii
+import org.keynear.designsystem.KeynearShapes
+import org.keynear.designsystem.KeynearSpacing
+import org.keynear.designsystem.KeynearTypeSizes
+import org.keynear.designsystem.LocalKeynearPalette
 
 private val ActionIconSize = 20.dp
 private val ContentGap = 10.dp
