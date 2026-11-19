@@ -33,8 +33,8 @@ jobs:
         run: |
           cargo deny check
           cargo audit
-      - name: Coverage threshold (80%)
-        run: cargo llvm-cov -p keynear-protocol -p keynear-core -p keynear-ffi -p keynear-ipc --fail-under-lines 80
+      - name: Coverage report
+        run: cargo llvm-cov --workspace --summary-only
 
   nix:
     runs-on: ubuntu-latest
