@@ -9,6 +9,7 @@ use std::time::{Duration, Instant};
 
 use zeroize::Zeroizing;
 
+use crate::clipboard::{ClipboardEngine, ClipboardItem, ClipboardPolicy};
 use crate::error::KeynearError;
 use crate::keyring::StaticKeypairRecord;
 use crate::model::{
@@ -24,7 +25,10 @@ use crate::presence::{
     KEYNEAR_BLE_SERVICE_UUID, KEYNEAR_BLE_SERVICE_UUID16, LAN_ENDPOINT_CHAR_UUID,
     LAN_ENDPOINT_CHAR_UUID16,
 };
-use crate::proto::{control_frame_to_envelope, decode_control_frame, v1, MAX_CONTROL_FRAME_BYTES};
+use crate::proto::{
+    control_frame_to_envelope, decode_control_frame, read_stream_kind, v1, QuicStreamKind,
+    MAX_CONTROL_FRAME_BYTES,
+};
 use crate::quic::{parse_endpoint_id_bytes, OrionNodeConfig, OrionQuicNode};
 use crate::transfer::TransferEngine;
 
@@ -369,6 +373,33 @@ impl From<TransferSession> for FfiTransferSession {
             transferred_bytes: value.transferred_bytes,
             state: FfiTransferState::from(value.state),
             started_at: value.started_at,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct FfiClipboardItem {
+    pub id: String,
+    pub peer_device_id: String,
+    pub mime_type: String,
+    pub data: Vec<u8>,
+    pub is_otp: bool,
+    pub is_image_offer: bool,
+    pub offer_id: String,
+    pub offered_mimes: Vec<String>,
+}
+
+impl From<ClipboardItem> for FfiClipboardItem {
+    fn from(value: ClipboardItem) -> Self {
+        Self {
+            id: value.id,
+            peer_device_id: value.peer_device_id,
+            mime_type: value.mime_type,
+            data: value.data,
+            is_otp: value.is_otp,
+            is_image_offer: value.is_image_offer,
+            offer_id: value.offer_id,
+            offered_mimes: value.offered_mimes,
         }
     }
 }
@@ -947,6 +978,8 @@ pub struct OrionNodeHandle {
     runtime: Arc<tokio::runtime::Runtime>,
     node: OrionQuicNode,
     engine: Arc<TransferEngine>,
+    clipboard: Arc<ClipboardEngine>,
+    synced_peers: Mutex<Vec<String>>,
     accept_task: Mutex<Option<tokio::task::JoinHandle<()>>>,
 }
 
@@ -983,16 +1016,43 @@ impl OrionNodeHandle {
             init.auto_accept_from_paired,
         ));
         engine.set_require_explicit_fd_for_single_file(init.require_explicit_fd_for_single_file);
+        let clipboard = Arc::new(ClipboardEngine::new(ClipboardPolicy::default()));
 
         let accept_node = node.clone();
         let accept_engine = Arc::clone(&engine);
+        let accept_clipboard = Arc::clone(&clipboard);
         let handle = runtime.spawn(async move {
             loop {
                 match accept_node.accept_authenticated().await {
                     Ok(Some((peer_id, conn))) => {
                         let eng = Arc::clone(&accept_engine);
+                        let clip = Arc::clone(&accept_clipboard);
                         tokio::spawn(async move {
-                            let _ = eng.handle_incoming_connection(peer_id, conn).await;
+                            while let Ok((send, mut recv)) = conn.accept_bi().await {
+                                match read_stream_kind(&mut recv).await {
+                                    Ok(
+                                        kind @ (QuicStreamKind::RawFileChunk
+                                        | QuicStreamKind::StoredZipArchive),
+                                    ) => {
+                                        let _ = eng
+                                            .handle_incoming_stream_with_kind(
+                                                &peer_id, kind, send, recv,
+                                            )
+                                            .await;
+                                    }
+                                    Ok(
+                                        kind @ (QuicStreamKind::Control
+                                        | QuicStreamKind::ClipboardBlob),
+                                    ) => {
+                                        let _ = clip
+                                            .handle_incoming_stream_with_kind(
+                                                &peer_id, kind, send, recv,
+                                            )
+                                            .await;
+                                    }
+                                    Err(_) => break,
+                                }
+                            }
                         });
                     }
                     Ok(None) => break,
@@ -1005,6 +1065,8 @@ impl OrionNodeHandle {
             runtime,
             node,
             engine,
+            clipboard,
+            synced_peers: Mutex::new(Vec::new()),
             accept_task: Mutex::new(Some(handle)),
         })
     }
@@ -1056,12 +1118,24 @@ impl OrionNodeHandle {
             .register_peer(&device_id, eid, parsed_addrs, secret)?;
         self.engine
             .set_peer_auto_accept(&device_id, auto_accept_files)?;
+        let mut peers = self
+            .synced_peers
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if !peers.contains(&device_id) {
+            peers.push(device_id);
+        }
         Ok(())
     }
 
     pub fn remove_peer(&self, device_id: String) -> Result<(), FfiError> {
         self.node.remove_peer(&device_id)?;
         self.engine.remove_peer_policy(&device_id);
+        let mut peers = self
+            .synced_peers
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        peers.retain(|id| id != &device_id);
         Ok(())
     }
 
@@ -1140,6 +1214,106 @@ impl OrionNodeHandle {
         self.engine
             .provide_receive_fd(&transfer_id, file)
             .map_err(FfiError::from)
+    }
+
+    pub fn set_clipboard_config(
+        &self,
+        clipboard_sync_enabled: bool,
+        clipboard_images_enabled: bool,
+        otp_passthrough_enabled: bool,
+        ignored_mime_types: Vec<String>,
+    ) {
+        self.clipboard.set_policy(ClipboardPolicy {
+            clipboard_sync_enabled,
+            clipboard_images_enabled,
+            otp_passthrough_enabled,
+            ignored_mime_types,
+        });
+    }
+
+    pub fn send_clipboard_text(&self, text: String, is_otp: bool) -> Result<(), FfiError> {
+        let peers = self
+            .synced_peers
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clone();
+        if peers.is_empty() {
+            return Err(FfiError::Transport {
+                detail: "no paired peers synchronized".to_string(),
+            });
+        }
+        let mut delivered = 0usize;
+        let mut last_err: Option<KeynearError> = None;
+        for peer_id in &peers {
+            match self.runtime.block_on(
+                self.clipboard
+                    .send_clipboard_text(&self.node, peer_id, &text, is_otp),
+            ) {
+                Ok(()) => delivered += 1,
+                Err(err) => last_err = Some(err),
+            }
+        }
+        if delivered > 0 {
+            Ok(())
+        } else if let Some(err) = last_err {
+            Err(FfiError::from(err))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn send_clipboard_blob(&self, mime_type: String, data: Vec<u8>) -> Result<(), FfiError> {
+        let peers = self
+            .synced_peers
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clone();
+        if peers.is_empty() {
+            return Err(FfiError::Transport {
+                detail: "no paired peers synchronized".to_string(),
+            });
+        }
+        let mut delivered = 0usize;
+        let mut last_err: Option<KeynearError> = None;
+        for peer_id in &peers {
+            match self.runtime.block_on(
+                self.clipboard
+                    .send_clipboard_payload(&self.node, peer_id, &mime_type, &data, false),
+            ) {
+                Ok(()) => delivered += 1,
+                Err(err) => last_err = Some(err),
+            }
+        }
+        if delivered > 0 {
+            Ok(())
+        } else if let Some(err) = last_err {
+            Err(FfiError::from(err))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn poll_incoming_clipboard(&self) -> Vec<FfiClipboardItem> {
+        self.clipboard
+            .poll_incoming()
+            .into_iter()
+            .map(FfiClipboardItem::from)
+            .collect()
+    }
+
+    pub fn fetch_clipboard_offer(
+        &self,
+        peer_device_id: String,
+        offer_id: String,
+        mime_type: String,
+    ) -> Result<FfiClipboardItem, FfiError> {
+        let item = self.runtime.block_on(self.clipboard.fetch_clipboard_image(
+            &self.node,
+            &peer_device_id,
+            &offer_id,
+            &mime_type,
+        ))?;
+        Ok(FfiClipboardItem::from(item))
     }
 
     pub fn shutdown(&self) {
@@ -1624,7 +1798,7 @@ mod tests {
         let devices_str = devices_path.to_string_lossy().to_string();
 
         let handle = CoreHandle::new();
-        assert_eq!(get_core_status().version, "0.4.0");
+        assert_eq!(get_core_status().version, "0.5.0");
 
         let seeded = FfiPairedDevice {
             device_id: "phone-1".to_string(),
@@ -1711,6 +1885,148 @@ mod tests {
             .expect("reload daemon config");
         assert_eq!(reloaded, saved);
 
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn orion_node_handle_demuxes_clipboard_and_enforces_config() {
+        use std::net::{IpAddr, Ipv4Addr};
+
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("keynear-orion-clip-{nonce}"));
+        fs::create_dir_all(&dir).expect("mkdir");
+
+        let loopback = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0);
+        let linux_node = OrionNodeHandle::build_with_init(OrionNodeInit {
+            device_id: "linux-host".to_string(),
+            display_name: "Linux".to_string(),
+            capability_flags: 1,
+            quic_secret_key: vec![0x31; 32],
+            incoming_directory: dir.to_string_lossy().to_string(),
+            auto_accept_from_paired: true,
+            require_explicit_fd_for_single_file: false,
+            bind_addr: Some(loopback),
+        })
+        .expect("bind linux");
+
+        let phone_node = OrionNodeHandle::build_with_init(OrionNodeInit {
+            device_id: "pixel-phone".to_string(),
+            display_name: "Pixel".to_string(),
+            capability_flags: 1,
+            quic_secret_key: vec![0x32; 32],
+            incoming_directory: dir.to_string_lossy().to_string(),
+            auto_accept_from_paired: true,
+            require_explicit_fd_for_single_file: false,
+            bind_addr: Some(loopback),
+        })
+        .expect("bind phone");
+
+        let secret = vec![0x88; 32];
+        let linux_ep = linux_node.local_lan_endpoint();
+        let phone_ep = phone_node.local_lan_endpoint();
+
+        linux_node
+            .sync_peer(
+                "pixel-phone".to_string(),
+                phone_ep.endpoint_id,
+                phone_ep.socket_addrs,
+                secret.clone(),
+                true,
+            )
+            .expect("sync phone");
+        phone_node
+            .sync_peer(
+                "linux-host".to_string(),
+                linux_ep.endpoint_id,
+                linux_ep.socket_addrs,
+                secret,
+                true,
+            )
+            .expect("sync linux");
+
+        linux_node
+            .send_clipboard_text("hello from desktop".to_string(), false)
+            .expect("send clipboard text");
+
+        let mut received_phone = Vec::new();
+        for _ in 0..50 {
+            received_phone.extend(phone_node.poll_incoming_clipboard());
+            if !received_phone.is_empty() {
+                break;
+            }
+            thread::sleep(Duration::from_millis(20));
+        }
+        assert_eq!(received_phone.len(), 1);
+        assert_eq!(received_phone[0].data, b"hello from desktop");
+        assert!(!received_phone[0].is_otp);
+
+        phone_node
+            .send_clipboard_text("847291".to_string(), true)
+            .expect("send OTP");
+
+        let mut received_linux = Vec::new();
+        for _ in 0..50 {
+            received_linux.extend(linux_node.poll_incoming_clipboard());
+            if !received_linux.is_empty() {
+                break;
+            }
+            thread::sleep(Duration::from_millis(20));
+        }
+        assert_eq!(received_linux.len(), 1);
+        assert_eq!(received_linux[0].data, b"847291");
+        assert!(received_linux[0].is_otp);
+
+        let large_img = vec![0x5Au8; 64 * 1024];
+        let offer = linux_node
+            .runtime
+            .block_on(linux_node.clipboard.offer_clipboard_image(
+                &linux_node.node,
+                "pixel-phone",
+                vec!["image/png".to_string()],
+                Arc::new({
+                    let data = large_img.clone();
+                    move |_| Ok(data.clone())
+                }),
+            ))
+            .expect("offer delayed image");
+
+        let mut phone_offers = Vec::new();
+        for _ in 0..50 {
+            phone_offers.extend(phone_node.poll_incoming_clipboard());
+            if !phone_offers.is_empty() {
+                break;
+            }
+            thread::sleep(Duration::from_millis(20));
+        }
+        assert_eq!(phone_offers.len(), 1);
+        assert!(phone_offers[0].is_image_offer);
+        assert!(phone_offers[0].data.is_empty());
+
+        let fetched = phone_node
+            .fetch_clipboard_offer(
+                "linux-host".to_string(),
+                offer.offer_id,
+                "image/png".to_string(),
+            )
+            .expect("fetch delayed offer");
+        assert_eq!(fetched.data, large_img);
+
+        phone_node.set_clipboard_config(
+            true,
+            true,
+            false,
+            vec!["application/x-password".to_string()],
+        );
+        let otp_err = phone_node
+            .send_clipboard_text("123456".to_string(), true)
+            .expect_err("disabled otp passthrough must reject");
+        assert!(matches!(otp_err, FfiError::Validation { .. }));
+
+        linux_node.shutdown();
+        phone_node.shutdown();
         let _ = fs::remove_dir_all(&dir);
     }
 }

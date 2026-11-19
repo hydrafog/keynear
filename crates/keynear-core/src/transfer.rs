@@ -810,10 +810,21 @@ impl TransferEngine {
     pub async fn handle_incoming_stream(
         &self,
         peer_device_id: &str,
-        mut send: SendStream,
+        send: SendStream,
         mut recv: RecvStream,
     ) -> Result<TransferSession, KeynearError> {
         let kind = read_stream_kind(&mut recv).await?;
+        self.handle_incoming_stream_with_kind(peer_device_id, kind, send, recv)
+            .await
+    }
+
+    pub async fn handle_incoming_stream_with_kind(
+        &self,
+        peer_device_id: &str,
+        kind: QuicStreamKind,
+        mut send: SendStream,
+        mut recv: RecvStream,
+    ) -> Result<TransferSession, KeynearError> {
         if !matches!(
             kind,
             QuicStreamKind::RawFileChunk | QuicStreamKind::StoredZipArchive
@@ -903,7 +914,7 @@ impl TransferEngine {
                 self.receive_zip_stream(&offer, &mut recv, &reg.cancel_flag)
                     .await
             }
-            QuicStreamKind::Control => unreachable!(),
+            QuicStreamKind::Control | QuicStreamKind::ClipboardBlob => unreachable!(),
         };
 
         match result {

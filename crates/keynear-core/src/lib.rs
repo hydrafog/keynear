@@ -1,3 +1,4 @@
+pub mod clipboard;
 pub mod error;
 pub mod keyring;
 pub mod lan_discovery;
@@ -13,6 +14,13 @@ pub mod uniffi_bridge;
 
 uniffi::setup_scaffolding!();
 
+pub use clipboard::{
+    is_image_mime, normalize_mime_type, pick_preferred_image_mime, read_clipboard_blob,
+    should_ignore_mime_offers, write_clipboard_blob, ClipboardEngine, ClipboardItem,
+    ClipboardPolicy, DelayedClipboardOffer, DelayedRenderCallback, BUILT_IN_IGNORED_MIMES,
+    CLIPBOARD_OFFER_TTL_SECS, DEFAULT_TEXT_MIME, MAX_CLIPBOARD_IMAGE_BYTES, MAX_CLIPBOARD_QUEUE,
+    MAX_INLINE_CLIPBOARD_BYTES,
+};
 pub use error::KeynearError;
 pub use keyring::{
     commit_paired_device, remove_paired_device, InMemorySecretStore, PeerSecrets, SecretStore,
@@ -52,7 +60,7 @@ pub use transfer::{
     sanitize_relative_path, TransferEngine, TransferRegistry, MAX_ACTIVE_TRANSFERS,
 };
 pub use uniffi_bridge::{
-    default_config_summary, get_core_status, CoreHandle, CoreStatus, FfiError, FfiLanEndpoint,
-    FfiTransferDirection, FfiTransferItem, FfiTransferSession, FfiTransferState, FfiVisibilityMode,
-    OrionNodeHandle,
+    default_config_summary, get_core_status, CoreHandle, CoreStatus, FfiClipboardItem, FfiError,
+    FfiLanEndpoint, FfiTransferDirection, FfiTransferItem, FfiTransferSession, FfiTransferState,
+    FfiVisibilityMode, OrionNodeHandle,
 };

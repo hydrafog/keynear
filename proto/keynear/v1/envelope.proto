@@ -17,6 +17,8 @@ message Envelope {
     TransferConsent transfer_consent = 16;
     TransferCancel transfer_cancel = 17;
     TransferComplete transfer_complete = 18;
+    ClipboardOffer clipboard_offer = 19;
+    ClipboardFetch clipboard_fetch = 20;
   }
 }
 
@@ -82,5 +84,18 @@ message TransferComplete {
   string transfer_id = 1;
   uint64 bytes_transferred = 2;
   bytes sha256_digest = 3;
+}
+
+message ClipboardOffer {
+  string offer_id = 1;
+  repeated string mime_types = 2;
+  bool is_image = 3;
+  bool is_otp = 4;
+  uint64 byte_size = 5;
+}
+
+message ClipboardFetch {
+  string offer_id = 1;
+  string mime_type = 2;
 }
 

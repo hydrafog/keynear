@@ -15,6 +15,7 @@ pub enum QuicStreamKind {
     Control = 0x01,
     RawFileChunk = 0x02,
     StoredZipArchive = 0x03,
+    ClipboardBlob = 0x04,
 }
 
 impl TryFrom<u8> for QuicStreamKind {
@@ -25,6 +26,7 @@ impl TryFrom<u8> for QuicStreamKind {
             0x01 => Ok(Self::Control),
             0x02 => Ok(Self::RawFileChunk),
             0x03 => Ok(Self::StoredZipArchive),
+            0x04 => Ok(Self::ClipboardBlob),
             other => Err(KeynearError::Protocol(format!(
                 "unknown QUIC stream kind 0x{other:02x}"
             ))),
@@ -119,6 +121,12 @@ pub fn envelope_to_control_frame(envelope: &v1::Envelope) -> Result<ControlFrame
         Some(v1::envelope::Payload::TransferComplete(inner)) => {
             ("transfer_complete", inner.encode_to_vec())
         }
+        Some(v1::envelope::Payload::ClipboardOffer(inner)) => {
+            ("clipboard_offer", inner.encode_to_vec())
+        }
+        Some(v1::envelope::Payload::ClipboardFetch(inner)) => {
+            ("clipboard_fetch", inner.encode_to_vec())
+        }
         None => {
             return Err(KeynearError::Protocol(
                 "envelope payload must not be empty".to_string(),
@@ -189,6 +197,14 @@ pub fn control_frame_to_envelope(frame: &ControlFrame) -> Result<v1::Envelope, K
         ),
         "transfer_complete" => v1::envelope::Payload::TransferComplete(
             v1::TransferComplete::decode(slice)
+                .map_err(|err| KeynearError::Protocol(err.to_string()))?,
+        ),
+        "clipboard_offer" => v1::envelope::Payload::ClipboardOffer(
+            v1::ClipboardOffer::decode(slice)
+                .map_err(|err| KeynearError::Protocol(err.to_string()))?,
+        ),
+        "clipboard_fetch" => v1::envelope::Payload::ClipboardFetch(
+            v1::ClipboardFetch::decode(slice)
                 .map_err(|err| KeynearError::Protocol(err.to_string()))?,
         ),
         other => {
@@ -367,6 +383,17 @@ mod tests {
                     sha256_digest: vec![0x99; 32],
                 },
             )),
+            sample_envelope(v1::envelope::Payload::ClipboardOffer(v1::ClipboardOffer {
+                offer_id: "offer-1".to_string(),
+                mime_types: vec!["image/png".to_string(), "image/jpeg".to_string()],
+                is_image: true,
+                is_otp: false,
+                byte_size: 131_072,
+            })),
+            sample_envelope(v1::envelope::Payload::ClipboardFetch(v1::ClipboardFetch {
+                offer_id: "offer-1".to_string(),
+                mime_type: "image/png".to_string(),
+            })),
         ];
 
         for env in cases {
@@ -437,6 +464,7 @@ mod tests {
             (0x01, QuicStreamKind::Control),
             (0x02, QuicStreamKind::RawFileChunk),
             (0x03, QuicStreamKind::StoredZipArchive),
+            (0x04, QuicStreamKind::ClipboardBlob),
         ] {
             assert_eq!(QuicStreamKind::try_from(byte).unwrap(), kind);
         }

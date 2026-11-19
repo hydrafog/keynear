@@ -10,7 +10,7 @@ use iroh::{EndpointAddr, EndpointId, RelayMode, SecretKey, TransportAddr};
 use rustls::crypto::{aws_lc_rs, CryptoProvider};
 use sha2::Sha256;
 use subtle::ConstantTimeEq;
-use tokio::sync::Mutex as AsyncMutex;
+use tokio::sync::{mpsc, Mutex as AsyncMutex};
 use tracing::{info, warn};
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
@@ -148,6 +148,8 @@ pub struct OrionQuicNode {
     allowlist: Arc<RwLock<HashMap<EndpointId, String>>>,
     peers_by_device: Arc<RwLock<HashMap<String, PeerAuthEntry>>>,
     connections: Arc<AsyncMutex<HashMap<EndpointId, Connection>>>,
+    outbound_tx: mpsc::UnboundedSender<(String, Connection)>,
+    outbound_rx: Arc<AsyncMutex<mpsc::UnboundedReceiver<(String, Connection)>>>,
 }
 
 impl OrionQuicNode {
@@ -185,12 +187,16 @@ impl OrionQuicNode {
             endpoint_id = %endpoint.id()
         );
 
+        let (outbound_tx, outbound_rx) = mpsc::unbounded_channel();
+
         Ok(Self {
             endpoint,
             config,
             allowlist,
             peers_by_device,
             connections: Arc::new(AsyncMutex::new(HashMap::new())),
+            outbound_tx,
+            outbound_rx: Arc::new(AsyncMutex::new(outbound_rx)),
         })
     }
 
@@ -352,29 +358,41 @@ impl OrionQuicNode {
 
         let mut cache = self.connections.lock().await;
         cache.insert(entry.endpoint_id, conn.clone());
+        let _ = self
+            .outbound_tx
+            .send((entry.device_id.clone(), conn.clone()));
         Ok(conn)
     }
 
     pub async fn accept_authenticated(&self) -> Result<Option<(String, Connection)>, KeynearError> {
-        let Some(incoming) = self.endpoint.accept().await else {
-            return Ok(None);
-        };
-        let connecting = incoming
-            .accept()
-            .map_err(|err| KeynearError::Transport(format!("QUIC accept failed: {err}")))?;
-        let conn = connecting
-            .await
-            .map_err(|err| KeynearError::Transport(format!("QUIC handshake failed: {err}")))?;
+        let mut outbound_rx = self.outbound_rx.lock().await;
+        tokio::select! {
+            incoming = self.endpoint.accept() => {
+                drop(outbound_rx);
+                let Some(incoming) = incoming else {
+                    return Ok(None);
+                };
+                let connecting = incoming
+                    .accept()
+                    .map_err(|err| KeynearError::Transport(format!("QUIC accept failed: {err}")))?;
+                let conn = connecting
+                    .await
+                    .map_err(|err| KeynearError::Transport(format!("QUIC handshake failed: {err}")))?;
 
-        match self.authenticate_inbound(&conn).await {
-            Ok(device_id) => {
-                let mut cache = self.connections.lock().await;
-                cache.insert(conn.remote_id(), conn.clone());
-                Ok(Some((device_id, conn)))
+                match self.authenticate_inbound(&conn).await {
+                    Ok(device_id) => {
+                        let mut cache = self.connections.lock().await;
+                        cache.insert(conn.remote_id(), conn.clone());
+                        Ok(Some((device_id, conn)))
+                    }
+                    Err(err) => {
+                        conn.close(QUIC_UNAUTHORIZED_CODE.into(), b"auth_failed");
+                        Err(err)
+                    }
+                }
             }
-            Err(err) => {
-                conn.close(QUIC_UNAUTHORIZED_CODE.into(), b"auth_failed");
-                Err(err)
+            outbound = outbound_rx.recv() => {
+                Ok(outbound)
             }
         }
     }
