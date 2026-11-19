@@ -1,6 +1,6 @@
 # Permissions and Privacy
 
-`Keynear` (`0.4.0-aquila`) requests only the OS permissions needed for local peer discovery, notifications, and direct Wi-Fi QUIC transfers.
+`Keynear` (`0.5.0-draco`) requests only the OS permissions needed for local peer discovery, notifications, clipboard continuity, and direct Wi-Fi QUIC transfers.
 
 ## Android Permissions
 
@@ -22,5 +22,6 @@
 
 - `devices.toml` stores only non-secret device metadata (`device_id`, `display_name`, `role`, `public_key_fingerprint`, `last_ble_address`, `last_lan_address`, `last_endpoint_id`, `auto_accept_files`, `paired_at`). Pairwise `irk`, `reconnect_secret`, local static X25519 keys, and the local Ed25519 `iroh` key (`quic_ed25519`) stay inside `oo7` (`org.freedesktop.secrets`) on Linux and Android Keystore on mobile. Two-step unpair removes both the metadata and the stored secrets.
 - Incoming Android file receives write directly to `MediaStore.Downloads` with `IS_PENDING = 1`, clearing `IS_PENDING = 0` upon completion or deleting the pending row on error or cancellation without requesting broad external storage permissions.
-- Upcoming clipboard policy (`0.5.0-draco`) skips offers carrying `x-kde-passwordManagerHint` or `application/x-password` before payload bytes are read.
+- Clipboard policy (`0.5.0-draco`) inspects offered MIME targets before reading any payload bytes and skips `x-kde-passwordManagerHint`, `application/x-password`, `ClipDescription.EXTRA_IS_SENSITIVE`, and user-configured `ignoredMimeTypes`.
+- Android OTP forwarding relies on Google Play Services SMS User Consent (`SmsRetriever.SEND_PERMISSION` + `com.google.android.gms` `EXTRA_CONSENT_INTENT` check) without requesting `READ_SMS`. Verified OTPs stay in Linux daemon memory only and are never written to `config.toml`, `devices.toml`, `DaemonStatus`, or logs.
 - `Keynear` ships under the [GNU General Public License v3.0](../../LICENSE).

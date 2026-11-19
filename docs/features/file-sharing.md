@@ -1,6 +1,6 @@
 # File Sharing
 
-`Keynear` (`0.4.0-aquila`) streams files and directories directly between paired peers over relay-free `iroh` QUIC streams.
+`Keynear` (`0.5.0-draco`) streams files and directories directly between paired peers over relay-free `iroh` QUIC streams.
 
 ## Transfer Pipeline
 

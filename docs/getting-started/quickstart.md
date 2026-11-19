@@ -1,6 +1,6 @@
 # Quickstart
 
-Pair a Linux desktop running `keynear-linux` and `keynear-settings` with an Android phone running `org.keynear.app` (`0.4.0-aquila`), then share files over direct Wi-Fi QUIC.
+Pair a Linux desktop running `keynear-linux` and `keynear-settings` with an Android phone running `org.keynear.app` (`0.5.0-draco`), then share files, clipboard items, and one-time codes over direct Wi-Fi QUIC.
 
 ## Pairing
 
@@ -24,7 +24,12 @@ Pair a Linux desktop running `keynear-linux` and `keynear-settings` with an Andr
 3. From Linux, send files or folders via the `ksni` tray, the `ashpd` file/folder choosers in `keynear-settings` (`--send-picker`), Nautilus/Dolphin/Yazi context menus (`keynear-settings --share -- <path>...`), or `keynear-linux --send <device_id> <path>...` to stream files in 60 KiB chunks or directories as uncompressed `STORED` zip archives over direct `iroh` QUIC (`X25519MLKEM768`, `RelayMode::Disabled`).
 4. Incoming drops wait in `PendingConsent` for `Accept` or `Decline` via desktop (`zbus`) or Android notifications, `keynear-settings`, `MainActivity`, or CLI (`keynear-linux --transfers`, `--accept <transfer_id>`, `--decline <transfer_id>`, `--cancel <transfer_id>`), unless `auto_accept_from_paired` or per-device `Auto-accept files` is enabled.
 
+## Clipboard and OTP Continuity
+
+- Desktop clipboard changes sync in real time over Wayland (`ext-data-control-v1` / `zwlr-data-control-v1`) or X11 to the paired Android phone in the background, skipping password-manager MIME targets (`x-kde-passwordManagerHint`, `application/x-password`) and `ignoredMimeTypes`.
+- Use **Copy phone clipboard** on the Android continuity notification or Quick Settings tile (`ClipboardTileService`) to read the phone clipboard and send it to the desktop.
+- Confirm Android SMS User Consent prompts to forward verified one-time codes to the desktop clipboard and enable **Copy latest OTP** in the Linux tray menu.
+
 ## Upcoming Milestones
 
-- `0.5.0-draco` adds Wayland/X11 clipboard synchronization and Android SMS User Consent OTP sync.
 - `1.0.0-vega` adds PipeWire/MPRIS2 Bluetooth audio handoff, the GNOME Mutter bridge, Wi-Fi Aware/Direct fallbacks, and `RangingManager` closeness gating.

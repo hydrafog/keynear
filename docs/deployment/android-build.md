@@ -1,6 +1,6 @@
 # Android Build
 
-The Android companion app (`org.keynear.app`, `versionCode = 4`, `versionName = "0.4.0-aquila"`) compiles `keynear-core` into `jniLibs` with `cargo-ndk` using 16 KB ELF page alignment before assembling the Gradle APK or AAB.
+The Android companion app (`org.keynear.app`, `versionCode = 5`, `versionName = "0.5.0-draco"`) compiles `keynear-core` into `jniLibs` with `cargo-ndk` using 16 KB ELF page alignment before assembling the Gradle APK or AAB.
 
 ## Native Library Compilation
 
