@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -233,11 +234,12 @@ private fun KeynearAppRoot(
         }
     }
 
+    val otpVerifiedMessage = stringResource(R.string.otp_verified_copied_snackbar)
     val consentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
     ) { result ->
         if (SmsUserConsentManager.handleConsentResult(context, result.resultCode, result.data)) {
-            showSnackbar(context.getString(R.string.otp_verified_copied_snackbar))
+            showSnackbar(otpVerifiedMessage)
         }
     }
 

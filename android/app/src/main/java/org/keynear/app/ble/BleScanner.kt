@@ -95,7 +95,7 @@ object BleScanner {
         GattSession.close(context)
     }
 
-    fun onCompanionDeviceAppeared(context: Context, address: String) {
+    fun onCompanionDeviceAppeared(context: Context) {
         Log.i(TAG, "companion_presence_awake")
         val client = CoreClientProvider.init(context)
         val mode = VisibilityState.fromFfi(client.coreHandle().visibilityMode())

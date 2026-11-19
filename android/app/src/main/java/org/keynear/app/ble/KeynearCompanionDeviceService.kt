@@ -9,15 +9,17 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 
 class KeynearCompanionDeviceService : CompanionDeviceService() {
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onDeviceAppeared(associationInfo: AssociationInfo) {
         val address = associationInfo.deviceMacAddress?.toString()
         Log.i(TAG, "companion_device_appeared_v33")
         if (!address.isNullOrBlank()) {
-            BleScanner.onCompanionDeviceAppeared(applicationContext, address)
+            BleScanner.onCompanionDeviceAppeared(applicationContext)
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onDeviceDisappeared(associationInfo: AssociationInfo) {
         val address = associationInfo.deviceMacAddress?.toString()
@@ -30,7 +32,7 @@ class KeynearCompanionDeviceService : CompanionDeviceService() {
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onDeviceAppeared(address: String) {
         Log.i(TAG, "companion_device_appeared_legacy")
-        BleScanner.onCompanionDeviceAppeared(applicationContext, address)
+        BleScanner.onCompanionDeviceAppeared(applicationContext)
     }
 
     @Suppress("OVERRIDE_DEPRECATION")

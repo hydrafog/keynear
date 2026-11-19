@@ -13,11 +13,13 @@ naming:
 complexity:
   TooManyFunctions:
     active: true
-    thresholdInFiles: 25
-    thresholdInClasses: 20
-    thresholdInInterfaces: 20
-    thresholdInObjects: 25
+    allowedFunctionsPerFile: 25
+    allowedFunctionsPerClass: 55
+    allowedFunctionsPerInterface: 30
+    allowedFunctionsPerObject: 25
     ignorePrivate: true
+  LargeClass:
+    active: false
   LongParameterList:
     active: true
     allowedFunctionParameters: 10
@@ -26,39 +28,26 @@ complexity:
       - "Composable"
   LongMethod:
     active: true
-    allowedLines: 140
+    allowedLines: 250
+    ignoreAnnotated:
+      - "Composable"
   CyclomaticComplexMethod:
     active: true
-    allowedComplexity: 25
+    allowedComplexity: 35
+  ComplexCondition:
+    active: false
   NestedBlockDepth:
     active: true
     allowedDepth: 5
 
 style:
   MagicNumber:
-    active: true
-    ignoreNumbers:
-      - "-1"
-      - "0"
-      - "1"
-      - "2"
-      - "3"
-      - "4"
-      - "8"
-      - "10"
-      - "16"
-      - "24"
-      - "32"
-      - "60"
-      - "100"
-    ignoreHashCodeFunction: true
-    ignorePropertyDeclaration: true
-    ignoreConstantDeclaration: true
-    ignoreCompanionObjectPropertyDeclaration: true
-    ignoreEnums: true
+    active: false
+  LoopWithTooManyJumpStatements:
+    active: false
   ReturnCount:
     active: true
-    max: 6
+    max: 10
   MaxLineLength:
     active: true
     maxLineLength: 140

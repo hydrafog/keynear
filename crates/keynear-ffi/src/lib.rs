@@ -796,31 +796,39 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn owned_fd_closes_once_on_drop() {
-        use std::os::fd::FromRawFd;
+        use std::io::{ErrorKind, Read};
         use std::os::fd::IntoRawFd;
+        use std::os::unix::net::UnixStream;
 
         assert!(matches!(
             wrap_raw_fd(-1),
             Err(KeynearError::Validation { field: "rawFd", .. })
         ));
 
-        let nonce = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("clock")
-            .as_nanos();
-        let path = std::env::temp_dir().join(format!("keynear-fd-test-{nonce}.bin"));
-        let file = fs::File::create(&path).expect("create temp file");
-        let raw_fd = file.into_raw_fd();
+        let (mut peer_a, peer_b) = UnixStream::pair().expect("create unix stream pair");
+        peer_a.set_nonblocking(true).expect("set nonblocking");
+        let raw_fd = peer_b.into_raw_fd();
 
         {
             let _owned = wrap_raw_fd(raw_fd).expect("wrap valid raw fd");
+            let mut buf = [0u8; 1];
+            let err = peer_a
+                .read(&mut buf)
+                .expect_err("peer fd must remain open while owned guard is alive");
+            assert_eq!(err.kind(), ErrorKind::WouldBlock);
         }
 
-        let reopened = unsafe { fs::File::from_raw_fd(raw_fd) };
-        let err = reopened.sync_all().expect_err("fd must already be closed");
-        std::mem::forget(reopened);
-        assert_eq!(err.raw_os_error(), Some(9));
-        let _ = fs::remove_file(&path);
+        peer_a
+            .set_nonblocking(false)
+            .expect("restore blocking mode");
+        peer_a
+            .set_read_timeout(Some(Duration::from_secs(1)))
+            .expect("set read timeout");
+        let mut buf = [0u8; 1];
+        let n = peer_a
+            .read(&mut buf)
+            .expect("peer read must observe EOF once owned fd drops");
+        assert_eq!(n, 0);
     }
 
     #[cfg(unix)]

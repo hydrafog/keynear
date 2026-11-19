@@ -17,7 +17,7 @@ import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.dp
 
 private val ChevronIconSize = 20.dp
-private val DefaultStrokeWidth = 2f
+private const val DEFAULT_STROKE_WIDTH = 2f
 
 
 private data class LucideRect(
@@ -38,7 +38,7 @@ private data class LucideCircle(
 private fun LucideSvgIcon(
     modifier: Modifier,
     tint: Color,
-    strokeWidth: Float = DefaultStrokeWidth,
+    strokeWidth: Float = DEFAULT_STROKE_WIDTH,
     pathStrings: List<String> = emptyList(),
     rects: List<LucideRect> = emptyList(),
     circles: List<LucideCircle> = emptyList(),
@@ -79,14 +79,16 @@ private fun LucideSvgIcon(
 fun IconInbox(
     modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,
         tint = tint,
         strokeWidth = strokeWidthDp,
         pathStrings = listOf(
-            "M 5.45 5.11 L 2 12 L 2 18 A 2 2 0 0 0 4 20 L 20 20 A 2 2 0 0 0 22 18 L 22 12 L 18.55 5.11 A 2 2 0 0 0 16.76 4 L 7.24 4 A 2 2 0 0 0 5.45 5.11 Z",
+            "M 5.45 5.11 L 2 12 L 2 18 A 2 2 0 0 0 4 20 L 20 20 " +
+                "A 2 2 0 0 0 22 18 L 22 12 L 18.55 5.11 " +
+                "A 2 2 0 0 0 16.76 4 L 7.24 4 A 2 2 0 0 0 5.45 5.11 Z",
             "M 22 12 L 16 12 L 14 15 L 10 15 L 8 12 L 2 12",
         ),
     )
@@ -96,14 +98,17 @@ fun IconInbox(
 fun IconSend(
     modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,
         tint = tint,
         strokeWidth = strokeWidthDp,
         pathStrings = listOf(
-            "M 14.536 21.686 A 0.5 0.5 0 0 0 15.473 21.662 L 21.973 2.662 A 0.496 0.496 0 0 0 21.338 2.027 L 2.338 8.527 A 0.5 0.5 0 0 0 2.314 9.464 L 10.244 12.644 A 2 2 0 0 1 11.356 13.754 Z",
+            "M 14.536 21.686 A 0.5 0.5 0 0 0 15.473 21.662 L 21.973 2.662 " +
+                "A 0.496 0.496 0 0 0 21.338 2.027 L 2.338 8.527 " +
+                "A 0.5 0.5 0 0 0 2.314 9.464 L 10.244 12.644 " +
+                "A 2 2 0 0 1 11.356 13.754 Z",
             "M 21.854 2.147 L 10.914 13.086",
         ),
     )
@@ -113,7 +118,7 @@ fun IconSend(
 fun IconSliders(
     modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -137,7 +142,7 @@ fun IconSliders(
 fun IconArrowLeft(
     modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -154,7 +159,7 @@ fun IconArrowLeft(
 fun IconChevronRight(
     modifier: Modifier = Modifier.size(ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.textMuted,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -168,7 +173,7 @@ fun IconChevronRight(
 fun IconChevronDown(
     modifier: Modifier = Modifier.size(ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.textMuted,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -182,7 +187,7 @@ fun IconChevronDown(
 fun IconChevronUp(
     modifier: Modifier = Modifier.size(ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.textMuted,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -196,14 +201,17 @@ fun IconChevronUp(
 fun IconLaptop(
     modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,
         tint = tint,
         strokeWidth = strokeWidthDp,
         pathStrings = listOf(
-            "M 18 5 A 2 2 0 0 1 20 7 L 20 15.526 A 2 2 0 0 0 20.212 16.423 L 21.28 18.55 A 1 1 0 0 1 20.38 20 L 3.62 20 A 1 1 0 0 1 2.72 18.55 L 3.788 16.423 A 2 2 0 0 0 4 15.526 L 4 7 A 2 2 0 0 1 6 5 Z",
+            "M 18 5 A 2 2 0 0 1 20 7 L 20 15.526 A 2 2 0 0 0 20.212 16.423 " +
+                "L 21.28 18.55 A 1 1 0 0 1 20.38 20 L 3.62 20 " +
+                "A 1 1 0 0 1 2.72 18.55 L 3.788 16.423 " +
+                "A 2 2 0 0 0 4 15.526 L 4 7 A 2 2 0 0 1 6 5 Z",
             "M 3.946 15.987 L 20.054 15.987",
         ),
     )
@@ -213,7 +221,7 @@ fun IconLaptop(
 fun IconSmartphone(
     modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -228,7 +236,7 @@ fun IconSmartphone(
 fun IconFile(
     modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -248,14 +256,16 @@ fun IconFile(
 fun IconFolder(
     modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,
         tint = tint,
         strokeWidth = strokeWidthDp,
         pathStrings = listOf(
-            "M 20 20 A 2 2 0 0 0 22 18 L 22 8 A 2 2 0 0 0 20 6 L 12.1 6 A 2 2 0 0 1 10.41 5.1 L 9.6 3.9 A 2 2 0 0 0 7.93 3 L 4 3 A 2 2 0 0 0 2 5 L 2 18 A 2 2 0 0 0 4 20 Z",
+            "M 20 20 A 2 2 0 0 0 22 18 L 22 8 A 2 2 0 0 0 20 6 L 12.1 6 " +
+                "A 2 2 0 0 1 10.41 5.1 L 9.6 3.9 A 2 2 0 0 0 7.93 3 L 4 3 " +
+                "A 2 2 0 0 0 2 5 L 2 18 A 2 2 0 0 0 4 20 Z",
         ),
     )
 }
@@ -264,7 +274,7 @@ fun IconFolder(
 fun IconClipboard(
     modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -281,7 +291,7 @@ fun IconClipboard(
 fun IconPlus(
     modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -295,7 +305,7 @@ fun IconPlus(
 fun IconEyeOff(
     modifier: Modifier = Modifier.size(KeynearSpacing.Lg),
     tint: Color = LocalKeynearPalette.current.textSecondary,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -314,14 +324,17 @@ fun IconEyeOff(
 fun IconShieldCheck(
     modifier: Modifier = Modifier.size(KeynearSpacing.Lg),
     tint: Color = LocalKeynearPalette.current.textSecondary,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,
         tint = tint,
         strokeWidth = strokeWidthDp,
         pathStrings = listOf(
-            "M 20 13 C 20 18 16.5 20.5 12.34 21.95 A 1 1 0 0 1 11.67 21.94 C 7.5 20.5 4 18 4 13 V 6 A 1 1 0 0 1 5 5 C 7 5 9.5 3.8 11.24 2.28 A 1.17 1.17 0 0 1 12.76 2.28 C 14.51 3.81 17 5 19 5 A 1 1 0 0 1 20 6 Z",
+            "M 20 13 C 20 18 16.5 20.5 12.34 21.95 A 1 1 0 0 1 11.67 21.94 " +
+                "C 7.5 20.5 4 18 4 13 V 6 A 1 1 0 0 1 5 5 C 7 5 9.5 3.8 11.24 2.28 " +
+                "A 1.17 1.17 0 0 1 12.76 2.28 C 14.51 3.81 17 5 19 5 " +
+                "A 1 1 0 0 1 20 6 Z",
             "M 9 12 L 11 14 L 15 10",
         ),
     )
@@ -331,7 +344,7 @@ fun IconShieldCheck(
 fun IconRadio(
     modifier: Modifier = Modifier.size(KeynearSpacing.Lg),
     tint: Color = LocalKeynearPalette.current.textSecondary,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -351,7 +364,7 @@ fun IconRadio(
 fun IconAlertTriangle(
     modifier: Modifier = Modifier.size(ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.onDangerTonal,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -369,7 +382,7 @@ fun IconAlertTriangle(
 fun IconClose(
     modifier: Modifier = Modifier.size(ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.error,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -383,7 +396,7 @@ fun IconClose(
 fun IconCheck(
     modifier: Modifier = Modifier.size(KeynearSpacing.Lg),
     tint: Color = LocalKeynearPalette.current.onLoadingTonal,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -397,7 +410,7 @@ fun IconCheck(
 fun IconRefreshCw(
     modifier: Modifier = Modifier.size(ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.textPrimary,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,
@@ -416,7 +429,7 @@ fun IconRefreshCw(
 fun IconTrash2(
     modifier: Modifier = Modifier.size(ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.error,
-    strokeWidthDp: Float = DefaultStrokeWidth,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
     LucideSvgIcon(
         modifier = modifier,

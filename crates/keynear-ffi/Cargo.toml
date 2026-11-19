@@ -4,10 +4,11 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+publish = false
 
 [lib]
 name = "keynear_core"
-crate-type = ["rlib", "cdylib"]
+crate-type = ["cdylib"]
 
 [features]
 default = []

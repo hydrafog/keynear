@@ -2,7 +2,14 @@
 all-features = true
 
 [advisories]
-ignore = []
+ignore = [
+    { id = "RUSTSEC-2026-0374", reason = "Transitive via uniffi_bindgen -> askama -> basic-toml; no upstream replacement yet" },
+    { id = "RUSTSEC-2026-0543", reason = "Transitive via iroh -> netwatch -> wmi -> chrono; no upstream replacement yet" },
+    { id = "RUSTSEC-2024-0436", reason = "Transitive via iroh -> netwatch -> netlink-packet-core -> paste; no upstream replacement yet" },
+    { id = "RUSTSEC-2026-0371", reason = "Transitive via ksni -> zbus 5 -> zbus_names; merged in zbus 6" },
+    { id = "RUSTSEC-2026-0370", reason = "Transitive via ksni -> zbus 5 -> zvariant; merged in zbus 6" },
+    { id = "RUSTSEC-2026-0372", reason = "Transitive via ksni -> zbus 5 -> zvariant_derive; merged in zbus 6" },
+]
 
 [licenses]
 allow = [
@@ -29,6 +36,7 @@ confidence-threshold = 0.8
 [bans]
 multiple-versions = "allow"
 wildcards = "deny"
+allow-wildcard-paths = true
 
 [sources]
 unknown-registry = "deny"

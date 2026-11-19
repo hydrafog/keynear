@@ -89,7 +89,7 @@ private val DeviceRowMinHeight = 62.dp
 private val EchoStrokeWidth = 4.5.dp
 private val EmptyIconSize = 22.dp
 private val EmptySheetExpandedHeight = 156.dp
-private val OrbitCycleMs = 40_000
+private const val ORBIT_CYCLE_MS = 40_000
 private val PinIconSize = 28.dp
 private val PinLabelTextSize = 13.sp
 private val PinLabelVerticalPadding = 7.dp
@@ -104,8 +104,8 @@ private val SheetExpandedHeight = 252.dp
 private val SpokeStrokeWidth = 1.dp
 private val VisibilityControlHeight = 56.dp
 private val VisibilityIconSize = 18.dp
-private val WaveCycleMs = 120_000
-private val WaveMoteAlpha = 0.5f
+private const val WAVE_CYCLE_MS = 120_000
+private const val WAVE_MOTE_ALPHA = 0.5f
 
 private object WaveMap {
     val InnerRadius = 78.dp
@@ -250,7 +250,7 @@ internal fun VisibilitySegmentedControl(
 @Composable
 internal fun RadarCanvasLayer(radarActive: Boolean) {
     val palette = LocalKeynearPalette.current
-    val cycleMs = WaveCycleMs
+    val cycleMs = WAVE_CYCLE_MS
     val transition = rememberInfiniteTransition(label = "waveMesh")
     val timestamp by transition.animateFloat(
         initialValue = 0f,
@@ -330,7 +330,7 @@ internal fun RadarCanvasLayer(radarActive: Boolean) {
                     timestamp * WaveMap.MoteRate + idx
                 val r = baseR + sin(timestamp * WaveMap.MoteWaveRate + idx + s) * WaveMap.MoteDrift.toPx()
                 drawCircle(
-                    color = palette.waveEcho.copy(alpha = WaveMoteAlpha),
+                    color = palette.waveEcho.copy(alpha = WAVE_MOTE_ALPHA),
                     radius = WaveMap.MoteRadius.toPx(),
                     center = Offset(cx + cos(theta) * r, cy + sin(theta) * r),
                 )
@@ -410,7 +410,7 @@ internal fun OrbitPinsLayer(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = OrbitCycleMs, easing = LinearEasing),
+            animation = tween(durationMillis = ORBIT_CYCLE_MS, easing = LinearEasing),
             repeatMode = RepeatMode.Restart,
         ),
         label = "orbitPhase",

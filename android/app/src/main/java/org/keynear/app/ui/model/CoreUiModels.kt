@@ -1,6 +1,7 @@
 package org.keynear.app.ui.model
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.companion.CompanionDeviceManager
 import android.content.ContentValues
 import android.content.Context
@@ -431,6 +432,7 @@ data class PermissionsChecklistState(
         ).count { !it }
 }
 
+@SuppressLint("NewApi")
 fun evaluatePermissionsChecklist(
     context: Context,
     sdkInt: Int = Build.VERSION.SDK_INT,

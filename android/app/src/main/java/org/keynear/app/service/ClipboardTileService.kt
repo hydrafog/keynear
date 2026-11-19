@@ -26,7 +26,9 @@ class ClipboardTileService : TileService() {
         val intent = Intent(this, ClipboardReadActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        if (usePendingIntentTileCollapse(Build.VERSION.SDK_INT)) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            usePendingIntentTileCollapse(Build.VERSION.SDK_INT)
+        ) {
             val pendingIntent = PendingIntent.getActivity(
                 this,
                 TILE_REQUEST_CODE,

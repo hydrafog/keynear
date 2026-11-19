@@ -29,8 +29,8 @@ private val ActionButtonHorizontalPadding = 20.dp
 private val ControlMinHeight = 52.dp
 private val ContentGap = 10.dp
 private val SelectionTileMinHeight = 128.dp
-private val DisabledContainerAlpha = 0.45f
-private val DisabledContentAlpha = 0.65f
+private const val DISABLED_CONTAINER_ALPHA = 0.45f
+private const val DISABLED_CONTENT_ALPHA = 0.65f
 
 @Composable
 fun SelectionTile(
@@ -100,8 +100,8 @@ fun ActionButton(
         tonalSurface -> palette.textPrimary
         else -> palette.onLoadingTonal
     }
-    val effectiveContainer = if (enabled) container else container.copy(alpha = DisabledContainerAlpha)
-    val effectiveContent = if (enabled) content else content.copy(alpha = DisabledContentAlpha)
+    val effectiveContainer = if (enabled) container else container.copy(alpha = DISABLED_CONTAINER_ALPHA)
+    val effectiveContent = if (enabled) content else content.copy(alpha = DISABLED_CONTENT_ALPHA)
     val buttonTone = when {
         !enabled -> TactileTone.NONE
         primary -> TactileTone.ACCENT

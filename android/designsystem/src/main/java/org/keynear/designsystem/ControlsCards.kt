@@ -34,10 +34,11 @@ import kotlin.math.abs
 private val CaptionLetterSpacing = 0.8.sp
 private val DefaultElevation = 5.dp
 private val TextSubtitleGap = 2.dp
-private val SheetClipMarginPx = 200f
-private val ShadowBlurThresholdPx = 0.5f
-private val CushionBlurThresholdPx = 0.4f
-private val CushionPaddingMarginPx = 8f
+private const val SHEET_CLIP_MARGIN_PX = 200f
+private const val SHADOW_BLUR_THRESHOLD_PX = 0.5f
+private const val CUSHION_BLUR_THRESHOLD_PX = 0.4f
+private const val CUSHION_PADDING_MARGIN_PX = 8f
+private const val HALF_FRACTION = 0.5f
 
 enum class TactileTone {
     SURFACE,
@@ -105,18 +106,18 @@ fun Modifier.tactileShadow(
                 val offsetYPx = spec.offsetY.toPx()
                 val paint = AndroidPaint(AndroidPaint.ANTI_ALIAS_FLAG).apply {
                     color = spec.color.toArgb()
-                    if (blurPx > ShadowBlurThresholdPx) {
+                    if (blurPx > SHADOW_BLUR_THRESHOLD_PX) {
                         maskFilter = BlurMaskFilter(blurPx, BlurMaskFilter.Blur.NORMAL)
                     }
                 }
                 if (isCircle) {
-                    val cx = size.width * 0.5f
-                    val cy = size.height * 0.5f + offsetYPx
-                    val r = (size.minDimension * 0.5f + spreadPx).coerceAtLeast(1f)
+                    val cx = size.width * HALF_FRACTION
+                    val cy = size.height * HALF_FRACTION + offsetYPx
+                    val r = (size.minDimension * HALF_FRACTION + spreadPx).coerceAtLeast(1f)
                     native.drawCircle(cx, cy, r, paint)
                 } else if (tone == TactileTone.SHEET) {
                     native.save()
-                    native.clipRect(-SheetClipMarginPx, -SheetClipMarginPx, size.width + SheetClipMarginPx, size.height)
+                    native.clipRect(-SHEET_CLIP_MARGIN_PX, -SHEET_CLIP_MARGIN_PX, size.width + SHEET_CLIP_MARGIN_PX, size.height)
                     val path = AndroidPath().apply {
                         addRoundRect(
                             -spreadPx,
@@ -155,16 +156,16 @@ fun Modifier.tactileCushion(
     if (specs.isEmpty()) return this
     return drawWithContent {
         val radiusPx = if (isCircle) {
-            size.minDimension * 0.5f
+            size.minDimension * HALF_FRACTION
         } else {
-            cornerRadius.toPx().coerceAtMost(size.minDimension * 0.5f)
+            cornerRadius.toPx().coerceAtMost(size.minDimension * HALF_FRACTION)
         }
         drawIntoCanvas { canvas ->
             val native = canvas.nativeCanvas
             specs.forEach { spec ->
                 val blurPx = spec.blurRadius.toPx()
                 val offsetYPx = spec.offsetY.toPx()
-                val pad = blurPx * 2f + abs(offsetYPx) + CushionPaddingMarginPx
+                val pad = blurPx * 2f + abs(offsetYPx) + CUSHION_PADDING_MARGIN_PX
                 val path = AndroidPath().apply {
                     fillType = AndroidPath.FillType.EVEN_ODD
                     addRect(-pad, -pad, size.width + pad, size.height + pad, AndroidPath.Direction.CW)
@@ -180,7 +181,7 @@ fun Modifier.tactileCushion(
                 }
                 val paint = AndroidPaint(AndroidPaint.ANTI_ALIAS_FLAG).apply {
                     color = spec.color.toArgb()
-                    if (blurPx > CushionBlurThresholdPx) {
+                    if (blurPx > CUSHION_BLUR_THRESHOLD_PX) {
                         maskFilter = BlurMaskFilter(blurPx, BlurMaskFilter.Blur.NORMAL)
                     }
                 }

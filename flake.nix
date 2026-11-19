@@ -73,6 +73,9 @@
               wayland
             ];
 
+            LLVM_COV = "${pkgs.rustc.llvmPackages.llvm}/bin/llvm-cov";
+            LLVM_PROFDATA = "${pkgs.rustc.llvmPackages.llvm}/bin/llvm-profdata";
+
             shellHook = ''
               for tool in cargo cargo-audit cargo-deny cargo-llvm-cov llvm-profdata llvm-cov rustc protoc java gradle; do
                 if ! command -v "$tool" >/dev/null 2>&1; then

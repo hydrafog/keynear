@@ -350,11 +350,31 @@ fun PermissionsScreen(
 ) {
     val palette = LocalKeynearPalette.current
     val rows = listOf(
-        Triple("Nearby devices", "Bluetooth and Wi-Fi discovery for nearby Linux desktops.", Pair(permissions.nearbyGranted, actions.onRequestNearbyOnboardingPermissions)),
-        Triple("Local network access", "Direct peer-to-peer transfers over your local Wi-Fi.", Pair(permissions.localNetworkGranted, actions.onRequestLocalNetworkPermission)),
-        Triple("Companion device presence", "Wakes the background service automatically when a paired PC is near.", Pair(permissions.companionAssociated, actions.onOpenAppSettings)),
-        Triple("Notifications", "Shows transfer requests, 6-digit pairing codes, and live progress.", Pair(permissions.notificationsGranted, actions.onRequestNotificationsPermission)),
-        Triple("Unrestricted battery", "Prevents Android from interrupting large transfers with the screen off.", Pair(permissions.batteryOptimizationIgnored, actions.onRequestBatteryOptimization)),
+        Triple(
+            "Nearby devices",
+            "Bluetooth and Wi-Fi discovery for nearby Linux desktops.",
+            Pair(permissions.nearbyGranted, actions.onRequestNearbyOnboardingPermissions),
+        ),
+        Triple(
+            "Local network access",
+            "Direct peer-to-peer transfers over your local Wi-Fi.",
+            Pair(permissions.localNetworkGranted, actions.onRequestLocalNetworkPermission),
+        ),
+        Triple(
+            "Companion device presence",
+            "Wakes the background service automatically when a paired PC is near.",
+            Pair(permissions.companionAssociated, actions.onOpenAppSettings),
+        ),
+        Triple(
+            "Notifications",
+            "Shows transfer requests, 6-digit pairing codes, and live progress.",
+            Pair(permissions.notificationsGranted, actions.onRequestNotificationsPermission),
+        ),
+        Triple(
+            "Unrestricted battery",
+            "Prevents Android from interrupting large transfers with the screen off.",
+            Pair(permissions.batteryOptimizationIgnored, actions.onRequestBatteryOptimization),
+        ),
     )
 
     Column(

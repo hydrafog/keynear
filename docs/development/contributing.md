@@ -14,7 +14,7 @@ nix develop -c cargo test --workspace
 For Android native and Gradle builds, use the isolated Android devShell:
 
 ```bash
-nix develop .#android -c bash -c 'cd android && ./gradlew testDebugUnitTest assembleDebug'
+nix develop .#android --command bash -c 'cd android && gradle testDebugUnitTest lintDebug detekt assembleDebug'
 ```
 
 On non-Nix Ubuntu hosts, install `protobuf-compiler`, `libgtk-4-dev`, and `pkg-config` before building the workspace.
@@ -25,7 +25,7 @@ Shared visual tokens (`Plus Jakarta Sans`, light/dark palettes, typography scale
 
 ## Quality Scripts and CI
 
-- `scripts/project/check.sh`: Runs `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`, `cargo audit`, `cargo deny check`, `cargo llvm-cov --workspace --fail-under-lines 80`, and `scripts/validation/repo-check.sh`.
+- `scripts/project/check.sh`: Runs `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`, `cargo deny check`, `cargo audit`, `cargo llvm-cov -p keynear-protocol -p keynear-core -p keynear-ffi -p keynear-ipc --fail-under-lines 80`, `scripts/validation/repo-check.sh`, and Android `testDebugUnitTest lintDebug detekt`.
 - `scripts/validation/repo-check.sh`: Verifies `.editorconfig`, `.gitignore` hygiene, absence of committed secrets or `.env` files, `scripts/validation/strip-comments.sh --check`, and runs `scripts/validation/design-lint.sh`.
 - `scripts/validation/design-lint.sh`: Thin wrapper around `tools/design-lint` checking design-token parity against `design/tokens.json` and scanning Android Kotlin/XML, GTK4 CSS, and Rust UI/tray/notification sources against `design/design-lint-baseline.json`.
 - `scripts/validation/strip-comments.sh`: Thin wrapper around `tools/strip-comments` enforcing comment hygiene across `crates/` and `android/` (`--check`).

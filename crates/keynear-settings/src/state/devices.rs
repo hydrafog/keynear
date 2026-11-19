@@ -12,10 +12,11 @@ pub struct OrbitPlacement {
 }
 
 pub fn orbit_for(rssi: i16, index: usize, count: usize) -> OrbitPlacement {
-    let t = (f64::from(-rssi) - 36.0) / 56.0;
-    let radius = 112.0 + t.clamp(0.0, 1.0) * 68.0;
-    let angle_deg = (index as f64 / count.max(1) as f64) * 360.0;
-    let angle_rad = (angle_deg - 90.0).to_radians();
+    let clamped = f64::from(rssi.clamp(-90, -40));
+    let strength = ((-clamped - 40.0) / 50.0).clamp(0.0, 1.0);
+    let radius = 128.0 + strength * 48.0;
+    let angle_rad =
+        (index as f64 / count.max(1) as f64) * std::f64::consts::TAU - std::f64::consts::FRAC_PI_2;
     OrbitPlacement {
         radius_px: radius.round() as i32,
         duration_secs: 40,

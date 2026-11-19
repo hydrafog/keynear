@@ -307,7 +307,8 @@ fun DeviceDetailScreen(
                         verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Lg),
                     ) {
                         Text(
-                            text = "Remove ${device.displayName}? You will need to confirm a new 6-digit code on both devices to pair again.",
+                            text = "Remove ${device.displayName}? You will need to confirm a new " +
+                                "6-digit code on both devices to pair again.",
                             color = palette.onDangerTonal,
                             fontSize = KeynearTypeSizes.Description,
                             fontWeight = FontWeight.SemiBold,
