@@ -74,4 +74,13 @@
     <string name="transfer_stage_complete">Finalizing transfer</string>
     <string name="transfer_progress_channel_name">Ongoing transfers</string>
     <string name="transfer_progress_channel_description">Live progress updates for active file transfers</string>
+    <string name="action_copy_phone_clipboard">Copy phone clipboard</string>
+    <string name="clipboard_tile_subtitle">Send clipboard to desktop</string>
+    <string name="otp_consent_channel_name">OTP verification</string>
+    <string name="otp_consent_channel_description">SMS User Consent prompts and Play Services availability alerts</string>
+    <string name="otp_play_services_unavailable_title">SMS User Consent unavailable</string>
+    <string name="otp_play_services_unavailable_body">Google Play services is required for SMS one-time code forwarding.</string>
+    <string name="otp_consent_prompt_title">Share verification code</string>
+    <string name="otp_consent_prompt_body">Confirm the incoming SMS prompt to copy your one-time code to desktop.</string>
+    <string name="otp_verified_copied_snackbar">Verified code copied to desktop</string>
 </resources>

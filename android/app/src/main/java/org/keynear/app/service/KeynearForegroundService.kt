@@ -2,6 +2,7 @@ package org.keynear.app.service
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -14,11 +15,13 @@ import androidx.core.content.ContextCompat
 import org.keynear.app.R
 import org.keynear.app.ble.KeynearBleConstants
 import org.keynear.app.ble.KeynearBleManager
+import org.keynear.app.clipboard.ClipboardReadActivity
 import org.keynear.app.core.CoreClientProvider
 import org.keynear.app.core.CoreState
 import org.keynear.app.core.TransferStateUi
 import org.keynear.app.core.VisibilityState
 import org.keynear.app.lan.LocalNetworkManager
+import org.keynear.app.otp.SmsUserConsentManager
 import org.keynear.app.share.DirectShareManager
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -32,11 +35,15 @@ class KeynearForegroundService : Service() {
     @Volatile
     private var actionExecutor: ExecutorService? = null
 
+    @Volatile
+    private var smsUserConsentManager: SmsUserConsentManager? = null
+
     override fun onCreate() {
         super.onCreate()
         CoreClientProvider.init(applicationContext)
         ensureNotificationChannel()
         actionExecutor = Executors.newSingleThreadExecutor()
+        smsUserConsentManager = SmsUserConsentManager(applicationContext)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -89,6 +96,16 @@ class KeynearForegroundService : Service() {
             else -> VisibilityState.PAIRED_ONLY to 0L
         }
 
+        val copyClipboardIntent = Intent(this, ClipboardReadActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val copyClipboardPendingIntent = PendingIntent.getActivity(
+            this,
+            CLIPBOARD_ACTION_REQUEST_CODE,
+            copyClipboardIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
         val statusText = visibility.formattedStatus(remainingSecs)
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
@@ -96,6 +113,11 @@ class KeynearForegroundService : Service() {
             .setContentText(statusText)
             .setOngoing(true)
             .setSilent(true)
+            .addAction(
+                android.R.drawable.ic_menu_edit,
+                getString(R.string.action_copy_phone_clipboard),
+                copyClipboardPendingIntent,
+            )
             .build()
 
         val foregroundStarted = runCatching {
@@ -127,6 +149,7 @@ class KeynearForegroundService : Service() {
             )
         }
         ensureTransferMonitor()
+        smsUserConsentManager?.startIfEnabled(client.isOtpPassthroughEnabled())
         return START_STICKY
     }
 
@@ -140,6 +163,8 @@ class KeynearForegroundService : Service() {
                     if (client.syncTransferStates(applicationContext)) {
                         KeynearBleManager.notifyUiRefresh()
                     }
+                    client.syncClipboardStates(applicationContext)
+                    smsUserConsentManager?.startIfEnabled(client.isOtpPassthroughEnabled())
                 }
             },
             TRANSFER_POLL_INTERVAL_MS,
@@ -154,6 +179,8 @@ class KeynearForegroundService : Service() {
         transferMonitor = null
         actionExecutor?.shutdownNow()
         actionExecutor = null
+        smsUserConsentManager?.shutdown()
+        smsUserConsentManager = null
         LocalNetworkManager.stop(applicationContext)
         CoreClientProvider.getClient().shutdownOrion()
         KeynearBleManager.stopAdvertisingAndScanning(applicationContext)
@@ -179,6 +206,7 @@ class KeynearForegroundService : Service() {
         private const val TRANSFER_POLL_INTERVAL_MS = 1000L
         const val CHANNEL_ID = "keynear_continuity"
         const val NOTIFICATION_ID = 1001
+        private const val CLIPBOARD_ACTION_REQUEST_CODE = 1002
         const val ACTION_SYNC_VISIBILITY = "org.keynear.app.action.SYNC_VISIBILITY"
         const val ACTION_PAIRING_APPROVE = "org.keynear.app.action.PAIRING_APPROVE"
         const val ACTION_PAIRING_REJECT = "org.keynear.app.action.PAIRING_REJECT"

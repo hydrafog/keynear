@@ -43,6 +43,12 @@ interface CoreBridge {
     fun sendQueueToPeer(peerDeviceId: String): Result<TransferUi> =
         Result.failure(UnsupportedOperationException("send unavailable"))
     fun updateDaemonConfig(transform: (DaemonConfigUi) -> DaemonConfigUi): CoreState = loadState()
+    fun sendPhoneClipboardText(text: String): Result<Unit> =
+        Result.failure(UnsupportedOperationException("clipboard send unavailable"))
+    fun sendPhoneClipboardBlob(mimeType: String, data: ByteArray): Result<Unit> =
+        Result.failure(UnsupportedOperationException("clipboard blob unavailable"))
+    fun sendVerifiedOtp(code: String): Result<Unit> =
+        Result.failure(UnsupportedOperationException("otp send unavailable"))
     fun sendContentUris(
         peerDeviceId: String,
         uris: List<String>,
@@ -346,6 +352,45 @@ object EndpointHexCodec {
     fun encode(bytes: ByteArray): String =
         bytes.joinToString(separator = "") { b -> "%02x".format(b.toInt() and 0xFF) }
 }
+
+const val MAX_CLIPBOARD_IMAGE_BYTES: Int = 16 * 1024 * 1024
+
+private val BUILT_IN_IGNORED_CLIPBOARD_MIMES = setOf(
+    "x-kde-passwordmanagerhint",
+    "application/x-password",
+)
+
+fun normalizeClipboardMime(raw: String): String =
+    raw.substringBefore(';').trim().lowercase()
+
+fun shouldIgnoreClipboardMimes(
+    offeredMimes: List<String>,
+    ignoredMimes: List<String>,
+): Boolean {
+    val rules = buildSet {
+        addAll(BUILT_IN_IGNORED_CLIPBOARD_MIMES)
+        for (rule in ignoredMimes) {
+            val clean = normalizeClipboardMime(rule)
+            if (clean.isNotEmpty()) add(clean)
+        }
+    }
+    return offeredMimes.any { mime ->
+        val norm = normalizeClipboardMime(mime)
+        norm.isNotEmpty() && norm in rules
+    }
+}
+
+fun shouldSkipClipDescription(
+    offeredMimes: List<String>,
+    isSensitive: Boolean,
+    ignoredMimes: List<String>,
+): Boolean = isSensitive || shouldIgnoreClipboardMimes(offeredMimes, ignoredMimes)
+
+fun shouldReadClipboardOnFocus(hasFocus: Boolean, alreadyHandled: Boolean): Boolean =
+    hasFocus && !alreadyHandled
+
+fun usePendingIntentTileCollapse(sdkInt: Int): Boolean =
+    sdkInt >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
 
 object CoreClientProvider {
     @Volatile

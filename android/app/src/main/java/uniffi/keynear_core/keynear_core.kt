@@ -753,9 +753,13 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_keynear_core_checksum_method_orionnodehandle_cancel_transfer(
     ): Int
+    external fun uniffi_keynear_core_checksum_method_orionnodehandle_fetch_clipboard_offer(
+    ): Int
     external fun uniffi_keynear_core_checksum_method_orionnodehandle_list_transfers(
     ): Int
     external fun uniffi_keynear_core_checksum_method_orionnodehandle_local_lan_endpoint(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_orionnodehandle_poll_incoming_clipboard(
     ): Int
     external fun uniffi_keynear_core_checksum_method_orionnodehandle_provide_receive_fd(
     ): Int
@@ -763,11 +767,17 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_keynear_core_checksum_method_orionnodehandle_respond_consent(
     ): Int
+    external fun uniffi_keynear_core_checksum_method_orionnodehandle_send_clipboard_blob(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_orionnodehandle_send_clipboard_text(
+    ): Int
     external fun uniffi_keynear_core_checksum_method_orionnodehandle_send_fd(
     ): Int
     external fun uniffi_keynear_core_checksum_method_orionnodehandle_send_paths(
     ): Int
     external fun uniffi_keynear_core_checksum_method_orionnodehandle_set_auto_accept_from_paired(
+    ): Int
+    external fun uniffi_keynear_core_checksum_method_orionnodehandle_set_clipboard_config(
     ): Int
     external fun uniffi_keynear_core_checksum_method_orionnodehandle_set_incoming_directory(
     ): Int
@@ -885,9 +895,13 @@ internal object UniffiLib {
     ): Long
     external fun uniffi_keynear_core_fn_method_orionnodehandle_cancel_transfer(`ptr`: Long,`transferId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_orionnodehandle_fetch_clipboard_offer(`ptr`: Long,`peerDeviceId`: RustBuffer.ByValue,`offerId`: RustBuffer.ByValue,`mimeType`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_orionnodehandle_list_transfers(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_orionnodehandle_local_lan_endpoint(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_orionnodehandle_poll_incoming_clipboard(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_orionnodehandle_provide_receive_fd(`ptr`: Long,`transferId`: RustBuffer.ByValue,`rawFd`: Int,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -895,11 +909,17 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_keynear_core_fn_method_orionnodehandle_respond_consent(`ptr`: Long,`transferId`: RustBuffer.ByValue,`accepted`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_keynear_core_fn_method_orionnodehandle_send_clipboard_blob(`ptr`: Long,`mimeType`: RustBuffer.ByValue,`data`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_keynear_core_fn_method_orionnodehandle_send_clipboard_text(`ptr`: Long,`text`: RustBuffer.ByValue,`isOtp`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_keynear_core_fn_method_orionnodehandle_send_fd(`ptr`: Long,`peerDeviceId`: RustBuffer.ByValue,`fileName`: RustBuffer.ByValue,`mimeType`: RustBuffer.ByValue,`sizeBytes`: Long,`rawFd`: Int,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_orionnodehandle_send_paths(`ptr`: Long,`peerDeviceId`: RustBuffer.ByValue,`paths`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_keynear_core_fn_method_orionnodehandle_set_auto_accept_from_paired(`ptr`: Long,`enabled`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_keynear_core_fn_method_orionnodehandle_set_clipboard_config(`ptr`: Long,`clipboardSyncEnabled`: Byte,`clipboardImagesEnabled`: Byte,`otpPassthroughEnabled`: Byte,`ignoredMimeTypes`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_keynear_core_fn_method_orionnodehandle_set_incoming_directory(`ptr`: Long,`dir`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -1159,10 +1179,16 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_cancel_transfer() and 0xFFFF) != 29991) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_fetch_clipboard_offer() and 0xFFFF) != 2863) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_list_transfers() and 0xFFFF) != 22309) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_local_lan_endpoint() and 0xFFFF) != 62674) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_poll_incoming_clipboard() and 0xFFFF) != 45991) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_provide_receive_fd() and 0xFFFF) != 41885) {
@@ -1174,6 +1200,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_respond_consent() and 0xFFFF) != 32676) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_send_clipboard_blob() and 0xFFFF) != 4665) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_send_clipboard_text() and 0xFFFF) != 35507) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_send_fd() and 0xFFFF) != 43515) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1181,6 +1213,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_set_auto_accept_from_paired() and 0xFFFF) != 60788) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_set_clipboard_config() and 0xFFFF) != 49816) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_keynear_core_checksum_method_orionnodehandle_set_incoming_directory() and 0xFFFF) != 40865) {
@@ -2737,9 +2772,13 @@ public interface OrionNodeHandleInterface {
     
     fun `cancelTransfer`(`transferId`: kotlin.String): FfiTransferSession
     
+    fun `fetchClipboardOffer`(`peerDeviceId`: kotlin.String, `offerId`: kotlin.String, `mimeType`: kotlin.String): FfiClipboardItem
+    
     fun `listTransfers`(): List<FfiTransferSession>
     
     fun `localLanEndpoint`(): FfiLanEndpoint
+    
+    fun `pollIncomingClipboard`(): List<FfiClipboardItem>
     
     fun `provideReceiveFd`(`transferId`: kotlin.String, `rawFd`: kotlin.Int)
     
@@ -2747,11 +2786,17 @@ public interface OrionNodeHandleInterface {
     
     fun `respondConsent`(`transferId`: kotlin.String, `accepted`: kotlin.Boolean): FfiTransferSession
     
+    fun `sendClipboardBlob`(`mimeType`: kotlin.String, `data`: kotlin.ByteArray)
+    
+    fun `sendClipboardText`(`text`: kotlin.String, `isOtp`: kotlin.Boolean)
+    
     fun `sendFd`(`peerDeviceId`: kotlin.String, `fileName`: kotlin.String, `mimeType`: kotlin.String, `sizeBytes`: kotlin.ULong, `rawFd`: kotlin.Int): FfiTransferSession
     
     fun `sendPaths`(`peerDeviceId`: kotlin.String, `paths`: List<kotlin.String>): FfiTransferSession
     
     fun `setAutoAcceptFromPaired`(`enabled`: kotlin.Boolean)
+    
+    fun `setClipboardConfig`(`clipboardSyncEnabled`: kotlin.Boolean, `clipboardImagesEnabled`: kotlin.Boolean, `otpPassthroughEnabled`: kotlin.Boolean, `ignoredMimeTypes`: List<kotlin.String>)
     
     fun `setIncomingDirectory`(`dir`: kotlin.String)
     
@@ -2893,6 +2938,23 @@ open class OrionNodeHandle: Disposable, AutoCloseable, OrionNodeHandleInterface
     }
     
 
+    
+    @Throws(FfiException::class)override fun `fetchClipboardOffer`(`peerDeviceId`: kotlin.String, `offerId`: kotlin.String, `mimeType`: kotlin.String): FfiClipboardItem {
+            return FfiConverterTypeFfiClipboardItem.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_orionnodehandle_fetch_clipboard_offer(
+        it,
+        
+        FfiConverterString.lower(`peerDeviceId`),
+        FfiConverterString.lower(`offerId`),
+        FfiConverterString.lower(`mimeType`),_status)
+}
+    }
+    )
+    }
+    
+
     override fun `listTransfers`(): List<FfiTransferSession> {
             return FfiConverterSequenceTypeFfiTransferSession.lift(
     callWithHandle {
@@ -2911,6 +2973,19 @@ open class OrionNodeHandle: Disposable, AutoCloseable, OrionNodeHandleInterface
     callWithHandle {
     uniffiRustCall() { _status ->
     UniffiLib.uniffi_keynear_core_fn_method_orionnodehandle_local_lan_endpoint(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    override fun `pollIncomingClipboard`(): List<FfiClipboardItem> {
+            return FfiConverterSequenceTypeFfiClipboardItem.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_orionnodehandle_poll_incoming_clipboard(
         it,
         _status)
 }
@@ -2965,6 +3040,36 @@ open class OrionNodeHandle: Disposable, AutoCloseable, OrionNodeHandleInterface
     
 
     
+    @Throws(FfiException::class)override fun `sendClipboardBlob`(`mimeType`: kotlin.String, `data`: kotlin.ByteArray)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_orionnodehandle_send_clipboard_blob(
+        it,
+        
+        FfiConverterString.lower(`mimeType`),
+        FfiConverterByteArray.lower(`data`),_status)
+}
+    }
+    
+    
+
+    
+    @Throws(FfiException::class)override fun `sendClipboardText`(`text`: kotlin.String, `isOtp`: kotlin.Boolean)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_orionnodehandle_send_clipboard_text(
+        it,
+        
+        FfiConverterString.lower(`text`),
+        FfiConverterBoolean.lower(`isOtp`),_status)
+}
+    }
+    
+    
+
+    
     @Throws(FfiException::class)override fun `sendFd`(`peerDeviceId`: kotlin.String, `fileName`: kotlin.String, `mimeType`: kotlin.String, `sizeBytes`: kotlin.ULong, `rawFd`: kotlin.Int): FfiTransferSession {
             return FfiConverterTypeFfiTransferSession.lift(
     callWithHandle {
@@ -3007,6 +3112,22 @@ open class OrionNodeHandle: Disposable, AutoCloseable, OrionNodeHandleInterface
         it,
         
         FfiConverterBoolean.lower(`enabled`),_status)
+}
+    }
+    
+    
+
+    override fun `setClipboardConfig`(`clipboardSyncEnabled`: kotlin.Boolean, `clipboardImagesEnabled`: kotlin.Boolean, `otpPassthroughEnabled`: kotlin.Boolean, `ignoredMimeTypes`: List<kotlin.String>)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_keynear_core_fn_method_orionnodehandle_set_clipboard_config(
+        it,
+        
+        FfiConverterBoolean.lower(`clipboardSyncEnabled`),
+        FfiConverterBoolean.lower(`clipboardImagesEnabled`),
+        FfiConverterBoolean.lower(`otpPassthroughEnabled`),
+        FfiConverterSequenceString.lower(`ignoredMimeTypes`),_status)
 }
     }
     
@@ -3134,6 +3255,74 @@ public object FfiConverterTypeCoreStatus: FfiConverterRustBuffer<CoreStatus> {
             FfiConverterString.write(value.`version`, buf)
             FfiConverterUInt.write(value.`maxControlFrameBytes`, buf)
             FfiConverterBoolean.write(value.`ready`, buf)
+    }
+}
+
+
+
+data class FfiClipboardItem (
+    var `id`: kotlin.String
+    , 
+    var `peerDeviceId`: kotlin.String
+    , 
+    var `mimeType`: kotlin.String
+    , 
+    var `data`: kotlin.ByteArray
+    , 
+    var `isOtp`: kotlin.Boolean
+    , 
+    var `isImageOffer`: kotlin.Boolean
+    , 
+    var `offerId`: kotlin.String
+    , 
+    var `offeredMimes`: List<kotlin.String>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiClipboardItem: FfiConverterRustBuffer<FfiClipboardItem> {
+    override fun read(buf: ByteBuffer): FfiClipboardItem {
+        return FfiClipboardItem(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiClipboardItem) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`peerDeviceId`) +
+            FfiConverterString.allocationSize(value.`mimeType`) +
+            FfiConverterByteArray.allocationSize(value.`data`) +
+            FfiConverterBoolean.allocationSize(value.`isOtp`) +
+            FfiConverterBoolean.allocationSize(value.`isImageOffer`) +
+            FfiConverterString.allocationSize(value.`offerId`) +
+            FfiConverterSequenceString.allocationSize(value.`offeredMimes`)
+    )
+
+    override fun write(value: FfiClipboardItem, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`peerDeviceId`, buf)
+            FfiConverterString.write(value.`mimeType`, buf)
+            FfiConverterByteArray.write(value.`data`, buf)
+            FfiConverterBoolean.write(value.`isOtp`, buf)
+            FfiConverterBoolean.write(value.`isImageOffer`, buf)
+            FfiConverterString.write(value.`offerId`, buf)
+            FfiConverterSequenceString.write(value.`offeredMimes`, buf)
     }
 }
 
@@ -4396,6 +4585,34 @@ public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.Str
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterString.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiClipboardItem: FfiConverterRustBuffer<List<FfiClipboardItem>> {
+    override fun read(buf: ByteBuffer): List<FfiClipboardItem> {
+        val len = buf.getInt()
+        return List<FfiClipboardItem>(len) {
+            FfiConverterTypeFfiClipboardItem.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiClipboardItem>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiClipboardItem.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiClipboardItem>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiClipboardItem.write(it, buf)
         }
     }
 }

@@ -37,6 +37,13 @@
         </activity>
 
         <activity
+            android:name=".clipboard.ClipboardReadActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <activity
             android:name=".share.ShareActivity"
             android:exported="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar">
@@ -81,6 +88,16 @@
         <service
             android:name=".service.KeynearTileService"
             android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".service.ClipboardTileService"
+            android:exported="true"
+            android:label="@string/action_copy_phone_clipboard"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />

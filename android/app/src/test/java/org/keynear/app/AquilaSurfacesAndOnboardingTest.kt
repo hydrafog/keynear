@@ -184,7 +184,7 @@ class AquilaSurfacesAndOnboardingTest {
         val bridge = object : CoreBridge {
             override fun loadState(): CoreState = CoreState.Ready(
                 CoreSnapshot(
-                    version = "0.4.0",
+                    version = "0.5.0",
                     maxControlFrameBytes = 65_536L,
                     ready = true,
                     visibility = VisibilityState.PAIRED_ONLY,
@@ -238,7 +238,7 @@ class AquilaSurfacesAndOnboardingTest {
         val bridge = object : CoreBridge {
             override fun loadState(): CoreState = CoreState.Ready(
                 CoreSnapshot(
-                    version = "0.4.0",
+                    version = "0.5.0",
                     maxControlFrameBytes = 65_536L,
                     ready = true,
                     visibility = VisibilityState.PAIRED_ONLY,

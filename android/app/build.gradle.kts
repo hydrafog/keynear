@@ -15,8 +15,8 @@ android {
         applicationId = "org.keynear.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.4.0-aquila"
+        versionCode = 5
+        versionName = "0.5.0-draco"
     }
 
     buildFeatures {
@@ -48,6 +48,7 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.12.4")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.work:work-runtime-ktx:2.12.0")
+    implementation("com.google.android.gms:play-services-auth-api-phone:18.3.1")
     implementation("net.java.dev.jna:jna:5.19.1@aar")
     testImplementation("junit:junit:4.13.2")
 }

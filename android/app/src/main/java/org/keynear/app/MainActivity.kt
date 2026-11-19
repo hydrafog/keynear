@@ -55,6 +55,8 @@ import org.keynear.app.core.CoreState
 import org.keynear.app.core.VisibilityState
 import org.keynear.app.core.evaluatePermissionsChecklist
 import org.keynear.app.lan.LocalNetworkManager
+import org.keynear.app.otp.OtpConsentVerifier
+import org.keynear.app.otp.SmsUserConsentManager
 import org.keynear.app.service.KeynearForegroundService
 import org.keynear.app.ui.components.ActionButton
 import org.keynear.app.ui.components.TactileSurface
@@ -76,6 +78,7 @@ import org.keynear.app.ui.theme.LocalKeynearPalette
 
 class MainActivity : ComponentActivity() {
     private var resumeTick by mutableIntStateOf(0)
+    private var pendingConsentIntent by mutableStateOf<Intent?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -83,15 +86,39 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.auto(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.auto(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT),
         )
+        extractPendingConsentIntent(intent)?.let { pendingConsentIntent = it }
         val bridge = CoreClientProvider.init(applicationContext)
         setContent {
-            KeynearAppRoot(bridge = bridge, resumeTick = resumeTick)
+            KeynearAppRoot(
+                bridge = bridge,
+                resumeTick = resumeTick,
+                pendingConsentIntent = pendingConsentIntent,
+                onConsentConsumed = { pendingConsentIntent = null },
+            )
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        extractPendingConsentIntent(intent)?.let { pendingConsentIntent = it }
     }
 
     override fun onResume() {
         super.onResume()
         resumeTick += 1
+    }
+
+    private fun extractPendingConsentIntent(source: Intent?): Intent? {
+        if (source?.action != SmsUserConsentManager.ACTION_HANDLE_SMS_CONSENT) return null
+        @Suppress("DEPRECATION")
+        val consent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            source.getParcelableExtra(SmsUserConsentManager.EXTRA_PENDING_CONSENT_INTENT, Intent::class.java)
+        } else {
+            source.getParcelableExtra(SmsUserConsentManager.EXTRA_PENDING_CONSENT_INTENT)
+        } ?: return null
+        val pkg = consent.resolveActivity(packageManager)?.packageName
+        return consent.takeIf { OtpConsentVerifier.isConsentIntentTrusted(pkg) }
     }
 }
 
@@ -99,6 +126,8 @@ class MainActivity : ComponentActivity() {
 private fun KeynearAppRoot(
     bridge: CoreBridge,
     resumeTick: Int = 0,
+    pendingConsentIntent: Intent? = null,
+    onConsentConsumed: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -203,17 +232,35 @@ private fun KeynearAppRoot(
         }
     }
 
+    val consentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (SmsUserConsentManager.handleConsentResult(context, result.resultCode, result.data)) {
+            showSnackbar(context.getString(R.string.otp_verified_copied_snackbar))
+        }
+    }
+
+    LaunchedEffect(pendingConsentIntent) {
+        val intent = pendingConsentIntent ?: return@LaunchedEffect
+        onConsentConsumed()
+        consentLauncher.launch(intent)
+    }
+
     LaunchedEffect(bridge, resumeTick) {
         syncBleAndLoad()
     }
 
     DisposableEffect(bridge) {
+        SmsUserConsentManager.setForegroundConsentLauncher { intent ->
+            consentLauncher.launch(intent)
+        }
         KeynearBleManager.setUiRefreshListener {
             scope.launch {
                 uiState = withContext(Dispatchers.IO) { bridge.loadState() }
             }
         }
         onDispose {
+            SmsUserConsentManager.setForegroundConsentLauncher(null)
             KeynearBleManager.setUiRefreshListener(null)
         }
     }

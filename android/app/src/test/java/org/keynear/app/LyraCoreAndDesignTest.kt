@@ -1,5 +1,6 @@
 package org.keynear.app
 
+import androidx.compose.ui.graphics.Color
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -9,15 +10,16 @@ import org.keynear.app.core.CoreState
 import org.keynear.app.core.ShareValidationResult
 import org.keynear.app.core.VisibilityState
 import org.keynear.app.core.validateShareIntent
+import org.keynear.app.ui.theme.DarkKeynearPalette
 import org.keynear.app.ui.theme.KeynearSpacing
-import org.keynear.app.ui.theme.KeynearTokenHex
+import org.keynear.app.ui.theme.LightKeynearPalette
 
 class LyraCoreAndDesignTest {
     private class FakeCoreBridge : CoreBridge {
         private var current = VisibilityState.PAIRED_ONLY
 
         private fun snapshot(): CoreSnapshot = CoreSnapshot(
-            version = "0.4.0",
+            version = "0.5.0",
             maxControlFrameBytes = 65_536L,
             ready = true,
             visibility = current,
@@ -43,7 +45,7 @@ class LyraCoreAndDesignTest {
     fun coreBridgeTransitionsStateCleanly() {
         val bridge = FakeCoreBridge()
         val initial = bridge.loadState() as CoreState.Empty
-        assertEquals("0.4.0", initial.snapshot.version)
+        assertEquals("0.5.0", initial.snapshot.version)
         assertEquals(VisibilityState.PAIRED_ONLY, initial.snapshot.visibility)
         assertEquals(65_536L, initial.snapshot.maxControlFrameBytes)
 
@@ -108,10 +110,10 @@ class LyraCoreAndDesignTest {
 
     @Test
     fun designTokensMatchPrototypePaletteAndTouchFloor() {
-        assertEquals(0xFFF0F4FA, KeynearTokenHex.LIGHT_CANVAS)
-        assertEquals(0xFF0B1016, KeynearTokenHex.DARK_CANVAS)
-        assertEquals(0xFF004CED, KeynearTokenHex.ACCENT_BLUE_600)
-        assertEquals(0xFF0172F9, KeynearTokenHex.FOCUS_BLUE_500)
+        assertEquals(Color(0xFFF0F4FA), LightKeynearPalette.canvas)
+        assertEquals(Color(0xFF0B1016), DarkKeynearPalette.canvas)
+        assertEquals(Color(0xFF004CED), LightKeynearPalette.accent)
+        assertEquals(Color(0xFF0172F9), LightKeynearPalette.focusRing)
         assertEquals(48, KeynearSpacing.MIN_TOUCH_TARGET_DP)
     }
 }
