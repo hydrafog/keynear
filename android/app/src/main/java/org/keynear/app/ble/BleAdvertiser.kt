@@ -16,6 +16,7 @@ import org.keynear.app.ui.model.BluetoothStatus
 import org.keynear.app.ui.model.VisibilityState
 import uniffi.keynear_core.CoreHandle
 import uniffi.keynear_core.FfiDeviceRole
+import org.keynear.app.bridge.getPairedDevices
 
 object BleAdvertiser {
     private const val TAG = "BleAdvertiser"

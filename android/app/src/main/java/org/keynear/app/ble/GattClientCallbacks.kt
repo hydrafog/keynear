@@ -10,6 +10,11 @@ import android.content.Context
 import org.keynear.app.bridge.CoreClientProvider
 import org.keynear.app.ui.model.PendingPairingUi
 import uniffi.keynear_core.FfiPairingState
+import org.keynear.app.bridge.EventQueue
+import org.keynear.app.bridge.onEncryptedLanEndpointFromBle
+import org.keynear.app.bridge.encodeLocalLanEndpointForPeer
+import org.keynear.app.bridge.saveCompletedPairing
+import uniffi.keynear_core.FfiNoisePairingSession
 
 internal fun GattSession.buildGattClientCallback(context: Context, peerAddress: String): BluetoothGattCallback =
     object : BluetoothGattCallback() {

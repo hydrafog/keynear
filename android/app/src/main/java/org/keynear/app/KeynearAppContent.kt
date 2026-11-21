@@ -27,6 +27,7 @@ import org.keynear.app.ui.model.CoreState
 import org.keynear.designsystem.ActionButton
 import org.keynear.designsystem.TactileSurface
 import org.keynear.app.ui.devices.DeviceDetailScreen
+import org.keynear.app.ui.navigation.KeynearActions
 import org.keynear.app.ui.navigation.KeynearBottomNav
 import org.keynear.app.ui.navigation.KeynearSnackbarHost
 import org.keynear.app.ui.navigation.KeynearSubScreen
@@ -103,7 +104,9 @@ internal fun KeynearAppContent(
                 KeynearSnackbarHost(message = snackbarMessage)
             }
         }
+}
 
+}
 @Composable
 private fun LoadingOrErrorContent(
     uiState: CoreState,
@@ -190,6 +193,4 @@ private fun CurrentScreenContent(
             )
         }
     }
-}
-
 }

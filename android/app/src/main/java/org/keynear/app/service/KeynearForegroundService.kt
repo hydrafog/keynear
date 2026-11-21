@@ -30,6 +30,10 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import org.keynear.app.bridge.syncTransferStates
+import org.keynear.app.bridge.syncClipboardStates
+import org.keynear.app.bridge.acceptIncomingTransferOrSync
+import org.keynear.app.bridge.localLanEndpoint
 
 class KeynearForegroundService : Service() {
     @Volatile

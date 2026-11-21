@@ -14,6 +14,8 @@ import org.keynear.app.bridge.CoreClientProvider
 import org.keynear.app.bridge.EventQueue
 import org.keynear.app.ui.model.LocalNetworkStatus
 import java.nio.charset.StandardCharsets
+import org.keynear.app.ble.showLnpBlockedNotification
+import org.keynear.app.bridge.onPeerLanEndpointDiscovered
 
 
 internal fun LanManager.handleMissingLnpPermission(

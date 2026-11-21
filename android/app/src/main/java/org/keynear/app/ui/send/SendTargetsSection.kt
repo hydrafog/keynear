@@ -20,6 +20,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.keynear.app.ui.model.DeviceRoleUi
+import org.keynear.app.ui.model.PairedDeviceUi
+import org.keynear.app.ui.model.SendQueueItemUi
 import org.keynear.designsystem.ActionButton
 import org.keynear.designsystem.SectionHeading
 import org.keynear.designsystem.TactileSurface
@@ -166,4 +168,5 @@ Column(verticalArrangement = Arrangement.spacedBy(KeynearLayout.SectionHeadingBo
             }
         }
     }
+}
 }

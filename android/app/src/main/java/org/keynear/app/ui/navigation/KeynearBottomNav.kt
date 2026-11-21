@@ -136,24 +136,29 @@ private fun NavTabIcon(
     missingPermissionsCount: Int,
     palette: org.keynear.designsystem.KeynearPalette,
 ) {
-    when (tab) {
-        KeynearTab.RECEIVE -> IconInbox(modifier = Modifier.size(NavIconSize), tint = tint)
-        KeynearTab.SEND -> IconSend(modifier = Modifier.size(NavIconSize), tint = tint)
-        KeynearTab.SETTINGS -> IconSliders(modifier = Modifier.size(NavIconSize), tint = tint)
-    }
-    if (tab == KeynearTab.SETTINGS && missingPermissionsCount > 0) {
-        TactileSurface(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .offset(x = BadgeOffsetX, y = BadgeOffsetY)
-                .size(ContentGap),
-            shape = CircleShape,
-            containerColor = palette.error,
-            tone = TactileTone.TONAL,
-            cornerRadius = BadgeRadius,
-            isCircle = true,
-        ) {
-            Box(modifier = Modifier.size(ContentGap))
+    Box(
+        modifier = Modifier.size(NavIconSize),
+        contentAlignment = Alignment.Center,
+    ) {
+        when (tab) {
+            KeynearTab.RECEIVE -> IconInbox(modifier = Modifier.size(NavIconSize), tint = tint)
+            KeynearTab.SEND -> IconSend(modifier = Modifier.size(NavIconSize), tint = tint)
+            KeynearTab.SETTINGS -> IconSliders(modifier = Modifier.size(NavIconSize), tint = tint)
+        }
+        if (tab == KeynearTab.SETTINGS && missingPermissionsCount > 0) {
+            TactileSurface(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = BadgeOffsetX, y = BadgeOffsetY)
+                    .size(ContentGap),
+                shape = CircleShape,
+                containerColor = palette.error,
+                tone = TactileTone.TONAL,
+                cornerRadius = BadgeRadius,
+                isCircle = true,
+            ) {
+                Box(modifier = Modifier.size(ContentGap))
+            }
         }
     }
 }

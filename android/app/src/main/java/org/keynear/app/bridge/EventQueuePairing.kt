@@ -42,11 +42,11 @@ import java.util.concurrent.ConcurrentHashMap
 
 internal fun EventQueue.localLanEndpoint(): FfiLanEndpoint? = orionNode?.localLanEndpoint()
 
-fun syncAllPairedPeersToOrion(node: OrionNodeHandle? = orionNode) {
+fun EventQueue.syncAllPairedPeersToOrion(node: OrionNodeHandle? = orionNode) {
     DeviceRepo.syncAllPairedPeersToOrion(handle, devicesPath, secretStore, node)
 }
 
-fun encodeLocalLanEndpointForBleAddress(bleAddress: String): ByteArray? {
+fun EventQueue.encodeLocalLanEndpointForBleAddress(bleAddress: String): ByteArray? {
     val dev = getPairedDevices().firstOrNull { it.lastBleAddress.equals(bleAddress, ignoreCase = true) }
         ?: return null
     return encodeLocalLanEndpointForPeer(dev.deviceId)

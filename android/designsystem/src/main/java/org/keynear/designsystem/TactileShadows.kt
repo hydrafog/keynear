@@ -70,7 +70,9 @@ private fun DrawScope.drawOuterShadows(
 ) {
     val radiusPx = cornerRadius.toPx()
     drawIntoCanvas { canvas ->
-        specs.forEach { spec -> drawOuterSpec(canvas.nativeCanvas, spec, radiusPx, isCircle, tone, size) }
+        specs.forEach { spec ->
+            drawOuterSpec(canvas.nativeCanvas, spec, radiusPx, isCircle, tone, size, density)
+        }
     }
 }
 
@@ -81,10 +83,11 @@ private fun drawOuterSpec(
     isCircle: Boolean,
     tone: TactileTone,
     size: Size,
+    density: Float,
 ) {
-    val blurPx = spec.blurRadius.toPx()
-    val spreadPx = spec.spread.toPx()
-    val offsetYPx = spec.offsetY.toPx()
+    val blurPx = spec.blurRadius.value * density
+    val spreadPx = spec.spread.value * density
+    val offsetYPx = spec.offsetY.value * density
     val paint = AndroidPaint(AndroidPaint.ANTI_ALIAS_FLAG).apply {
         color = spec.color.toArgb()
         if (blurPx > SHADOW_BLUR_THRESHOLD_PX) {

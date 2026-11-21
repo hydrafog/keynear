@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.keynear.app.ui.model.SendItemKind
+import org.keynear.app.ui.model.SendQueueItemUi
 import org.keynear.app.ui.model.formatBytes
 import org.keynear.designsystem.ActionButton
 import org.keynear.designsystem.TactileSurface
@@ -190,4 +191,5 @@ TactileSurface(
             }
         }
     }
+}
 }

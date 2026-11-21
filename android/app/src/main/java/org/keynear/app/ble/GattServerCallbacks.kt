@@ -11,6 +11,10 @@ import org.keynear.app.ui.model.PendingPairingUi
 import uniffi.keynear_core.FfiDeviceRole
 import uniffi.keynear_core.FfiNoisePairingSession
 import uniffi.keynear_core.FfiPairingState
+import org.keynear.app.bridge.EventQueue
+import org.keynear.app.bridge.encodeLocalLanEndpointForBleAddress
+import org.keynear.app.bridge.saveCompletedPairing
+import org.keynear.app.bridge.onEncryptedLanEndpointFromBle
 
 internal fun GattSession.buildGattServerCallback(context: Context): BluetoothGattServerCallback =
     object : BluetoothGattServerCallback() {

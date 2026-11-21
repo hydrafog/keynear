@@ -17,6 +17,10 @@ import uniffi.keynear_core.OrionNodeHandle
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
+import org.keynear.app.ble.showOrUpdateTransferProgress
+import org.keynear.app.ble.showIncomingTransferConsent
+import org.keynear.app.ble.showTransferCompleted
+import org.keynear.app.ble.showTransferError
 
 object TransferRepo {
     private const val STREAM_COPY_BUFFER_BYTES = 65_536

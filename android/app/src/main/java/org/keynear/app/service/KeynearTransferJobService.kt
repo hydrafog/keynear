@@ -18,6 +18,9 @@ import org.keynear.app.ui.model.TransferUi
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import org.keynear.app.ble.showOrUpdateTransferProgress
+import org.keynear.app.ble.buildTransferProgressNotification
+import org.keynear.app.bridge.syncTransferStates
 
 class KeynearTransferJobService : JobService() {
     @Volatile

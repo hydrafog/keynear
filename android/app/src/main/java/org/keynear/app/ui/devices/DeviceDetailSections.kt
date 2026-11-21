@@ -98,6 +98,7 @@ TactileSurface(
         }
     }
 }
+}
 @Composable
 internal fun DeviceSettingsCard(
     device: PairedDeviceUi,
@@ -194,6 +195,7 @@ TactileSurface(
             )
         }
     }
+}
 }
 @Composable
 private fun MetadataLine(label: String, value: String) {

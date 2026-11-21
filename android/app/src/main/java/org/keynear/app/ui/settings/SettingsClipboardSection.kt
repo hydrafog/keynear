@@ -43,11 +43,8 @@ import org.keynear.designsystem.LocalKeynearPalette
 private val ActionMinHeight = 44.dp
 private val ChipMinWidth = 50.dp
 private val CompactGap = 6.dp
-private val ContentGap = 10.dp
 private val ControlIconSize = 20.dp
 private val FieldHeight = 38.dp
-private val RowIconSize = 14.dp
-private val ValueTextSize = 19.sp
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -210,4 +207,5 @@ SettingsSection(title = "Clipboard") {
             }
         }
     }
+}
 }

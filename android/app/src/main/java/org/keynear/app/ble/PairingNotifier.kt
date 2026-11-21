@@ -91,4 +91,3 @@ object PairingNotifier {
         manager.cancel(NOTIFICATION_ID)
     }
 }
-}

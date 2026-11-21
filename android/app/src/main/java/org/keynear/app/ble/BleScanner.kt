@@ -23,6 +23,7 @@ import uniffi.keynear_core.CoreHandle
 import uniffi.keynear_core.FfiPairedBeaconState
 import uniffi.keynear_core.FfiPairedDevice
 import java.util.concurrent.ConcurrentHashMap
+import org.keynear.app.bridge.getPairedDevices
 
 object BleScanner {
     private const val TAG = "BleScanner"

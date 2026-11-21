@@ -43,7 +43,7 @@ import java.util.concurrent.ConcurrentHashMap
 typealias UniffiCoreClient = EventQueue
 
 class EventQueue(
-    private var appContext: Context? = null,
+    internal var appContext: Context? = null,
 ) : CoreBridge {
     internal val handle: CoreHandle by lazy { CoreHandle() }
     internal var devicesPath: String? = appContext?.let { File(it.filesDir, "devices.toml").absolutePath }

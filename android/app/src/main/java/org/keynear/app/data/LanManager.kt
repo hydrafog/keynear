@@ -8,6 +8,7 @@ import org.keynear.app.bridge.CoreClientProvider
 import org.keynear.app.ui.model.LocalNetworkStatus
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
+import org.keynear.app.bridge.localLanEndpoint
 
 object LanManager {
     internal const val TAG = "LanManager"
