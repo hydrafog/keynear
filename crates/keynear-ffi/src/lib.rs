@@ -8,6 +8,7 @@ pub mod callbacks;
 pub mod clipboard;
 pub mod pairing;
 pub mod transfer;
+pub mod vega;
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -31,6 +32,11 @@ pub use pairing::{
     FfiPairingRole, FfiPairingState, FfiPairingStep, FfiStaticKeypair,
 };
 pub use transfer::{FfiTransferDirection, FfiTransferItem, FfiTransferSession, FfiTransferState};
+pub use vega::{
+    negotiate_vega_capabilities, select_vega_fallback, vega_capability_flags,
+    FfiCapabilityNegotiation, FfiFallbackMedia, FfiFallbackSelection, FfiFallbackStatus,
+    FfiRangingMethod, FfiVegaCapabilities,
+};
 
 use callbacks::{
     cycle_visibility_mode_impl, generate_static_keypair_impl, load_daemon_config_impl,

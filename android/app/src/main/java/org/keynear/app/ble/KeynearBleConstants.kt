@@ -25,7 +25,13 @@ object KeynearBleConstants {
     const val MAX_BEACON_DATA_BYTES = 24
     const val MAX_GATT_PAIRING_FRAME_BYTES = 512
     const val MAX_LAN_ENDPOINT_GATT_BYTES = 65_536
-    const val ANDROID_CAPABILITY_FLAGS = 0x03u
+    const val CAP_FILE_TRANSFER: UInt = 0x01u
+    const val CAP_CLIPBOARD: UInt = 0x02u
+    const val CAP_AUDIO_HANDOFF: UInt = 0x08u
+    const val CAP_WIFI_AWARE: UInt = 0x40u
+    const val CAP_WIFI_DIRECT_R2: UInt = 0x80u
+    const val ANDROID_CAPABILITY_FLAGS: UInt =
+        CAP_FILE_TRANSFER or CAP_CLIPBOARD or CAP_AUDIO_HANDOFF or CAP_WIFI_AWARE or CAP_WIFI_DIRECT_R2
 
     fun requiredPermissions(sdkInt: Int): List<String> = buildList {
         add(Manifest.permission.BLUETOOTH_SCAN)

@@ -1,0 +1,9 @@
+{
+  "uuid": "keynear-clipboard@hydrafog.github.com",
+  "name": "Keynear Clipboard Bridge",
+  "description": "D-Bus clipboard bridge for Keynear under GNOME Mutter",
+  "shell-version": ["45", "46", "47", "48"],
+  "session-modes": ["user"],
+  "version": 1,
+  "url": "https://github.com/hydrafog/keynear"
+}

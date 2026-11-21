@@ -92,6 +92,7 @@ impl DaemonRuntime {
         } = deps;
         config.validate()?;
         let state = init_state(config, &options);
+        crate::vega::initialize(config).await;
         let mut services = init_services(InitParams {
             config,
             options: &options,
