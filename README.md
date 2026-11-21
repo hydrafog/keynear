@@ -1,8 +1,6 @@
 <div align="center">
-  <img src="assets/brand/banner.jpg" width="100%" alt="Keynear banner">
-</div>
-
-<div align="center">
+  <img src="assets/brand/icon.svg" width="100" height="100" alt="Keynear logo">
+  <img src="assets/brand/icon.svg" width="84" height="84" alt="Keynear logo">
   <h1>Keynear</h1>
   <p><strong>Background-first, end-to-end encrypted continuity between Linux and Android</strong></p>
 
