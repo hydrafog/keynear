@@ -31,6 +31,15 @@ Add Keynear as a flake input and enable either the NixOS system module (`nixosMo
 
 For user-scoped declarative `config.toml` settings and file-manager integrations, import `keynear.homeManagerModules.default` (also exposed at `packaging/nixos/default.nix`) and configure non-secret `services.keynear.settings` plus `services.keynear.integrations.{nautilus,dolphin,yazi,gnomeExtension}.enable`.
 
+Pre-built binaries are published to `https://hydrafog.cachix.org`. `flake.nix` declares `nixConfig` for interactive flake commands, and NixOS configurations can opt in permanently with:
+
+```nix
+nix.settings = {
+  extra-substituters = [ "https://hydrafog.cachix.org" ];
+  extra-trusted-public-keys = [ "hydrafog.cachix.org-1:UKlU4vpY+vHoft1i+OAVBaVnFaq6udjRM8FPUSAPKLw=" ];
+};
+```
+
 ## Flathub (Flatpak)
 
 `packaging/flathub/org.keynear.Keynear.yml` targets `org.gnome.Platform` `49` with `org.freedesktop.Sdk.Extension.rust-stable`, installs `org.keynear.Keynear.desktop`, `org.keynear.Keynear.metainfo.xml`, `hicolor` icons, and the bundled `Plus Jakarta Sans` font, and aligns the GTK4 application ID to `org.keynear.Keynear`.

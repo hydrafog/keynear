@@ -1,6 +1,11 @@
 {
   description = "Keynear continuity service packages, NixOS/Home Manager modules, and development environments";
 
+  nixConfig = {
+    extra-substituters = [ "https://hydrafog.cachix.org" ];
+    extra-trusted-public-keys = [ "hydrafog.cachix.org-1:UKlU4vpY+vHoft1i+OAVBaVnFaq6udjRM8FPUSAPKLw=" ];
+  };
+
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     rust-overlay = {
