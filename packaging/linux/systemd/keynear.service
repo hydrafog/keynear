@@ -1,5 +1,6 @@
 [Unit]
 Description=Keynear background continuity daemon
+PartOf=graphical-session.target
 Wants=graphical-session.target
 After=graphical-session.target bluetooth.target
 StartLimitIntervalSec=0
@@ -8,7 +9,12 @@ StartLimitIntervalSec=0
 ExecStart=%h/.local/bin/keynear-linux
 Restart=on-failure
 RestartSec=3
+Environment=KEYNEAR_LOG=info
+NoNewPrivileges=yes
+PrivateTmp=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
 
 [Install]
-WantedBy=default.target
-
+WantedBy=graphical-session.target

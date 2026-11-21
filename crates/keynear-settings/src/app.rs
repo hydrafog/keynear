@@ -97,6 +97,7 @@ impl SimpleComponent for SettingsModel {
     fn init_root() -> Self::Root {
         let window = gtk4::Window::builder()
             .title("Keynear")
+            .icon_name("org.keynear.Keynear")
             .default_width(440)
             .default_height(840)
             .build();
@@ -158,7 +159,7 @@ impl SimpleComponent for SettingsModel {
 }
 
 pub fn run_gui(init: SettingsInit) {
-    let app = RelmApp::new("org.keynear.settings").with_args(Vec::new());
+    let app = RelmApp::new("org.keynear.Keynear").with_args(Vec::new());
     app.run::<SettingsModel>(init);
 }
 

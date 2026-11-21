@@ -1,7 +1,9 @@
 app-id: org.keynear.Keynear
-runtime: org.freedesktop.Platform
-runtime-version: '25.08'
-sdk: org.freedesktop.Sdk
+runtime: org.gnome.Platform
+runtime-version: '49'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
 command: keynear-settings
 finish-args:
   - --share=network
@@ -10,14 +12,51 @@ finish-args:
   - --socket=fallback-x11
   - --device=dri
   - --filesystem=xdg-download
+  - --filesystem=xdg-run/pipewire-0:ro
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=org.freedesktop.secrets
+  - --talk-name=org.mpris.MediaPlayer2.*
+  - --system-talk-name=org.bluez
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  env:
+    CARGO_HOME: /run/build/keynear/cargo
+    CARGO_NET_OFFLINE: 'true'
 modules:
+  - name: protobuf
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -Dprotobuf_BUILD_TESTS=OFF
+      - -Dprotobuf_ABSL_PROVIDER=package
+      - -DBUILD_SHARED_LIBS=OFF
+    cleanup:
+      - /include
+      - /lib/cmake
+      - /lib/pkgconfig
+      - '*.a'
+    sources:
+      - type: archive
+        url: https://github.com/protocolbuffers/protobuf/releases/download/v28.3/protobuf-28.3.tar.gz
+        sha256: 7c3ebd7aaedd86fa5dc479a0fda803f602caaf78d8aff7ce83b89e1b8ae7442a
   - name: keynear
     buildsystem: simple
     build-commands:
-      - cargo build --release -p keynear-linux -p keynear-settings
+      - cargo --offline build --release -p keynear-linux -p keynear-settings
       - install -Dm755 target/release/keynear-linux /app/bin/keynear-linux
       - install -Dm755 target/release/keynear-settings /app/bin/keynear-settings
       - install -Dm644 packaging/flathub/org.keynear.Keynear.desktop /app/share/applications/org.keynear.Keynear.desktop
+      - install -Dm644 packaging/flathub/org.keynear.Keynear.metainfo.xml /app/share/metainfo/org.keynear.Keynear.metainfo.xml
+      - install -Dm644 packaging/linux/icons/hicolor/scalable/apps/org.keynear.Keynear.svg /app/share/icons/hicolor/scalable/apps/org.keynear.Keynear.svg
+      - install -Dm644 packaging/linux/icons/hicolor/symbolic/apps/org.keynear.Keynear-symbolic.svg /app/share/icons/hicolor/symbolic/apps/org.keynear.Keynear-symbolic.svg
+      - install -Dm644 packaging/linux/icons/hicolor/128x128/apps/org.keynear.Keynear.png /app/share/icons/hicolor/128x128/apps/org.keynear.Keynear.png
+      - install -Dm644 packaging/linux/icons/hicolor/256x256/apps/org.keynear.Keynear.png /app/share/icons/hicolor/256x256/apps/org.keynear.Keynear.png
+      - install -Dm644 packaging/linux/icons/hicolor/512x512/apps/org.keynear.Keynear.png /app/share/icons/hicolor/512x512/apps/org.keynear.Keynear.png
+      - install -Dm644 'assets/fonts/PlusJakartaSans[wght].ttf' /app/share/fonts/truetype/keynear/PlusJakartaSans[wght].ttf
+      - install -Dm644 assets/fonts/OFL.txt /app/share/fonts/truetype/keynear/OFL.txt
     sources:
       - type: dir
         path: ../..
+      # TODO: Generate cargo-sources.json via flatpak-cargo-generator Cargo.lock for Flathub offline submission.

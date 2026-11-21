@@ -1,12 +1,10 @@
 [Desktop Entry]
 Type=Service
-X-KDE-ServiceTypes=KonqPopupMenu/Plugin
-MimeType=application/octet-stream;inode/directory;
+MimeType=all/all;
 Actions=SendViaKeynear;
 X-KDE-Priority=TopLevel
 
 [Desktop Action SendViaKeynear]
 Name=Send via Keynear
-Icon=document-send
+Icon=org.keynear.Keynear
 Exec=keynear-settings --share -- %F
-

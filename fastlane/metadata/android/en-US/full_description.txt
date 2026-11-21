@@ -1,0 +1,11 @@
+Keynear pairs a Linux desktop with an Android phone over Bluetooth Low Energy (BLE) and local Wi-Fi QUIC with zero cloud accounts and zero relay servers.
+
+Key capabilities:
+- Resumable 60 KiB checkpointed file and directory streaming across LAN and Wi-Fi fallback transitions
+- Privacy-aware bidirectional clipboard synchronization with password-manager MIME exclusion
+- PipeWire and MPRIS2 Bluetooth headset handoff
+- Native Android DocumentsProvider surfacing paired Linux shared directories in the system Files app
+- Noise XX mutual authentication and post-quantum hybrid X25519MLKEM768 transport encryption
+
+The F-Droid build uses the foss flavor with zero Google Play Services dependencies.
+

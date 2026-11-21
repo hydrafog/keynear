@@ -20,6 +20,18 @@ android {
         versionName = "1.1.0-perseus"
     }
 
+    flavorDimensions += "distribution"
+
+    productFlavors {
+        create("gms") {
+            dimension = "distribution"
+            isDefault = true
+        }
+        create("foss") {
+            dimension = "distribution"
+        }
+    }
+
     buildFeatures {
         compose = true
     }
@@ -56,6 +68,19 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.12.4")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.work:work-runtime-ktx:2.12.0")
-    implementation("com.google.android.gms:play-services-auth-api-phone:18.3.1")
+    "gmsImplementation"("com.google.android.gms:play-services-auth-api-phone:18.3.1")
     testImplementation("junit:junit:4.13.2")
+}
+
+afterEvaluate {
+    if (tasks.findByName("testDebugUnitTest") == null) {
+        tasks.register("testDebugUnitTest") {
+            dependsOn("testGmsDebugUnitTest", "testFossDebugUnitTest")
+        }
+    }
+    if (tasks.findByName("lintDebug") == null) {
+        tasks.register("lintDebug") {
+            dependsOn("lintGmsDebug", "lintFossDebug")
+        }
+    }
 }

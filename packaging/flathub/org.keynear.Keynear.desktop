@@ -1,8 +1,13 @@
 [Desktop Entry]
 Type=Application
 Name=Keynear
-Comment=Continuity between Linux and Android
+GenericName=Device Continuity
+Comment=Direct, end-to-end encrypted continuity between Linux and Android
 Exec=keynear-settings
-Icon=keynear
+Icon=org.keynear.Keynear
 Terminal=false
-Categories=Utility;
+Categories=Utility;Network;FileTransfer;
+Keywords=share;transfer;android;continuity;clipboard;nearby;
+StartupNotify=true
+StartupWMClass=org.keynear.Keynear
+SingleMainWindow=true

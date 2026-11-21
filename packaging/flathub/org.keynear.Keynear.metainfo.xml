@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.keynear.Keynear</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <name>Keynear</name>
+  <summary>Direct, end-to-end encrypted continuity between Linux and Android</summary>
+  <description>
+    <p>
+      Keynear links a Linux desktop and an Android phone over Bluetooth Low Energy (BLE)
+      and local Wi-Fi QUIC with zero cloud accounts and zero relay servers.
+    </p>
+    <p>
+      Features include resumable 60 KiB checkpointed file and directory streaming,
+      privacy-aware clipboard and one-time code synchronization, PipeWire and MPRIS2
+      Bluetooth headset handoff, and on-demand virtual filesystem browsing.
+    </p>
+  </description>
+  <launchable type="desktop-id">org.keynear.Keynear.desktop</launchable>
+  <developer id="org.keynear">
+    <name>Hydrafog</name>
+  </developer>
+  <url type="homepage">https://github.com/hydrafog/keynear</url>
+  <url type="bugtracker">https://github.com/hydrafog/keynear/issues</url>
+  <url type="vcs-browser">https://github.com/hydrafog/keynear</url>
+  <branding>
+    <color type="primary" scheme_preference="light">#0172F9</color>
+    <color type="primary" scheme_preference="dark">#07132B</color>
+  </branding>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+  <recommends>
+    <display_length compare="ge">360</display_length>
+  </recommends>
+  <categories>
+    <category>Utility</category>
+    <category>Network</category>
+    <category>FileTransfer</category>
+  </categories>
+  <keywords>
+    <keyword>continuity</keyword>
+    <keyword>nearby share</keyword>
+    <keyword>android</keyword>
+    <keyword>clipboard</keyword>
+    <keyword>file transfer</keyword>
+    <keyword>quic</keyword>
+  </keywords>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="1.1.0-perseus" date="2026-11-21">
+      <description>
+        <p>
+          Adds checkpointed 60 KiB resumable transfers, on-demand Linux FUSE3 and Android
+          DocumentsProvider virtual filesystem browsing, offline Plus Jakarta Sans font
+          assets, and official desktop and mobile packaging definitions.
+        </p>
+      </description>
+    </release>
+  </releases>
+</component>
+

@@ -1,6 +1,13 @@
 # Android Build
 
-The Android companion app (`org.keynear.app`, `versionCode = 7`, `versionName = "1.1.0-perseus"`) compiles `keynear-ffi` (`libkeynear_core.so`) into `android/core-ffi/src/main/jniLibs` with `cargo-ndk` using 16 KB ELF page alignment before assembling the multi-module Gradle build (`:core-ffi`, `:designsystem`, `:app`).
+The Android companion app (`org.keynear.app`, `versionCode = 7`, `versionName = "1.1.0-perseus"`) compiles `keynear-ffi` (`libkeynear_core.so`) into `android/core-ffi/src/main/jniLibs` with `cargo-ndk` using 16 KB ELF page alignment before assembling the multi-module Gradle build (`:core-ffi`, `:designsystem`, `:app`). Launcher assets ship as an Adaptive Icon (`mipmap-anydpi-v26/ic_launcher.xml` with background, foreground, and Android 13+ monochrome layers) plus fallback `mipmap-*/ic_launcher*.png` rasters.
+
+## Product Flavors (`gms` and `foss`)
+
+`android/app/build.gradle.kts` defines the `distribution` flavor dimension with two flavors:
+
+- `gms` (default): Links `com.google.android.gms:play-services-auth-api-phone` via `gmsImplementation` and compiles `src/gms/java/org/keynear/app/otp/SmsUserConsentManager.kt` for Google Play Services SMS User Consent OTP forwarding.
+- `foss`: Excludes all Google Play Services dependencies, compiles `src/foss/java/org/keynear/app/otp/SmsUserConsentManager.kt` with a clean availability notification fallback, and matches the F-Droid recipe in `packaging/fdroid/org.keynear.app.yml` and metadata under `fastlane/metadata/android/en-US/`.
 
 ## Native Library Compilation
 
@@ -24,8 +31,9 @@ nix develop .#android --command bash -c 'cd android && gradle :core-ffi:generate
 
 ## Gradle Assembly, Lint, and Unit Tests
 
-`android/app/build.gradle.kts` and `android/core-ffi/build.gradle.kts` set `useLegacyPackaging = false` for 16 KB page alignment on Android 15+, target `compileSdk = 36`, `buildToolsVersion = "36.0.0"`, `minSdk = 31`, and `targetSdk = 36`, and apply `dev.detekt` (`android/detekt.yml`) across `:designsystem` and `:app`:
+`android/app/build.gradle.kts` and `android/core-ffi/build.gradle.kts` set `useLegacyPackaging = false` for 16 KB page alignment on Android 15+, target `compileSdk = 36`, `buildToolsVersion = "36.0.0"`, `minSdk = 31`, and `targetSdk = 36`, and apply `dev.detekt` (`android/detekt.yml`) across `:designsystem` and `:app`. Compatibility aggregate tasks `testDebugUnitTest` and `lintDebug` exercise both `gms` and `foss`:
 
 ```bash
 nix develop .#android --command bash -c 'cd android && gradle testDebugUnitTest lintDebug detekt assembleDebug'
+nix develop .#android --command bash -c 'cd android && gradle assembleFossRelease'
 ```
