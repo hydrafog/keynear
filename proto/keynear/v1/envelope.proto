@@ -22,6 +22,9 @@ message Envelope {
     AudioHandoff audio_handoff = 21;
     CapabilityNegotiation capability_negotiation = 22;
     FallbackProbe fallback_probe = 23;
+    TransferCheckpoint transfer_checkpoint = 24;
+    TransferResumeRequest transfer_resume_request = 25;
+    TransferResumeAck transfer_resume_ack = 26;
   }
 }
 
@@ -156,5 +159,29 @@ message FallbackProbe {
   FallbackMedia media = 1;
   FallbackStatus status = 2;
   string detail = 3;
+}
+
+message TransferCheckpoint {
+  string transfer_id = 1;
+  uint64 sequence = 2;
+  uint64 chunk_count = 3;
+  bytes chunk_bitmap = 4;
+  bytes rolling_sha256 = 5;
+  uint64 verified_bytes = 6;
+}
+
+message TransferResumeRequest {
+  string transfer_id = 1;
+  uint64 sequence = 2;
+  uint64 first_missing_chunk = 3;
+  uint64 verified_bytes = 4;
+}
+
+message TransferResumeAck {
+  string transfer_id = 1;
+  uint64 sequence = 2;
+  bool accepted = 3;
+  uint64 resume_from_chunk = 4;
+  string reason = 5;
 }
 

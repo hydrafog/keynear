@@ -6,6 +6,7 @@ pub const CAP_RANGING_CS: u32 = 0x10;
 pub const CAP_RANGING_UWB: u32 = 0x20;
 pub const CAP_WIFI_AWARE: u32 = 0x40;
 pub const CAP_WIFI_DIRECT_R2: u32 = 0x80;
+pub const CAP_RESUMABLE_TRANSFER: u32 = 0x100;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RangingMethod {
@@ -69,6 +70,11 @@ mod tests {
         assert_eq!(CAP_CLIPBOARD, 0x02);
         assert_eq!(CAP_LEGACY_RESERVED, 0x04);
         assert_eq!(CAP_AUDIO_HANDOFF, 0x08);
+        assert_eq!(CAP_RANGING_CS, 0x10);
+        assert_eq!(CAP_RANGING_UWB, 0x20);
+        assert_eq!(CAP_WIFI_AWARE, 0x40);
+        assert_eq!(CAP_WIFI_DIRECT_R2, 0x80);
+        assert_eq!(CAP_RESUMABLE_TRANSFER, 0x100);
     }
 
     #[test]

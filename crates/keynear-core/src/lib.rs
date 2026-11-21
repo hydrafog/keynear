@@ -10,8 +10,10 @@ pub mod clipboard;
 pub mod fallback;
 pub mod keyring;
 pub mod pairing;
+pub mod resume;
 pub mod transfer;
 pub mod transport;
+pub mod vfs;
 
 pub use audio::{
     AudioHandoffEngine, AudioHandoffPlan, AudioHandoffState, AudioSinkProfile, HandoffPhase,
@@ -20,7 +22,7 @@ pub use audio::{
 pub use capability::{
     negotiate_capabilities, ranging_method, RangingMethod, VegaCapabilities, CAP_AUDIO_HANDOFF,
     CAP_CLIPBOARD, CAP_FILE_TRANSFER, CAP_LEGACY_RESERVED, CAP_RANGING_CS, CAP_RANGING_UWB,
-    CAP_WIFI_AWARE, CAP_WIFI_DIRECT_R2,
+    CAP_RESUMABLE_TRANSFER, CAP_WIFI_AWARE, CAP_WIFI_DIRECT_R2,
 };
 pub use clipboard::{
     is_image_mime, normalize_mime_type, pick_preferred_image_mime, read_clipboard_blob,
@@ -50,6 +52,10 @@ pub use pairing::{
     NoisePairingSession, PairingCompleted, PairingPeerMetadata, PairingRole, PairingState,
     EXPORT_CONTRIBUTION_LEN, MAX_GATT_PAIRING_FRAME_BYTES, PAIRING_PROTOCOL,
 };
+pub use resume::{
+    resume_from_checkpoint, ChunkBitmap, ResumeDecision, Sha256Chain, MAX_CHECKPOINT_BITMAP_BYTES,
+    MAX_TRANSFER_ID_LEN,
+};
 pub use transfer::{
     sanitize_relative_path, TransferEngine, TransferRegistry, MAX_ACTIVE_TRANSFERS,
 };
@@ -61,4 +67,8 @@ pub use transport::{
     KEYNEAR_MDNS_SERVICE_TYPE, LAN_ENDPOINT_CHAR_UUID, LAN_ENDPOINT_CHAR_UUID16,
     MAX_BLE_SERVICE_DATA_BYTES, MAX_COUNTER_SKEW, MAX_LEGACY_ADV_BYTES, PAIRED_BEACON_LEN,
     PRESENCE_WINDOW_SECS,
+};
+pub use vfs::{
+    page_documents, read_plan, ReadPlan, RemoteVfsNode, MAX_DOCUMENT_ID_LEN, MAX_VFS_NAME_LEN,
+    VFS_PAGE_SIZE,
 };

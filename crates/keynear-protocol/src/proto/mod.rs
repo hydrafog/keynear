@@ -123,6 +123,9 @@ fn payload_kind_and_bytes(payload: &v1::envelope::Payload) -> (&'static str, Vec
         P::AudioHandoff(value) => ("audio_handoff", value.encode_to_vec()),
         P::CapabilityNegotiation(value) => ("capability_negotiation", value.encode_to_vec()),
         P::FallbackProbe(value) => ("fallback_probe", value.encode_to_vec()),
+        P::TransferCheckpoint(value) => ("transfer_checkpoint", value.encode_to_vec()),
+        P::TransferResumeRequest(value) => ("transfer_resume_request", value.encode_to_vec()),
+        P::TransferResumeAck(value) => ("transfer_resume_ack", value.encode_to_vec()),
     }
 }
 
@@ -172,6 +175,9 @@ fn decode_payload(kind: &str, slice: &[u8]) -> Result<v1::envelope::Payload, Key
         "audio_handoff" => P::AudioHandoff(decode(slice)?),
         "capability_negotiation" => P::CapabilityNegotiation(decode(slice)?),
         "fallback_probe" => P::FallbackProbe(decode(slice)?),
+        "transfer_checkpoint" => P::TransferCheckpoint(decode(slice)?),
+        "transfer_resume_request" => P::TransferResumeRequest(decode(slice)?),
+        "transfer_resume_ack" => P::TransferResumeAck(decode(slice)?),
         other => {
             return Err(KeynearError::Protocol(format!(
                 "unknown control frame kind '{other}'"
