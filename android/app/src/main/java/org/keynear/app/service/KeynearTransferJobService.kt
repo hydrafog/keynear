@@ -10,6 +10,7 @@ import android.os.Build
 import android.util.Log
 import org.keynear.app.ble.PairingNotifier
 import org.keynear.app.bridge.CoreClientProvider
+import org.keynear.app.bridge.EventQueue
 import org.keynear.app.ui.model.CoreState
 import org.keynear.app.ui.model.TransferDirectionUi
 import org.keynear.app.ui.model.TransferStateUi
@@ -28,12 +29,22 @@ class KeynearTransferJobService : JobService() {
         val initialTransfer = activeTransfersFromState(client.loadState()).firstOrNull()
             ?: placeholderTransfer()
 
+        showInitialNotification(app, params, initialTransfer)
+        if (activeTransfersFromState(client.loadState()).isEmpty()) {
+            return false
+        }
+
+        startMonitor(app, client, params)
+        return true
+    }
+
+    private fun showInitialNotification(app: Context, params: JobParameters, transfer: TransferUi) {
         val initialNotification = PairingNotifier.buildTransferProgressNotification(
             context = app,
-            transfer = initialTransfer,
+            transfer = transfer,
             sdkInt = Build.VERSION.SDK_INT,
         )
-        val initialNotificationId = PairingNotifier.progressNotificationId(initialTransfer.transferId)
+        val initialNotificationId = PairingNotifier.progressNotificationId(transfer.transferId)
 
         if (Build.VERSION.SDK_INT >= 34) {
             runCatching {
@@ -47,48 +58,50 @@ class KeynearTransferJobService : JobService() {
                 Log.w(TAG, "job_set_notification_failed: ${err.message}")
             }
         }
+    }
 
-        if (activeTransfersFromState(client.loadState()).isEmpty()) {
-            return false
-        }
-
+    private fun startMonitor(app: Context, client: EventQueue, params: JobParameters) {
         val executor = Executors.newSingleThreadScheduledExecutor()
         monitor = executor
         executor.scheduleWithFixedDelay(
-            {
-                runCatching {
-                    client.syncTransferStates(app)
-                    val active = activeTransfersFromState(client.loadState())
-                    val current = active.firstOrNull()
-                    if (current == null) {
-                        stopMonitor()
-                        jobFinished(params, false)
-                        return@runCatching
-                    }
-                    if (Build.VERSION.SDK_INT >= 34) {
-                        val updated = PairingNotifier.buildTransferProgressNotification(
-                            context = app,
-                            transfer = current,
-                            sdkInt = Build.VERSION.SDK_INT,
-                        )
-                        setNotification(
-                            params,
-                            PairingNotifier.progressNotificationId(current.transferId),
-                            updated,
-                            JOB_END_NOTIFICATION_POLICY_DETACH,
-                        )
-                    } else {
-                        PairingNotifier.showOrUpdateTransferProgress(app, current)
-                    }
-                }.onFailure { err ->
-                    Log.w(TAG, "job_poll_failed: ${err.message}")
-                }
-            },
+            { pollTransfer(app, client, params) },
             POLL_INTERVAL_MS,
             POLL_INTERVAL_MS,
             TimeUnit.MILLISECONDS,
         )
-        return true
+    }
+
+    private fun pollTransfer(app: Context, client: EventQueue, params: JobParameters) {
+        runCatching {
+            client.syncTransferStates(app)
+            val current = activeTransfersFromState(client.loadState()).firstOrNull()
+            if (current == null) {
+                stopMonitor()
+                jobFinished(params, false)
+                return@runCatching
+            }
+            updateTransferNotification(app, params, current)
+        }.onFailure { err ->
+            Log.w(TAG, "job_poll_failed: ${err.message}")
+        }
+    }
+
+    private fun updateTransferNotification(app: Context, params: JobParameters, current: TransferUi) {
+        if (Build.VERSION.SDK_INT >= 34) {
+            val updated = PairingNotifier.buildTransferProgressNotification(
+                context = app,
+                transfer = current,
+                sdkInt = Build.VERSION.SDK_INT,
+            )
+            setNotification(
+                params,
+                PairingNotifier.progressNotificationId(current.transferId),
+                updated,
+                JOB_END_NOTIFICATION_POLICY_DETACH,
+            )
+        } else {
+            PairingNotifier.showOrUpdateTransferProgress(app, current)
+        }
     }
 
     override fun onStopJob(params: JobParameters): Boolean {

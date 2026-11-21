@@ -1,5 +1,6 @@
 package org.keynear.app.service
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -18,6 +19,7 @@ import org.keynear.app.ble.BleScanner
 import org.keynear.app.ble.GattSession
 import org.keynear.app.clipboard.ClipboardReadActivity
 import org.keynear.app.bridge.CoreClientProvider
+import org.keynear.app.bridge.EventQueue
 import org.keynear.app.ui.model.CoreState
 import org.keynear.app.ui.model.TransferStateUi
 import org.keynear.app.ui.model.VisibilityState
@@ -51,39 +53,53 @@ class KeynearForegroundService : Service() {
         val client = CoreClientProvider.init(applicationContext)
         ensureNotificationChannel()
 
-        when (intent?.action) {
+        dispatchAction(intent, client)
+
+        val (visibility, remainingSecs) = resolveVisibility(client)
+        val notification = buildForegroundNotification(visibility, remainingSecs)
+        if (!startForegroundService(startId, notification)) {
+            return START_NOT_STICKY
+        }
+
+        startBackgroundWork(client, visibility)
+        return START_STICKY
+    }
+
+    private fun dispatchAction(intent: Intent?, client: EventQueue) {
+        val action = intent?.action ?: return
+        when (action) {
             ACTION_PAIRING_APPROVE -> GattSession.approveActivePairing(applicationContext)
             ACTION_PAIRING_REJECT -> GattSession.rejectActivePairing(applicationContext)
-            ACTION_TRANSFER_ACCEPT -> {
-                val transferId = intent.getStringExtra(EXTRA_TRANSFER_ID)
-                if (!transferId.isNullOrBlank()) {
-                    actionExecutor?.execute {
-                        client.acceptIncomingTransferOrSync(applicationContext, transferId)
-                        BleScanner.notifyUiRefresh()
-                    }
+            ACTION_TRANSFER_ACCEPT -> withTransferId(intent) { transferId ->
+                actionExecutor?.execute {
+                    client.acceptIncomingTransferOrSync(applicationContext, transferId)
+                    BleScanner.notifyUiRefresh()
                 }
             }
-            ACTION_TRANSFER_DECLINE -> {
-                val transferId = intent.getStringExtra(EXTRA_TRANSFER_ID)
-                if (!transferId.isNullOrBlank()) {
-                    actionExecutor?.execute {
-                        client.declineTransfer(transferId)
-                        BleScanner.notifyUiRefresh()
-                    }
+            ACTION_TRANSFER_DECLINE -> withTransferId(intent) { transferId ->
+                actionExecutor?.execute {
+                    client.declineTransfer(transferId)
+                    BleScanner.notifyUiRefresh()
                 }
             }
-            ACTION_TRANSFER_CANCEL -> {
-                val transferId = intent.getStringExtra(EXTRA_TRANSFER_ID)
-                if (!transferId.isNullOrBlank()) {
-                    actionExecutor?.execute {
-                        client.cancelTransfer(transferId)
-                        BleScanner.notifyUiRefresh()
-                    }
+            ACTION_TRANSFER_CANCEL -> withTransferId(intent) { transferId ->
+                actionExecutor?.execute {
+                    client.cancelTransfer(transferId)
+                    BleScanner.notifyUiRefresh()
                 }
             }
         }
+    }
 
-        val (visibility, remainingSecs) = when (val state = client.loadState()) {
+    private fun withTransferId(intent: Intent, action: (String) -> Unit) {
+        val transferId = intent.getStringExtra(EXTRA_TRANSFER_ID)
+        if (!transferId.isNullOrBlank()) {
+            action(transferId)
+        }
+    }
+
+    private fun resolveVisibility(client: EventQueue): Pair<VisibilityState, Long> =
+        when (val state = client.loadState()) {
             is CoreState.Empty -> {
                 DirectShareManager.syncShortcuts(applicationContext, state.snapshot.pairedDevices)
                 state.snapshot.visibility to state.snapshot.everyoneRemainingSecs
@@ -97,6 +113,7 @@ class KeynearForegroundService : Service() {
             else -> VisibilityState.PAIRED_ONLY to 0L
         }
 
+    private fun buildForegroundNotification(visibility: VisibilityState, remainingSecs: Long): Notification {
         val copyClipboardIntent = Intent(this, ClipboardReadActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
@@ -108,7 +125,7 @@ class KeynearForegroundService : Service() {
         )
 
         val statusText = visibility.formattedStatus(remainingSecs)
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+        return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
             .setContentTitle(getString(R.string.notification_title))
             .setContentText(statusText)
@@ -120,7 +137,9 @@ class KeynearForegroundService : Service() {
                 copyClipboardPendingIntent,
             )
             .build()
+    }
 
+    private fun startForegroundService(startId: Int, notification: Notification): Boolean {
         val foregroundStarted = runCatching {
             ServiceCompat.startForeground(
                 this,
@@ -131,12 +150,13 @@ class KeynearForegroundService : Service() {
         }.onFailure { err ->
             Log.w(TAG, "foreground_start_failed: ${err.message}")
         }.isSuccess
-
         if (!foregroundStarted) {
             stopSelf(startId)
-            return START_NOT_STICKY
         }
+        return foregroundStarted
+    }
 
+    private fun startBackgroundWork(client: EventQueue, visibility: VisibilityState) {
         BleScanner.startOrSync(applicationContext, visibility)
         val node = client.ensureOrionNode(applicationContext)
         val ep = node?.localLanEndpoint()
@@ -151,7 +171,6 @@ class KeynearForegroundService : Service() {
         }
         ensureTransferMonitor()
         smsUserConsentManager?.startIfEnabled(client.isOtpPassthroughEnabled())
-        return START_STICKY
     }
 
     private fun ensureTransferMonitor() {

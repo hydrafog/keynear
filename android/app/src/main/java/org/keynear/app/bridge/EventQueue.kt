@@ -45,48 +45,48 @@ typealias UniffiCoreClient = EventQueue
 class EventQueue(
     private var appContext: Context? = null,
 ) : CoreBridge {
-    private val handle: CoreHandle by lazy { CoreHandle() }
-    private var devicesPath: String? = appContext?.let { File(it.filesDir, "devices.toml").absolutePath }
-    private var configPath: String? = appContext?.let { File(it.filesDir, "config.toml").absolutePath }
-    private var secretStore: KeystoreSecretStore? = appContext?.let { runCatching { KeystoreSecretStore.open(it) }.getOrNull() }
-    private var localDeviceId: String = appContext?.let { DeviceRepo.resolveStableLocalDeviceId(it) } ?: "android-device"
-    private var mediaStoreTracker: PendingMediaStoreTracker<Uri>? =
+    internal val handle: CoreHandle by lazy { CoreHandle() }
+    internal var devicesPath: String? = appContext?.let { File(it.filesDir, "devices.toml").absolutePath }
+    internal var configPath: String? = appContext?.let { File(it.filesDir, "config.toml").absolutePath }
+    internal var secretStore: KeystoreSecretStore? = appContext?.let { runCatching { KeystoreSecretStore.open(it) }.getOrNull() }
+    internal var localDeviceId: String = appContext?.let { DeviceRepo.resolveStableLocalDeviceId(it) } ?: "android-device"
+    internal var mediaStoreTracker: PendingMediaStoreTracker<Uri>? =
         appContext?.let { PendingMediaStoreTracker(AndroidMediaStoreOps(it.applicationContext)) }
-    private val sendQueueStore = SendQueueStore()
+    internal val sendQueueStore = SendQueueStore()
 
     @Volatile
-    private var cachedDarkTheme: Boolean = appContext?.let { readDarkThemePref(it) } ?: false
+    internal var cachedDarkTheme: Boolean = appContext?.let { readDarkThemePref(it) } ?: false
 
     @Volatile
-    private var cachedDaemonConfig: DaemonConfigUi = DaemonConfigUi(darkTheme = cachedDarkTheme)
+    internal var cachedDaemonConfig: DaemonConfigUi = DaemonConfigUi(darkTheme = cachedDarkTheme)
 
     @Volatile
-    private var orionNode: OrionNodeHandle? = null
+    internal var orionNode: OrionNodeHandle? = null
 
     @Volatile
-    private var cachedNearby: List<DiscoveredPeerUi> = emptyList()
+    internal var cachedNearby: List<DiscoveredPeerUi> = emptyList()
 
     @Volatile
-    private var cachedPendingPairing: PendingPairingUi? = null
+    internal var cachedPendingPairing: PendingPairingUi? = null
 
     @Volatile
-    private var cachedBtStatus: BluetoothStatus = BluetoothStatus.READY
+    internal var cachedBtStatus: BluetoothStatus = BluetoothStatus.READY
 
     @Volatile
-    private var cachedWarning: String? = null
+    internal var cachedWarning: String? = null
 
     @Volatile
-    private var cachedLnpStatus: LocalNetworkStatus = LocalNetworkStatus.READY
+    internal var cachedLnpStatus: LocalNetworkStatus = LocalNetworkStatus.READY
 
     @Volatile
-    private var cachedLnpMessage: String? = null
+    internal var cachedLnpMessage: String? = null
 
-    private val notifiedConsentIds = ConcurrentHashMap.newKeySet<String>()
-    private val notifiedTerminalIds = ConcurrentHashMap.newKeySet<String>()
-    private val fdHandedOffIds = ConcurrentHashMap.newKeySet<String>()
+    internal val notifiedConsentIds = ConcurrentHashMap.newKeySet<String>()
+    internal val notifiedTerminalIds = ConcurrentHashMap.newKeySet<String>()
+    internal val fdHandedOffIds = ConcurrentHashMap.newKeySet<String>()
 
     @Volatile
-    private var lastSyncedShortcutSnapshot: List<Pair<String, String>>? = null
+    internal var lastSyncedShortcutSnapshot: List<Pair<String, String>>? = null
 
     @Synchronized
     fun attachContext(context: Context) {
@@ -111,18 +111,18 @@ class EventQueue(
         refreshConfigFromDisk()
     }
 
-    private fun readDarkThemePref(context: Context): Boolean =
+    internal fun readDarkThemePref(context: Context): Boolean =
         context.getSharedPreferences(UI_PREFS_NAME, Context.MODE_PRIVATE)
             .getBoolean(PREF_DARK_THEME, false)
 
-    private fun writeDarkThemePref(context: Context, enabled: Boolean) {
+    internal fun writeDarkThemePref(context: Context, enabled: Boolean) {
         context.getSharedPreferences(UI_PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
             .putBoolean(PREF_DARK_THEME, enabled)
             .apply()
     }
 
-    private fun refreshConfigFromDisk() {
+    internal fun refreshConfigFromDisk() {
         val path = configPath ?: return
         runCatching {
             val loaded = handle.loadDaemonConfig(path)
@@ -186,235 +186,7 @@ class EventQueue(
         notifiedTerminalIds.clear()
     }
 
-    fun localLanEndpoint(): FfiLanEndpoint? = orionNode?.localLanEndpoint()
-
-    fun syncAllPairedPeersToOrion(node: OrionNodeHandle? = orionNode) {
-        DeviceRepo.syncAllPairedPeersToOrion(handle, devicesPath, secretStore, node)
-    }
-
-    fun encodeLocalLanEndpointForBleAddress(bleAddress: String): ByteArray? {
-        val dev = getPairedDevices().firstOrNull { it.lastBleAddress.equals(bleAddress, ignoreCase = true) }
-            ?: return null
-        return encodeLocalLanEndpointForPeer(dev.deviceId)
-    }
-
-    fun encodeLocalLanEndpointForPeer(deviceId: String): ByteArray? =
-        PairingRepo.encodeLocalLanEndpointForPeer(handle, orionNode, secretStore, deviceId)
-
-    fun onEncryptedLanEndpointFromBle(encoded: ByteArray, bleAddress: String? = null): FfiLanEndpoint? {
-        val store = secretStore ?: return null
-        val decoded = PairingRepo.decodeEncryptedLanEndpointFromBle(handle, store, getPairedDevices(), encoded, bleAddress)
-        if (decoded != null) {
-            onPeerLanEndpointDiscovered(decoded.deviceId, decoded.endpointId, decoded.socketAddrs)
-        }
-        return decoded
-    }
-
-    fun onPeerLanEndpointDiscovered(
-        deviceId: String,
-        endpointId: ByteArray,
-        socketAddrs: List<String>,
-    ) {
-        PairingRepo.onPeerLanEndpointDiscovered(
-            handle = handle,
-            devicesPath = devicesPath,
-            orionNode = orionNode,
-            store = secretStore,
-            devices = getPairedDevices(),
-            deviceId = deviceId,
-            endpointId = endpointId,
-            socketAddrs = socketAddrs,
-        )
-    }
-
-    fun syncTransferStates(context: Context): Boolean {
-        val app = context.applicationContext
-        attachContext(app)
-        val node = orionNode ?: return false
-        return TransferRepo.syncTransferStates(
-            app = app,
-            node = node,
-            pairedDevices = getPairedDevices(),
-            tracker = mediaStoreTracker,
-            fdHandedOffIds = fdHandedOffIds,
-            notifiedConsentIds = notifiedConsentIds,
-            notifiedTerminalIds = notifiedTerminalIds,
-        )
-    }
-
     fun isOtpPassthroughEnabled(): Boolean = cachedDaemonConfig.otpPassthroughEnabled
-
-    fun syncClipboardPolicyToNode(node: OrionNodeHandle? = orionNode) {
-        val activeNode = node ?: return
-        val cfg = cachedDaemonConfig
-        runCatching {
-            activeNode.setClipboardConfig(
-                clipboardSyncEnabled = cfg.clipboardSyncEnabled,
-                clipboardImagesEnabled = cfg.clipboardImagesEnabled,
-                otpPassthroughEnabled = cfg.otpPassthroughEnabled,
-                ignoredMimeTypes = cfg.ignoredMimeTypes,
-            )
-        }
-    }
-
-    fun syncClipboardStates(context: Context): Boolean {
-        val app = context.applicationContext
-        attachContext(app)
-        val node = orionNode ?: return false
-        syncClipboardPolicyToNode(node)
-        val cfg = cachedDaemonConfig
-        if (!cfg.clipboardSyncEnabled) return false
-
-        val incoming = runCatching { node.pollIncomingClipboard() }.getOrNull() ?: return false
-        if (incoming.isEmpty()) return false
-
-        var applied = false
-        for (item in incoming) {
-            val mimesToCheck = if (item.offeredMimes.isNotEmpty()) {
-                item.offeredMimes
-            } else {
-                listOf(item.mimeType)
-            }
-            if (shouldIgnoreClipboardMimes(mimesToCheck, cfg.ignoredMimeTypes)) {
-                continue
-            }
-            val resolved: FfiClipboardItem = if (item.isImageOffer) {
-                if (!cfg.clipboardImagesEnabled) continue
-                runCatching {
-                    node.fetchClipboardOffer(item.peerDeviceId, item.offerId, item.mimeType)
-                }.getOrNull() ?: continue
-            } else {
-                item
-            }
-            if (shouldIgnoreClipboardMimes(listOf(resolved.mimeType), cfg.ignoredMimeTypes)) {
-                continue
-            }
-            if (applyIncomingClipboardToAndroid(app, resolved)) {
-                applied = true
-            }
-        }
-        return applied
-    }
-
-    private fun applyIncomingClipboardToAndroid(context: Context, item: FfiClipboardItem): Boolean {
-        val mainHandler = Handler(Looper.getMainLooper())
-        val mime = item.mimeType.lowercase(Locale.ROOT)
-        if (mime.startsWith("image/")) {
-            if (!cachedDaemonConfig.clipboardImagesEnabled || item.data.isEmpty()) return false
-            val ext = when {
-                mime.contains("png") -> "png"
-                mime.contains("webp") -> "webp"
-                mime.contains("gif") -> "gif"
-                else -> "jpg"
-            }
-            val values = ContentValues().apply {
-                put(MediaStore.Images.Media.DISPLAY_NAME, "keynear-clip-${System.currentTimeMillis()}.$ext")
-                put(MediaStore.Images.Media.MIME_TYPE, item.mimeType.substringBefore(';').trim())
-                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Keynear")
-                put(MediaStore.Images.Media.IS_PENDING, 1)
-            }
-            val uri = runCatching {
-                context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-            }.getOrNull() ?: return false
-            val wrote = runCatching {
-                context.contentResolver.openOutputStream(uri)?.use { out ->
-                    out.write(item.data)
-                }
-                val clearPending = ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }
-                context.contentResolver.update(uri, clearPending, null, null)
-            }.isSuccess
-            if (!wrote) {
-                runCatching { context.contentResolver.delete(uri, null, null) }
-                return false
-            }
-            return mainHandler.post {
-                runCatching {
-                    val manager = context.getSystemService(ClipboardManager::class.java)
-                    manager?.setPrimaryClip(ClipData.newUri(context.contentResolver, "Keynear image", uri))
-                }
-            }
-        }
-
-        val text = item.data.toString(Charsets.UTF_8)
-        if (text.isEmpty()) return false
-        return mainHandler.post {
-            runCatching {
-                val manager = context.getSystemService(ClipboardManager::class.java)
-                manager?.setPrimaryClip(ClipData.newPlainText("Keynear", text))
-            }
-        }
-    }
-
-    override fun sendPhoneClipboardText(text: String): Result<Unit> {
-        val ctx = appContext ?: return Result.failure(IllegalStateException("Context not attached"))
-        if (!cachedDaemonConfig.clipboardSyncEnabled) {
-            return Result.failure(IllegalStateException("Clipboard sync is disabled"))
-        }
-        if (shouldIgnoreClipboardMimes(listOf("text/plain"), cachedDaemonConfig.ignoredMimeTypes)) {
-            return Result.failure(IllegalStateException("Clipboard MIME type is ignored"))
-        }
-        val node = ensureOrionNode(ctx)
-            ?: return Result.failure(IllegalStateException("Orion transport node unavailable"))
-        syncClipboardPolicyToNode(node)
-        syncAllPairedPeersToOrion(node)
-        return runCatching {
-            node.sendClipboardText(text, false)
-        }
-    }
-
-    override fun sendPhoneClipboardBlob(mimeType: String, data: ByteArray): Result<Unit> {
-        val ctx = appContext ?: return Result.failure(IllegalStateException("Context not attached"))
-        if (!cachedDaemonConfig.clipboardSyncEnabled || !cachedDaemonConfig.clipboardImagesEnabled) {
-            return Result.failure(IllegalStateException("Clipboard image sync is disabled"))
-        }
-        if (shouldIgnoreClipboardMimes(listOf(mimeType), cachedDaemonConfig.ignoredMimeTypes)) {
-            return Result.failure(IllegalStateException("Clipboard MIME type is ignored"))
-        }
-        val node = ensureOrionNode(ctx)
-            ?: return Result.failure(IllegalStateException("Orion transport node unavailable"))
-        syncClipboardPolicyToNode(node)
-        syncAllPairedPeersToOrion(node)
-        return runCatching {
-            node.sendClipboardBlob(mimeType, data)
-        }
-    }
-
-    override fun sendVerifiedOtp(code: String): Result<Unit> {
-        val ctx = appContext ?: return Result.failure(IllegalStateException("Context not attached"))
-        if (!cachedDaemonConfig.otpPassthroughEnabled) {
-            return Result.failure(IllegalStateException("OTP pass-through is disabled"))
-        }
-        val node = ensureOrionNode(ctx)
-            ?: return Result.failure(IllegalStateException("Orion transport node unavailable"))
-        syncClipboardPolicyToNode(node)
-        syncAllPairedPeersToOrion(node)
-        return runCatching {
-            node.sendClipboardText(code, true)
-        }
-    }
-
-    fun saveCompletedPairing(
-        peerDeviceId: String,
-        peerDisplayName: String,
-        peerRole: FfiDeviceRole,
-        peerStaticPubkeyHex: String,
-        peerCapabilityFlags: UInt,
-        bleAddress: String,
-        reconnectSecret: ByteArray,
-    ) {
-        PairingRepo.saveCompletedPairing(
-            handle = handle,
-            devicesPath = devicesPath,
-            secretStore = secretStore,
-            peerDeviceId = peerDeviceId,
-            peerDisplayName = peerDisplayName,
-            peerRole = peerRole,
-            peerStaticPubkeyHex = peerStaticPubkeyHex,
-            peerCapabilityFlags = peerCapabilityFlags,
-            bleAddress = bleAddress,
-            reconnectSecret = reconnectSecret,
-        )
-    }
 
     override fun updateNearbyPeers(peers: List<DiscoveredPeerUi>) {
         cachedNearby = peers
@@ -455,7 +227,7 @@ class EventQueue(
         CoreState.Error(t.message ?: "Unable to set visibility mode", snapshotFromCurrent())
     }
 
-    private fun persistCurrentConfig(visibility: VisibilityState) {
+    internal fun persistCurrentConfig(visibility: VisibilityState) {
         val path = configPath ?: return
         runCatching {
             val saved = handle.saveDaemonConfig(path, cachedDaemonConfig.toFfi(visibility))
@@ -468,44 +240,6 @@ class EventQueue(
         buildState()
     } catch (t: Throwable) {
         CoreState.Error(t.message ?: "Unable to reset Bluetooth bond", snapshotFromCurrent())
-    }
-
-    override fun stageFileUris(uris: List<String>): CoreState {
-        val ctx = appContext
-        uris.forEach { raw ->
-            if (raw.isBlank()) return@forEach
-            if (ctx != null) {
-                val (name, size, mime) = TransferRepo.queryContentUriMetadata(ctx, Uri.parse(raw))
-                sendQueueStore.addFile(name, size, mime, raw)
-            } else {
-                val name = raw.substringAfterLast('/').ifBlank { "shared-file.bin" }
-                sendQueueStore.addFile(name, 0L, "application/octet-stream", raw)
-            }
-        }
-        return buildState()
-    }
-
-    override fun stageFolderUri(
-        folderUri: String,
-        displayName: String,
-        fileUris: List<String>,
-    ): CoreState {
-        val ctx = appContext
-        if (fileUris.isNotEmpty()) {
-            fileUris.forEach { raw ->
-                if (raw.isBlank()) return@forEach
-                if (ctx != null) {
-                    val (name, size, mime) = TransferRepo.queryContentUriMetadata(ctx, Uri.parse(raw))
-                    sendQueueStore.addFile(name, size, mime, raw)
-                } else {
-                    val name = raw.substringAfterLast('/').ifBlank { "shared-file.bin" }
-                    sendQueueStore.addFile(name, 0L, "application/octet-stream", raw)
-                }
-            }
-        } else if (folderUri.isNotBlank()) {
-            sendQueueStore.addFolder(displayName, folderUri)
-        }
-        return buildState()
     }
 
     override fun stageClipboardText(text: String): CoreState {
@@ -528,217 +262,31 @@ class EventQueue(
         return buildState()
     }
 
-    override fun sendQueueToPeer(peerDeviceId: String): Result<TransferUi> {
-        val items = sendQueueStore.snapshot()
-        if (items.isEmpty()) {
-            return Result.failure(IllegalArgumentException("Stage at least one file or snippet first"))
-        }
-        val uris = items.mapNotNull { item ->
-            item.uriString.takeIf { it.isNotBlank() && item.kind != SendItemKind.FOLDER }
-        }
-        val textCombined = items
-            .mapNotNull { it.textPayload.takeIf { txt -> txt.isNotEmpty() } }
-            .joinToString(separator = "\n\n")
-            .ifBlank { null }
-        val result = sendContentUris(peerDeviceId, uris, textCombined)
-        if (result.isSuccess) {
-            sendQueueStore.clear()
-        }
-        return result
-    }
-
-    override fun updateDaemonConfig(transform: (DaemonConfigUi) -> DaemonConfigUi): CoreState = try {
-        val updated = transform(cachedDaemonConfig)
-        cachedDarkTheme = updated.darkTheme
-        appContext?.let { writeDarkThemePref(it, updated.darkTheme) }
-        val currentVisibility = VisibilityState.fromFfi(handle.visibilityMode())
-        val path = configPath
-        cachedDaemonConfig = if (path != null) {
-            val saved = handle.saveDaemonConfig(path, updated.toFfi(currentVisibility))
-            DaemonConfigUi.fromFfi(saved, updated.darkTheme)
-        } else {
-            updated
-        }
-        orionNode?.let { syncClipboardPolicyToNode(it) }
-        buildState()
-    } catch (t: Throwable) {
-        CoreState.Error(t.message ?: "Unable to save settings", snapshotFromCurrent())
-    }
-
     override fun tick(): CoreState = buildState()
 
-    override fun unpairDevice(deviceId: String): CoreState = try {
-        devicesPath?.let { handle.removePairedDevice(it, deviceId) }
-        secretStore?.deletePeerSecrets(deviceId)
-        runCatching { orionNode?.removePeer(deviceId) }
-        lastSyncedShortcutSnapshot = null
-        buildState()
-    } catch (t: Throwable) {
-        CoreState.Error(t.message ?: "Unable to unpair device")
-    }
+    fun timeoutSecs(): Long = runCatching { everyoneNearbyTimeoutSecs().toLong() }.getOrDefault(DEFAULT_TIMEOUT_SECS)
 
-    override fun renamePairedDevice(deviceId: String, newDisplayName: String): CoreState {
-        val validated = validateDisplayNameInput(newDisplayName).getOrElse { err ->
-            return CoreState.Error(err.message ?: "Invalid device name", snapshotFromCurrent())
-        }
-        val path = devicesPath ?: return CoreState.Error("Device store path unavailable", snapshotFromCurrent())
-        return try {
-            handle.renamePairedDevice(path, deviceId, validated)
-            lastSyncedShortcutSnapshot = null
-            buildState()
-        } catch (t: Throwable) {
-            CoreState.Error(t.message ?: "Unable to rename device", snapshotFromCurrent())
-        }
-    }
-
-    override fun setAutoAcceptFiles(deviceId: String, enabled: Boolean): CoreState {
-        val path = devicesPath ?: return CoreState.Error("Device store path unavailable")
-        return try {
-            handle.setAutoAcceptFiles(path, deviceId, enabled)
-            syncAllPairedPeersToOrion()
-            buildState()
-        } catch (t: Throwable) {
-            CoreState.Error(t.message ?: "Unable to update auto-accept preference", snapshotFromCurrent())
-        }
-    }
-
-    fun acceptIncomingTransferOrSync(context: Context, transferId: String): CoreState {
-        attachContext(context)
-        return acceptTransfer(transferId)
-    }
-
-    override fun acceptTransfer(transferId: String): CoreState {
-        val node = orionNode ?: return CoreState.Error("Orion transfer node is not running", snapshotFromCurrent())
-        return try {
-            val session = node.respondConsent(transferId, true)
-            appContext?.let { PairingNotifier.cancelTransferNotification(it, transferId) }
-            if (TransferRepo.isSingleFileReceive(session)) {
-                val handedOff = TransferRepo.prepareAndHandOffReceiveFd(mediaStoreTracker, fdHandedOffIds, node, session)
-                if (!handedOff) {
-                    runCatching { node.cancelTransfer(transferId) }
-                    return CoreState.Error("Unable to open MediaStore download output", snapshotFromCurrent())
-                }
-            }
-            buildState()
-        } catch (t: Throwable) {
-            CoreState.Error(t.message ?: "Unable to accept transfer", snapshotFromCurrent())
-        }
-    }
-
-    override fun declineTransfer(transferId: String): CoreState {
-        val node = orionNode ?: return buildState()
-        return try {
-            node.respondConsent(transferId, false)
-            appContext?.let { PairingNotifier.cancelTransferNotification(it, transferId) }
-            mediaStoreTracker?.reconcileState(transferId, TransferStateUi.CANCELLED)
-            buildState()
-        } catch (t: Throwable) {
-            CoreState.Error(t.message ?: "Unable to decline transfer", snapshotFromCurrent())
-        }
-    }
-
-    override fun cancelTransfer(transferId: String): CoreState {
-        val node = orionNode ?: return buildState()
-        return try {
-            node.cancelTransfer(transferId)
-            appContext?.let { PairingNotifier.cancelTransferNotification(it, transferId) }
-            mediaStoreTracker?.reconcileState(transferId, TransferStateUi.CANCELLED)
-            buildState()
-        } catch (t: Throwable) {
-            CoreState.Error(t.message ?: "Unable to cancel transfer", snapshotFromCurrent())
-        }
-    }
-
+    override fun sendPhoneClipboardText(text: String): Result<Unit> = sendPhoneClipboardTextImpl(text)
+    override fun sendPhoneClipboardBlob(mimeType: String, data: ByteArray): Result<Unit> = sendPhoneClipboardBlobImpl(mimeType, data)
+    override fun sendVerifiedOtp(code: String): Result<Unit> = sendVerifiedOtpImpl(code)
+    override fun stageFileUris(uris: List<String>): CoreState = stageFileUrisImpl(uris)
+    override fun stageFolderUri(
+        folderUri: String,
+        displayName: String,
+        fileUris: List<String>,
+    ): CoreState = stageFolderUriImpl(folderUri, displayName, fileUris)
+    override fun sendQueueToPeer(peerDeviceId: String): Result<TransferUi> = sendQueueToPeerImpl(peerDeviceId)
+    override fun updateDaemonConfig(transform: (DaemonConfigUi) -> DaemonConfigUi): CoreState = updateDaemonConfigImpl(transform)
+    override fun renamePairedDevice(deviceId: String, newDisplayName: String): CoreState = renamePairedDeviceImpl(deviceId, newDisplayName)
+    override fun setAutoAcceptFiles(deviceId: String, enabled: Boolean): CoreState = setAutoAcceptFilesImpl(deviceId, enabled)
+    override fun acceptTransfer(transferId: String): CoreState = acceptTransferImpl(transferId)
+    override fun declineTransfer(transferId: String): CoreState = declineTransferImpl(transferId)
+    override fun cancelTransfer(transferId: String): CoreState = cancelTransferImpl(transferId)
     override fun sendContentUris(
         peerDeviceId: String,
         uris: List<String>,
         sharedText: String?,
-    ): Result<TransferUi> {
-        val ctx = appContext ?: return Result.failure(IllegalStateException("Context not attached"))
-        val node = ensureOrionNode(ctx)
-            ?: return Result.failure(IllegalStateException("Local transfer node could not start"))
-        syncAllPairedPeersToOrion(node)
-
-        val peerNames = getPairedDevices().associate { it.deviceId to it.displayName }
-        return TransferRepo.sendContentUrisViaOrion(
-            context = ctx,
-            node = node,
-            peerDeviceId = peerDeviceId,
-            uris = uris,
-            sharedText = sharedText,
-            peerNames = peerNames,
-        )
-    }
-
-    fun getPairedDevices(): List<FfiPairedDevice> =
-        DeviceRepo.getPairedDevices(handle, devicesPath)
-
-    fun timeoutSecs(): Long = runCatching { everyoneNearbyTimeoutSecs().toLong() }.getOrDefault(DEFAULT_TIMEOUT_SECS)
-
-    private fun snapshotFromCurrent(): CoreSnapshot? = when (val state = runCatching { buildState() }.getOrNull()) {
-        is CoreState.Empty -> state.snapshot
-        is CoreState.Ready -> state.snapshot
-        else -> null
-    }
-
-    private fun buildState(): CoreState = try {
-        val status = handle.status()
-        val visibility = VisibilityState.fromFfi(handle.visibilityMode())
-        val remaining = handle.everyoneNearbyRemainingSecs().toLong()
-        val rawPaired = getPairedDevices()
-        val peerNames = rawPaired.associate { it.deviceId to it.displayName }
-        val paired = DeviceRepo.mapPairedDevices(rawPaired)
-        val shortcutSnapshot = paired.map { it.deviceId to it.displayName }
-        appContext?.let { ctx ->
-            if (lastSyncedShortcutSnapshot != shortcutSnapshot) {
-                lastSyncedShortcutSnapshot = shortcutSnapshot
-                DirectShareManager.syncShortcuts(ctx, paired)
-            }
-        }
-        val transfers = orionNode?.let { node ->
-            runCatching { node.listTransfers() }.getOrDefault(emptyList())
-                .map { TransferRepo.mapTransferSessionToUi(it, peerNames) }
-        } ?: emptyList()
-
-        val pending = cachedPendingPairing?.let { prompt ->
-            if (prompt.remainingSecs <= 1L) null else prompt.copy(remainingSecs = prompt.remainingSecs - 1L)
-        }
-        if (cachedPendingPairing != null) {
-            cachedPendingPairing = pending
-        }
-        val activeConfig = configPath?.let { path ->
-            runCatching {
-                DaemonConfigUi.fromFfi(handle.loadDaemonConfig(path), cachedDarkTheme)
-            }.getOrNull()
-        }?.also { cachedDaemonConfig = it } ?: cachedDaemonConfig.copy(darkTheme = cachedDarkTheme)
-
-        val queue = sendQueueStore.snapshot()
-        val snapshot = CoreSnapshot(
-            version = status.version,
-            maxControlFrameBytes = status.maxControlFrameBytes.toLong(),
-            ready = status.ready,
-            visibility = visibility,
-            configSummary = defaultConfigSummary(),
-            everyoneRemainingSecs = remaining,
-            pairedDevices = paired,
-            nearbyPeers = cachedNearby,
-            pendingPairing = cachedPendingPairing,
-            bluetoothStatus = cachedBtStatus,
-            warningMessage = cachedWarning,
-            localNetworkStatus = cachedLnpStatus,
-            localNetworkMessage = cachedLnpMessage,
-            activeTransfers = transfers,
-            daemonConfig = activeConfig,
-            sendQueue = queue,
-        )
-        if (paired.isEmpty() && cachedNearby.isEmpty() && cachedPendingPairing == null && transfers.isEmpty() && queue.isEmpty()) {
-            CoreState.Empty(snapshot)
-        } else {
-            CoreState.Ready(snapshot)
-        }
-    } catch (t: Throwable) {
-        CoreState.Error(t.message ?: "Unable to initialize keynear core")
-    }
+    ): Result<TransferUi> = sendContentUrisImpl(peerDeviceId, uris, sharedText)
 
     companion object {
         private const val TAG = "EventQueue"
@@ -747,4 +295,3 @@ class EventQueue(
         private const val DEFAULT_TIMEOUT_SECS = 600L
     }
 }
-

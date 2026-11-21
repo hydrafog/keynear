@@ -73,6 +73,39 @@ fun SelectionTile(
     }
 }
 
+private fun actionContainerColor(
+    palette: KeynearPalette,
+    danger: Boolean,
+    errorTonal: Boolean,
+    tonalSurface: Boolean,
+    primary: Boolean,
+): Color = when {
+    danger -> palette.error
+    errorTonal -> palette.errorAction
+    tonalSurface -> palette.surfaceTonal
+    primary -> palette.loading
+    else -> palette.loadingTonal
+}
+
+private fun actionContentColor(
+    palette: KeynearPalette,
+    danger: Boolean,
+    errorTonal: Boolean,
+    tonalSurface: Boolean,
+    primary: Boolean,
+): Color = when {
+    danger || primary -> palette.onAccent
+    errorTonal -> palette.onDangerAction
+    tonalSurface -> palette.textPrimary
+    else -> palette.onLoadingTonal
+}
+
+private fun actionTone(enabled: Boolean, primary: Boolean): TactileTone = when {
+    !enabled -> TactileTone.NONE
+    primary -> TactileTone.ACCENT
+    else -> TactileTone.TONAL
+}
+
 @Composable
 fun ActionButton(
     label: String,
@@ -87,26 +120,11 @@ fun ActionButton(
     leadingIcon: (@Composable (Color) -> Unit)? = null,
 ) {
     val palette = LocalKeynearPalette.current
-    val container = when {
-        danger -> palette.error
-        errorTonal -> palette.errorAction
-        tonalSurface -> palette.surfaceTonal
-        primary -> palette.loading
-        else -> palette.loadingTonal
-    }
-    val content = when {
-        danger || primary -> palette.onAccent
-        errorTonal -> palette.onDangerAction
-        tonalSurface -> palette.textPrimary
-        else -> palette.onLoadingTonal
-    }
+    val container = actionContainerColor(palette, danger, errorTonal, tonalSurface, primary)
+    val content = actionContentColor(palette, danger, errorTonal, tonalSurface, primary)
     val effectiveContainer = if (enabled) container else container.copy(alpha = DISABLED_CONTAINER_ALPHA)
     val effectiveContent = if (enabled) content else content.copy(alpha = DISABLED_CONTENT_ALPHA)
-    val buttonTone = when {
-        !enabled -> TactileTone.NONE
-        primary -> TactileTone.ACCENT
-        else -> TactileTone.TONAL
-    }
+    val buttonTone = actionTone(enabled, primary)
 
     TactileSurface(
         modifier = modifier.heightIn(min = minHeight),

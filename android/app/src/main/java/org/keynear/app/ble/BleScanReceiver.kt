@@ -24,13 +24,17 @@ class BleScanReceiver : BroadcastReceiver() {
 
         val serviceUuid = ParcelUuid(KeynearBleConstants.SERVICE_UUID)
         for (result in results) {
-            val payload = result.scanRecord?.getServiceData(serviceUuid) ?: continue
-            if (payload.isEmpty() || payload.size > KeynearBleConstants.MAX_BEACON_DATA_BYTES) {
-                continue
-            }
-            val address = result.device?.address ?: continue
-            BleScanner.onScanPayload(context.applicationContext, address, result.rssi, payload)
+            processScanResult(context, result, serviceUuid)
         }
+    }
+
+    private fun processScanResult(context: Context, result: ScanResult, serviceUuid: ParcelUuid) {
+        val payload = result.scanRecord?.getServiceData(serviceUuid) ?: return
+        if (payload.isEmpty() || payload.size > KeynearBleConstants.MAX_BEACON_DATA_BYTES) {
+            return
+        }
+        val address = result.device?.address ?: return
+        BleScanner.onScanPayload(context.applicationContext, address, result.rssi, payload)
     }
 
     companion object {

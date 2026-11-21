@@ -11,8 +11,10 @@ import android.content.Context
 import android.os.ParcelUuid
 import android.util.Log
 import org.keynear.app.bridge.CoreClientProvider
+import org.keynear.app.bridge.EventQueue
 import org.keynear.app.ui.model.BluetoothStatus
 import org.keynear.app.ui.model.VisibilityState
+import uniffi.keynear_core.CoreHandle
 import uniffi.keynear_core.FfiDeviceRole
 
 object BleAdvertiser {
@@ -45,50 +47,50 @@ object BleAdvertiser {
         if (!KeynearBleConstants.hasAdvertisePermission(context)) return
         val client = CoreClientProvider.init(context)
         val handle = client.coreHandle()
-
-        val payload: ByteArray? = when (visibility) {
-            VisibilityState.HIDDEN -> null
-            VisibilityState.EVERYONE_NEARBY -> {
-                runCatching {
-                    handle.encodeEveryoneNearbyBeacon(
-                        role = FfiDeviceRole.MOBILE,
-                        capabilityFlags = KeynearBleConstants.ANDROID_CAPABILITY_FLAGS,
-                        displayName = client.localDisplayName(),
-                    )
-                }.getOrNull()
-            }
-            VisibilityState.PAIRED_ONLY -> {
-                val store = client.keystoreStore()
-                val firstPeer = client.getPairedDevices().firstOrNull()
-                if (store != null && firstPeer != null) {
-                    val secrets = store.getPeerSecrets(firstPeer.deviceId)
-                    if (secrets != null) {
-                        try {
-                            val counter = store.nextPresenceCounter().toUInt()
-                            handle.encodePairedBeacon(
-                                deviceId = client.localDeviceId(),
-                                counter = counter,
-                                reconnectKey = secrets.reconnectSecret,
-                                available = true,
-                                batteryLevel = null,
-                            )
-                        } catch (_: Throwable) {
-                            null
-                        } finally {
-                            secrets.zeroize()
-                        }
-                    } else {
-                        null
-                    }
-                } else {
-                    null
-                }
-            }
-        }
-
+        val payload = buildBeaconPayload(client, handle, visibility)
         stopAdvertising(adapter)
         if (payload == null) return
+        startLeAdvertising(adapter, payload)
+    }
 
+    private fun buildBeaconPayload(
+        client: EventQueue,
+        handle: CoreHandle,
+        visibility: VisibilityState,
+    ): ByteArray? = when (visibility) {
+        VisibilityState.HIDDEN -> null
+        VisibilityState.EVERYONE_NEARBY -> runCatching {
+            handle.encodeEveryoneNearbyBeacon(
+                role = FfiDeviceRole.MOBILE,
+                capabilityFlags = KeynearBleConstants.ANDROID_CAPABILITY_FLAGS,
+                displayName = client.localDisplayName(),
+            )
+        }.getOrNull()
+        VisibilityState.PAIRED_ONLY -> pairedBeaconPayload(client, handle)
+    }
+
+    private fun pairedBeaconPayload(client: EventQueue, handle: CoreHandle): ByteArray? {
+        val store = client.keystoreStore() ?: return null
+        val firstPeer = client.getPairedDevices().firstOrNull() ?: return null
+        val secrets = store.getPeerSecrets(firstPeer.deviceId) ?: return null
+        return try {
+            val counter = store.nextPresenceCounter().toUInt()
+            handle.encodePairedBeacon(
+                deviceId = client.localDeviceId(),
+                counter = counter,
+                reconnectKey = secrets.reconnectSecret,
+                available = true,
+                batteryLevel = null,
+            )
+        } catch (_: Throwable) {
+            null
+        } finally {
+            secrets.zeroize()
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun startLeAdvertising(adapter: BluetoothAdapter, payload: ByteArray) {
         val leAdv = adapter.bluetoothLeAdvertiser ?: return
         val settings = AdvertiseSettings.Builder()
             .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED)
@@ -120,4 +122,3 @@ object BleAdvertiser {
         advertiseCallback = null
     }
 }
-

@@ -13,10 +13,15 @@ import android.content.Intent
 import android.os.ParcelUuid
 import android.util.Log
 import org.keynear.app.bridge.CoreClientProvider
+import org.keynear.app.bridge.EventQueue
+import org.keynear.app.bridge.KeystoreSecretStore
 import org.keynear.app.ui.model.BluetoothStatus
 import org.keynear.app.ui.model.DeviceRoleUi
 import org.keynear.app.ui.model.DiscoveredPeerUi
 import org.keynear.app.ui.model.VisibilityState
+import uniffi.keynear_core.CoreHandle
+import uniffi.keynear_core.FfiPairedBeaconState
+import uniffi.keynear_core.FfiPairedDevice
 import java.util.concurrent.ConcurrentHashMap
 
 object BleScanner {
@@ -118,49 +123,28 @@ object BleScanner {
 
         val everyone = runCatching { handle.decodeEveryoneNearbyBeacon(serviceData) }.getOrNull()
         if (everyone != null) {
-            discoveredByAddress[address] = DiscoveredPeerUi(
-                address = address,
-                displayName = everyone.displayName,
-                role = DeviceRoleUi.fromFfi(everyone.role),
-                rssi = rssi,
-                capabilityFlags = everyone.capabilityFlags.toLong(),
-                isPaired = false,
-                batteryLevel = null,
+            publishPeer(
+                client,
+                DiscoveredPeerUi(
+                    address = address,
+                    displayName = everyone.displayName,
+                    role = DeviceRoleUi.fromFfi(everyone.role),
+                    rssi = rssi,
+                    capabilityFlags = everyone.capabilityFlags.toLong(),
+                    isPaired = false,
+                    batteryLevel = null,
+                ),
             )
-            client.updateNearbyPeers(discoveredByAddress.values.sortedByDescending { it.rssi })
-            lastStateUpdateListener?.invoke()
             return
         }
 
         val secretStore = client.keystoreStore() ?: return
-        val paired = client.getPairedDevices()
-        val counterHint = if (serviceData.size >= MIN_COUNTER_BYTES) {
-            ((serviceData[6].toUInt() and BYTE_MASK) shl 24) or
-                ((serviceData[7].toUInt() and BYTE_MASK) shl 16) or
-                ((serviceData[8].toUInt() and BYTE_MASK) shl 8) or
-                (serviceData[9].toUInt() and BYTE_MASK)
-        } else {
-            0u
-        }
-
-        for (device in paired) {
-            val secrets = secretStore.getPeerSecrets(device.deviceId) ?: continue
-            val verified = try {
-                handle.decodePairedBeacon(
-                    serviceData = serviceData,
-                    deviceId = device.deviceId,
-                    expectedCounter = counterHint,
-                    lastAcceptedCounter = lastPairedCounters[device.deviceId],
-                    reconnectKey = secrets.reconnectSecret,
-                )
-            } catch (_: Throwable) {
-                null
-            } finally {
-                secrets.zeroize()
-            }
-            if (verified != null) {
-                lastPairedCounters[device.deviceId] = verified.counter
-                discoveredByAddress[address] = DiscoveredPeerUi(
+        for (device in client.getPairedDevices()) {
+            val verified = verifyPairedDevice(handle, secretStore, device, serviceData) ?: continue
+            lastPairedCounters[device.deviceId] = verified.counter
+            publishPeer(
+                client,
+                DiscoveredPeerUi(
                     address = address,
                     displayName = device.displayName,
                     role = DeviceRoleUi.fromFfi(device.deviceRole),
@@ -168,13 +152,50 @@ object BleScanner {
                     capabilityFlags = device.capabilityFlags.toLong(),
                     isPaired = true,
                     batteryLevel = verified.batteryLevel?.toInt(),
-                )
-                client.updateNearbyPeers(discoveredByAddress.values.sortedByDescending { it.rssi })
-                lastStateUpdateListener?.invoke()
-                return
-            }
+                ),
+            )
+            return
         }
     }
+
+    private fun publishPeer(client: EventQueue, peer: DiscoveredPeerUi) {
+        discoveredByAddress[peer.address] = peer
+        client.updateNearbyPeers(discoveredByAddress.values.sortedByDescending { it.rssi })
+        lastStateUpdateListener?.invoke()
+    }
+
+    private fun verifyPairedDevice(
+        handle: CoreHandle,
+        secretStore: KeystoreSecretStore,
+        device: FfiPairedDevice,
+        serviceData: ByteArray,
+    ): FfiPairedBeaconState? {
+        val secrets = secretStore.getPeerSecrets(device.deviceId) ?: return null
+        val hint = counterHint(serviceData)
+        return try {
+            handle.decodePairedBeacon(
+                serviceData = serviceData,
+                deviceId = device.deviceId,
+                expectedCounter = hint,
+                lastAcceptedCounter = lastPairedCounters[device.deviceId],
+                reconnectKey = secrets.reconnectSecret,
+            )
+        } catch (_: Throwable) {
+            null
+        } finally {
+            secrets.zeroize()
+        }
+    }
+
+    private fun counterHint(serviceData: ByteArray): UInt =
+        if (serviceData.size >= MIN_COUNTER_BYTES) {
+            ((serviceData[6].toUInt() and BYTE_MASK) shl 24) or
+                ((serviceData[7].toUInt() and BYTE_MASK) shl 16) or
+                ((serviceData[8].toUInt() and BYTE_MASK) shl 8) or
+                (serviceData[9].toUInt() and BYTE_MASK)
+        } else {
+            0u
+        }
 
     @SuppressLint("MissingPermission")
     private fun startScanning(context: Context, adapter: BluetoothAdapter) {

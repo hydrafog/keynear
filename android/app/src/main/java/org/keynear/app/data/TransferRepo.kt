@@ -161,71 +161,110 @@ object TransferRepo {
     ): Boolean {
         val sessions = runCatching { node.listTransfers() }.getOrNull() ?: return false
         val peerNames = pairedDevices.associate { it.deviceId to it.displayName }
+        val ctx = SyncContext(
+            app = app,
+            node = node,
+            pairedDevices = pairedDevices,
+            tracker = tracker,
+            fdHandedOffIds = fdHandedOffIds,
+            notifiedConsentIds = notifiedConsentIds,
+            notifiedTerminalIds = notifiedTerminalIds,
+            peerNames = peerNames,
+        )
         var changed = false
         var hasActiveTransfers = false
 
         for (session in sessions) {
             val uiState = TransferStateUi.fromFfi(session.state)
-            val peerName = peerNames[session.peerDeviceId] ?: session.peerDeviceId
-            val summary = summarizeTransferItems(session)
-
-            if (session.direction == FfiTransferDirection.RECEIVE && uiState == TransferStateUi.PENDING_CONSENT) {
-                if (notifiedConsentIds.add(session.transferId)) {
-                    PairingNotifier.showIncomingTransferConsent(
-                        context = app,
-                        transferId = session.transferId,
-                        peerName = peerName,
-                        summary = summary,
-                        sizeLabel = formatByteCount(session.totalBytes.toLong()),
-                    )
-                    changed = true
-                }
+            if (ctx.handlePendingConsent(session, uiState)) {
+                changed = true
             }
-
             if (uiState == TransferStateUi.ACTIVE) {
                 hasActiveTransfers = true
-                if (session.direction == FfiTransferDirection.RECEIVE &&
-                    isSingleFileReceive(session) &&
-                    !fdHandedOffIds.contains(session.transferId)
-                ) {
-                    if (prepareAndHandOffReceiveFd(tracker, fdHandedOffIds, node, session)) {
-                        changed = true
-                    }
-                }
-                PairingNotifier.showOrUpdateTransferProgress(
-                    context = app,
-                    transfer = mapTransferSessionToUi(session, peerNames),
-                )
-            }
-
-            tracker?.reconcileState(session.transferId, uiState)
-
-            if (uiState.isTerminal()) {
-                PairingNotifier.cancelTransferNotification(app, session.transferId)
-                if (notifiedTerminalIds.add(session.transferId)) {
+                if (ctx.handleActiveTransfer(session)) {
                     changed = true
-                    if (session.direction == FfiTransferDirection.RECEIVE && uiState == TransferStateUi.COMPLETED) {
-                        val autoAccepted = pairedDevices
-                            .firstOrNull { it.deviceId == session.peerDeviceId }
-                            ?.autoAcceptFiles == true
-                        PairingNotifier.showTransferCompleted(
-                            context = app,
-                            peerName = peerName,
-                            summary = summary,
-                            autoAccepted = autoAccepted,
-                        )
-                    } else if (uiState == TransferStateUi.FAILED) {
-                        PairingNotifier.showTransferError(
-                            context = app,
-                            summary = summary,
-                            reason = "Connection interrupted or rejected",
-                        )
-                    }
                 }
+            }
+            tracker?.reconcileState(session.transferId, uiState)
+            if (ctx.handleTerminalState(session, uiState)) {
+                changed = true
             }
         }
         KeynearTransferJobService.syncActiveTransfers(app, hasActiveTransfers)
         return changed
     }
+
+    private fun SyncContext.handlePendingConsent(
+        session: FfiTransferSession,
+        uiState: TransferStateUi,
+    ): Boolean {
+        if (session.direction != FfiTransferDirection.RECEIVE || uiState != TransferStateUi.PENDING_CONSENT) {
+            return false
+        }
+        if (!notifiedConsentIds.add(session.transferId)) return false
+        PairingNotifier.showIncomingTransferConsent(
+            context = app,
+            transferId = session.transferId,
+            peerName = peerNames[session.peerDeviceId] ?: session.peerDeviceId,
+            summary = summarizeTransferItems(session),
+            sizeLabel = formatByteCount(session.totalBytes.toLong()),
+        )
+        return true
+    }
+
+    private fun SyncContext.handleActiveTransfer(session: FfiTransferSession): Boolean {
+        var changed = false
+        if (session.direction == FfiTransferDirection.RECEIVE &&
+            isSingleFileReceive(session) &&
+            !fdHandedOffIds.contains(session.transferId)
+        ) {
+            if (prepareAndHandOffReceiveFd(tracker, fdHandedOffIds, node, session)) {
+                changed = true
+            }
+        }
+        PairingNotifier.showOrUpdateTransferProgress(
+            context = app,
+            transfer = mapTransferSessionToUi(session, peerNames),
+        )
+        return changed
+    }
+
+    private fun SyncContext.handleTerminalState(
+        session: FfiTransferSession,
+        uiState: TransferStateUi,
+    ): Boolean {
+        if (!uiState.isTerminal()) return false
+        PairingNotifier.cancelTransferNotification(app, session.transferId)
+        if (!notifiedTerminalIds.add(session.transferId)) return false
+        if (session.direction == FfiTransferDirection.RECEIVE && uiState == TransferStateUi.COMPLETED) {
+            val autoAccepted = pairedDevices
+                .firstOrNull { it.deviceId == session.peerDeviceId }
+                ?.autoAcceptFiles == true
+            PairingNotifier.showTransferCompleted(
+                context = app,
+                peerName = peerNames[session.peerDeviceId] ?: session.peerDeviceId,
+                summary = summarizeTransferItems(session),
+                autoAccepted = autoAccepted,
+            )
+        } else if (uiState == TransferStateUi.FAILED) {
+            PairingNotifier.showTransferError(
+                context = app,
+                summary = summarizeTransferItems(session),
+                reason = "Connection interrupted or rejected",
+            )
+        }
+        return true
+    }
+
+    private data class SyncContext(
+        val app: Context,
+        val node: OrionNodeHandle,
+        val pairedDevices: List<FfiPairedDevice>,
+        val tracker: PendingMediaStoreTracker<Uri>?,
+        val fdHandedOffIds: MutableSet<String>,
+        val notifiedConsentIds: MutableSet<String>,
+        val notifiedTerminalIds: MutableSet<String>,
+        val peerNames: Map<String, String>,
+    )
 }
 
