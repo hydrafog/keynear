@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Keynear">
   <title>Keynear</title>
-  <rect x="144" y="118" width="56" height="276" rx="28" fill="currentColor"/>
-  <path d="M 232 256 L 344 138" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/>
-  <path d="M 244 256 L 348 374" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/>
-  <path d="M 344 212 A 58 58 0 0 1 344 300" fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round" opacity="0.72"/>
+  <rect x="128" y="276" width="64" height="124" rx="32" fill="currentColor" opacity="0.55"/>
+  <path d="M 218 226 L 322 136" fill="none" stroke="currentColor" stroke-width="64" stroke-linecap="round" opacity="0.75"/>
+  <path d="M 160 144 L 160 248 Q 160 270 178 284 L 322 374" fill="none" stroke="currentColor" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 336 202 A 72 72 0 0 1 336 310" fill="none" stroke="currentColor" stroke-width="22" stroke-linecap="round"/>
+  <path d="M 376 172 A 112 112 0 0 1 376 340" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" opacity="0.58"/>
 </svg>
-

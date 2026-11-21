@@ -1,49 +1,68 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Keynear">
   <title>Keynear</title>
   <defs>
-    <linearGradient id="kn-bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0D1C3D"/>
-      <stop offset="52%" stop-color="#07132B"/>
-      <stop offset="100%" stop-color="#040B1A"/>
+    <linearGradient id="kn-bg" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0%" stop-color="#1E7CFA"/>
+      <stop offset="52%" stop-color="#0656E8"/>
+      <stop offset="100%" stop-color="#0038B8"/>
     </linearGradient>
-    <radialGradient id="kn-aura" cx="50%" cy="46%" r="54%">
-      <stop offset="0%" stop-color="#0172F9" stop-opacity="0.28"/>
-      <stop offset="55%" stop-color="#0195D4" stop-opacity="0.08"/>
-      <stop offset="100%" stop-color="#07132B" stop-opacity="0"/>
-    </radialGradient>
     <linearGradient id="kn-rim" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#7DCCFA" stop-opacity="0.34"/>
-      <stop offset="45%" stop-color="#38A8EE" stop-opacity="0.08"/>
-      <stop offset="100%" stop-color="#0172F9" stop-opacity="0.18"/>
+      <stop offset="0%" stop-color="#80BAFF" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#002B8F" stop-opacity="0.35"/>
     </linearGradient>
-    <linearGradient id="kn-brand-v" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#5CC4FF"/>
-      <stop offset="50%" stop-color="#0195D4"/>
-      <stop offset="100%" stop-color="#004CED"/>
+    <linearGradient id="kn-bot-pillar" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#3E82F7"/>
+      <stop offset="100%" stop-color="#7EB2FF"/>
     </linearGradient>
-    <linearGradient id="kn-brand" x1="0.15" y1="0.1" x2="0.85" y2="0.9">
-      <stop offset="0%" stop-color="#48B8FF"/>
-      <stop offset="48%" stop-color="#0195D4"/>
-      <stop offset="100%" stop-color="#0172F9"/>
+    <linearGradient id="kn-top-wing" x1="0.15" y1="0.85" x2="0.9" y2="0.1">
+      <stop offset="0%" stop-color="#6CA6FF"/>
+      <stop offset="100%" stop-color="#C8E2FF"/>
     </linearGradient>
-    <linearGradient id="kn-arc" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#7DCCFA"/>
-      <stop offset="100%" stop-color="#0172F9"/>
+    <linearGradient id="kn-front-ribbon" x1="0.15" y1="0.08" x2="0.88" y2="0.92">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="55%" stop-color="#EEF5FF"/>
+      <stop offset="100%" stop-color="#C8E0FF"/>
     </linearGradient>
-    <linearGradient id="kn-spec" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#FFFFFE" stop-opacity="0.55"/>
-      <stop offset="100%" stop-color="#FFFFFE" stop-opacity="0"/>
+    <linearGradient id="kn-w1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F2F7FF"/>
+      <stop offset="100%" stop-color="#B8D8FF"/>
     </linearGradient>
+    <linearGradient id="kn-w2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#B4D4FF" stop-opacity="0.72"/>
+      <stop offset="100%" stop-color="#7EB0FF" stop-opacity="0.45"/>
+    </linearGradient>
+    <filter id="kn-ambient" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="7" result="blur"/>
+      <feOffset in="blur" dx="0" dy="5" result="offsetBlur"/>
+      <feColorMatrix in="offsetBlur" type="matrix"
+        values="0 0 0 0 0.00  0 0 0 0 0.08  0 0 0 0 0.32  0 0 0 0.24 0" result="shadow"/>
+      <feMerge>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="kn-fold" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="9" result="blur"/>
+      <feOffset in="blur" dx="-2" dy="6" result="offsetBlur"/>
+      <feColorMatrix in="offsetBlur" type="matrix"
+        values="0 0 0 0 0.00  0 0 0 0 0.08  0 0 0 0 0.32  0 0 0 0.38 0" result="shadow"/>
+      <feMerge>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
   <rect x="24" y="24" width="464" height="464" rx="112" fill="url(#kn-bg)"/>
-  <rect x="24" y="24" width="464" height="464" rx="112" fill="url(#kn-aura)"/>
-  <rect x="26" y="26" width="460" height="460" rx="110" fill="none" stroke="url(#kn-rim)" stroke-width="3"/>
-  <path d="M 326 196 A 76 76 0 0 1 326 316" fill="none" stroke="#7DCCFA" stroke-width="16" stroke-linecap="round" opacity="0.36"/>
-  <path d="M 358 172 A 110 110 0 0 1 358 340" fill="none" stroke="#38A8EE" stroke-width="12" stroke-linecap="round" opacity="0.22"/>
-  <rect x="144" y="120" width="52" height="272" rx="26" fill="url(#kn-brand-v)"/>
-  <rect x="152" y="130" width="14" height="120" rx="7" fill="url(#kn-spec)"/>
-  <path d="M 226 256 L 336 144" fill="none" stroke="url(#kn-arc)" stroke-width="46" stroke-linecap="round"/>
-  <path d="M 248 256 L 344 368" fill="none" stroke="url(#kn-brand)" stroke-width="46" stroke-linecap="round"/>
-  <circle cx="228" cy="256" r="22" fill="#FFFFFE"/>
-  <circle cx="228" cy="256" r="10" fill="#004CED"/>
+  <rect x="25.5" y="25.5" width="461" height="461" rx="110.5" fill="none" stroke="url(#kn-rim)" stroke-width="3"/>
+  <g filter="url(#kn-ambient)">
+    <path d="M 336 202 A 72 72 0 0 1 336 310" fill="none" stroke="url(#kn-w1)" stroke-width="22" stroke-linecap="round"/>
+    <path d="M 376 172 A 112 112 0 0 1 376 340" fill="none" stroke="url(#kn-w2)" stroke-width="16" stroke-linecap="round"/>
+  </g>
+  <g filter="url(#kn-ambient)">
+    <rect x="128" y="232" width="64" height="168" rx="32" fill="url(#kn-bot-pillar)"/>
+    <path d="M 174 264 L 322 136" fill="none" stroke="url(#kn-top-wing)" stroke-width="64" stroke-linecap="round"/>
+    <g filter="url(#kn-fold)">
+      <path d="M 160 144 L 160 248 Q 160 270 178 284 L 322 374" fill="none" stroke="url(#kn-front-ribbon)" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
 </svg>
