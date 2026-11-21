@@ -1,18 +1,30 @@
 <div align="center">
+  <img src="assets/brand/banner.jpg" width="100%" alt="Keynear banner">
+</div>
+
+<div align="center">
   <h1>Keynear</h1>
   <p><strong>Background-first, end-to-end encrypted continuity between Linux and Android</strong></p>
 
   <p>
-    <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-Workspace-orange.svg" alt="Rust"></a>
-    <a href="https://developer.android.com/"><img src="https://img.shields.io/badge/Android-API%2036-green.svg" alt="Android"></a>
-    <a href="https://nixos.org/"><img src="https://img.shields.io/badge/Nix-Flake-5277C3.svg" alt="Nix"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPLv3"></a>
+    <a href="docs/development/timeline.md"><img src="https://img.shields.io/badge/Version-1.0.0--vega-004CED?style=flat-square" alt="Version 1.0.0-vega"></a>
+    <a href="https://github.com/hydrafog/keynear/actions/workflows/quality.yml"><img src="https://img.shields.io/github/actions/workflow/status/hydrafog/keynear/quality.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=Quality%20Gate" alt="Quality Gate workflow status"></a>
+    <a href="docs/deployment/linux-systemd.md"><img src="https://img.shields.io/badge/Linux-Wayland%20%26%20X11%20%C2%B7%20GTK4-0195D4?style=flat-square&logo=linux&logoColor=white" alt="Linux: Wayland, X11, and GTK4"></a>
+    <a href="docs/deployment/android-build.md"><img src="https://img.shields.io/badge/Android-12--16%20(API%2031--36)-01B37D?style=flat-square&logo=android&logoColor=white" alt="Android 12 to 16 (API 31 to 36)"></a>
+    <a href="docs/architecture/protocol-and-crypto.md"><img src="https://img.shields.io/badge/Crypto-Noise%20XX%20%2B%20ML--KEM--768-07132B?style=flat-square" alt="Cryptography: Noise XX and ML-KEM-768"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/github/license/hydrafog/keynear?style=flat-square&color=5277C3&label=License" alt="License: GPL-3.0"></a>
   </p>
 </div>
 
 Keynear links a Linux desktop and an Android phone over Bluetooth Low Energy (BLE) and local Wi-Fi QUIC with zero cloud accounts and zero relay servers. On Linux it runs as a `systemd --user` daemon with a native `StatusNotifierItem` tray menu and an on-demand GTK4/`relm4` preferences window; on Android it runs as a `connectedDevice` foreground service surfaced through a Quick Settings tile, the system Share Sheet, and native notifications.
 
-## Documentation
+<h3 id="documentation">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/heading-documentation-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="assets/brand/heading-documentation-light.svg">
+    <img src="assets/brand/heading-documentation-light.svg" alt="Documentation" width="100%">
+  </picture>
+</h3>
 
 <details>
 <summary><strong>Getting Started</strong></summary>
@@ -83,6 +95,12 @@ Keynear links a Linux desktop and an Android phone over Bluetooth Low Energy (BL
 
 </details>
 
-## License
+<h3 id="license">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/heading-license-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="assets/brand/heading-license-light.svg">
+    <img src="assets/brand/heading-license-light.svg" alt="License" width="100%">
+  </picture>
+</h3>
 
 All project source code, protocols, and scripts are licensed under the [GNU General Public License v3.0](LICENSE).
