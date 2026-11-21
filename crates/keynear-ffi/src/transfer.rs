@@ -109,6 +109,7 @@ pub(crate) fn wrap_raw_fd(raw_fd: i32) -> Result<OwnedFd, KeynearError> {
     Ok(unsafe { OwnedFd::from_raw_fd(raw_fd) })
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn send_paths_impl(
     runtime: &Arc<tokio::runtime::Runtime>,
     engine: &Arc<TransferEngine>,

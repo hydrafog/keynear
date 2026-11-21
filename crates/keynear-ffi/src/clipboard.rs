@@ -32,6 +32,7 @@ impl From<ClipboardItem> for FfiClipboardItem {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn set_clipboard_config_impl(
     clipboard: &Arc<ClipboardEngine>,
     clipboard_sync_enabled: bool,
@@ -47,6 +48,7 @@ pub(crate) fn set_clipboard_config_impl(
     });
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn send_clipboard_text_impl(
     runtime: &Arc<tokio::runtime::Runtime>,
     clipboard: &Arc<ClipboardEngine>,
@@ -81,6 +83,7 @@ pub(crate) fn send_clipboard_text_impl(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn send_clipboard_blob_impl(
     runtime: &Arc<tokio::runtime::Runtime>,
     clipboard: &Arc<ClipboardEngine>,
@@ -127,6 +130,7 @@ pub(crate) fn poll_incoming_clipboard_impl(
         .collect()
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn fetch_clipboard_offer_impl(
     runtime: &Arc<tokio::runtime::Runtime>,
     clipboard: &Arc<ClipboardEngine>,

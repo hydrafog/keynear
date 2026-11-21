@@ -1,0 +1,158 @@
+use super::*;
+use std::net::{IpAddr, Ipv4Addr};
+
+fn loopback_addr() -> SocketAddr {
+    SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0)
+}
+
+fn node_config(device_id: &str, seed_byte: u8) -> OrionNodeConfig {
+    OrionNodeConfig {
+        device_id: device_id.to_string(),
+        display_name: format!("Node {device_id}"),
+        capability_flags: 0x03,
+        quic_secret_key: Zeroizing::new([seed_byte; 32]),
+    }
+}
+
+#[tokio::test]
+async fn endpoint_disables_relays_and_negotiates_x25519mlkem768() {
+    let provider = build_orion_crypto_provider();
+    assert_eq!(provider.kx_groups.len(), 1);
+    assert_eq!(
+        provider.kx_groups[0].name(),
+        aws_lc_rs::kx_group::X25519MLKEM768.name()
+    );
+
+    let server = OrionQuicNode::bind(node_config("linux-host", 0x11), Some(loopback_addr()))
+        .await
+        .expect("bind server");
+    let client = OrionQuicNode::bind(node_config("pixel-phone", 0x22), Some(loopback_addr()))
+        .await
+        .expect("bind client");
+
+    assert!(server.endpoint_addr().relay_urls().next().is_none());
+    assert!(client.endpoint_addr().relay_urls().next().is_none());
+
+    let secret = [0x99; 32];
+    let server_addrs: Vec<SocketAddr> = server.endpoint_addr().ip_addrs().copied().collect();
+    let client_addrs: Vec<SocketAddr> = client.endpoint_addr().ip_addrs().copied().collect();
+    assert!(!server_addrs.is_empty());
+
+    server
+        .register_peer("pixel-phone", client.endpoint_id(), client_addrs, secret)
+        .expect("register client");
+    client
+        .register_peer(
+            "linux-host",
+            server.endpoint_id(),
+            server_addrs.clone(),
+            secret,
+        )
+        .expect("register server");
+
+    let server_clone = server.clone();
+    let accept_task = tokio::spawn(async move { server_clone.accept_authenticated().await });
+
+    let conn = client
+        .connect_peer("linux-host")
+        .await
+        .expect("client connects over PQ QUIC");
+    assert_eq!(conn.alpn(), QUIC_ALPN);
+
+    let accepted = accept_task
+        .await
+        .expect("server join")
+        .expect("server accept")
+        .expect("some conn");
+    assert_eq!(accepted.0, "pixel-phone");
+
+    let mut classic_provider = aws_lc_rs::default_provider();
+    classic_provider.kx_groups = vec![aws_lc_rs::kx_group::X25519];
+    let classic_client = Endpoint::builder(presets::Empty)
+        .secret_key(SecretKey::from_bytes(&[0x33; 32]))
+        .crypto_provider(Arc::new(classic_provider))
+        .relay_mode(RelayMode::Disabled)
+        .bind_addr(loopback_addr())
+        .expect("bind addr")
+        .bind()
+        .await
+        .expect("bind classic client");
+    server
+        .register_peer("classic-peer", classic_client.id(), vec![], [0x44; 32])
+        .expect("register classic peer");
+    let server_addr = EndpointAddr::from_parts(
+        server.endpoint_id(),
+        server_addrs.into_iter().map(TransportAddr::Ip),
+    );
+    assert!(
+        classic_client
+            .connect(server_addr, QUIC_ALPN)
+            .await
+            .is_err(),
+        "classic-only peer without X25519MLKEM768 must be rejected"
+    );
+
+    classic_client.close().await;
+    client.close().await;
+    server.close().await;
+}
+
+#[tokio::test]
+async fn rejects_unpaired_and_invalid_hmac() {
+    let server = OrionQuicNode::bind(node_config("linux-host", 0x51), Some(loopback_addr()))
+        .await
+        .expect("bind server");
+    let rogue = OrionQuicNode::bind(node_config("rogue-node", 0x52), Some(loopback_addr()))
+        .await
+        .expect("bind rogue");
+    let paired = OrionQuicNode::bind(node_config("pixel-phone", 0x53), Some(loopback_addr()))
+        .await
+        .expect("bind paired");
+
+    let server_addrs: Vec<SocketAddr> = server.endpoint_addr().ip_addrs().copied().collect();
+
+    rogue
+        .register_peer(
+            "linux-host",
+            server.endpoint_id(),
+            server_addrs.clone(),
+            [0xAA; 32],
+        )
+        .expect("rogue registers server");
+    let server_for_rogue = server.clone();
+    let rogue_accept = tokio::spawn(async move {
+        if let Some(incoming) = server_for_rogue.endpoint().accept().await {
+            if let Ok(connecting) = incoming.accept() {
+                return connecting.await.is_ok();
+            }
+        }
+        false
+    });
+    let rogue_res = rogue.connect_peer("linux-host").await;
+    assert!(rogue_res.is_err(), "unpaired peer must be rejected");
+    let _ = rogue_accept.await;
+
+    server
+        .register_peer("pixel-phone", paired.endpoint_id(), vec![], [0x11; 32])
+        .expect("server registers paired");
+    paired
+        .register_peer("linux-host", server.endpoint_id(), server_addrs, [0x22; 32])
+        .expect("paired registers server with wrong secret");
+
+    let server_for_hmac = server.clone();
+    let hmac_accept = tokio::spawn(async move { server_for_hmac.accept_authenticated().await });
+    let client_res = paired.connect_peer("linux-host").await;
+    assert!(
+        client_res.is_err(),
+        "mismatched reconnect_secret must fail handshake auth, got {client_res:?}"
+    );
+    let server_res = hmac_accept.await.expect("join");
+    assert!(
+        matches!(server_res, Err(KeynearError::UnauthorizedPeer(_))),
+        "server must reject invalid HMAC auth_proof"
+    );
+
+    rogue.close().await;
+    paired.close().await;
+    server.close().await;
+}

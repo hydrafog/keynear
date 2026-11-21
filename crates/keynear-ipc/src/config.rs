@@ -1,0 +1,33 @@
+pub const MAX_IPC_FRAME_BYTES: usize = 262_144;
+pub(crate) const IPC_WIRE_VERSION: u8 = 1;
+pub(crate) const MAX_IPC_PATHS: usize = 1024;
+pub(crate) const MAX_IPC_ITEMS: usize = 1024;
+pub(crate) const MAX_IPC_TRANSFERS: usize = 256;
+pub(crate) const MAX_IPC_DEVICES: usize = 256;
+pub(crate) const MAX_IPC_MIMES: usize = 128;
+pub(crate) const MAX_TRANSFER_ID_BYTES: usize = 128;
+pub(crate) const IPC_CONTROL_TIMEOUT_SECS: u64 = 10;
+pub(crate) const IPC_SEND_TIMEOUT_SECS: u64 = 300;
+
+pub(crate) const REQ_SEND_FILES: u8 = 1;
+pub(crate) const REQ_ACCEPT_TRANSFER: u8 = 2;
+pub(crate) const REQ_DECLINE_TRANSFER: u8 = 3;
+pub(crate) const REQ_CANCEL_TRANSFER: u8 = 4;
+pub(crate) const REQ_LIST_TRANSFERS: u8 = 5;
+pub(crate) const REQ_STATUS: u8 = 6;
+pub(crate) const REQ_LIST_DEVICES: u8 = 7;
+pub(crate) const REQ_SET_VISIBILITY: u8 = 8;
+pub(crate) const REQ_GET_CONFIG: u8 = 9;
+pub(crate) const REQ_UPDATE_CONFIG: u8 = 10;
+pub(crate) const REQ_RENAME_DEVICE: u8 = 11;
+pub(crate) const REQ_SET_DEVICE_AUTO_ACCEPT: u8 = 12;
+pub(crate) const REQ_UNPAIR_DEVICE: u8 = 13;
+
+pub(crate) const RESP_TRANSFER: u8 = 1;
+pub(crate) const RESP_TRANSFERS: u8 = 2;
+pub(crate) const RESP_STATUS: u8 = 3;
+pub(crate) const RESP_ERROR: u8 = 4;
+pub(crate) const RESP_DEVICES: u8 = 5;
+pub(crate) const RESP_DEVICE: u8 = 6;
+pub(crate) const RESP_CONFIG: u8 = 7;
+pub(crate) const RESP_UNPAIRED: u8 = 8;

@@ -88,21 +88,25 @@ pub(crate) async fn read_data_chunk(
     Ok(Some(buf))
 }
 
+pub(crate) struct CompletionDetails<'a> {
+    pub transfer_id: &'a str,
+    pub bytes_transferred: u64,
+    pub digest: &'a [u8; 32],
+}
+
 pub(crate) async fn send_completion_and_wait_ack(
     send: &mut SendStream,
     recv: &mut RecvStream,
-    transfer_id: &str,
-    bytes_transferred: u64,
-    digest: &[u8; 32],
+    completion: CompletionDetails<'_>,
 ) -> Result<(), KeynearError> {
     send.write_all(&0u32.to_be_bytes())
         .await
         .map_err(|err| KeynearError::Transport(format!("write EOF marker failed: {err}")))?;
     let complete = wrap_payload(v1::envelope::Payload::TransferComplete(
         v1::TransferComplete {
-            transfer_id: transfer_id.to_string(),
-            bytes_transferred,
-            sha256_digest: digest.to_vec(),
+            transfer_id: completion.transfer_id.to_string(),
+            bytes_transferred: completion.bytes_transferred,
+            sha256_digest: completion.digest.to_vec(),
         },
     ));
     write_control_envelope(send, &complete).await?;

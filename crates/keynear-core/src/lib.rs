@@ -1,3 +1,9 @@
+#![deny(
+    clippy::too_many_lines,
+    clippy::cognitive_complexity,
+    clippy::too_many_arguments
+)]
+
 pub mod clipboard;
 pub mod keyring;
 pub mod pairing;
