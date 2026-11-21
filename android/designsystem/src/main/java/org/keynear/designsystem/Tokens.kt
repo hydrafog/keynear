@@ -7,6 +7,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+enum class TactileTone {
+    SURFACE,
+    TONAL,
+    ACCENT,
+    SHEET,
+    INSET,
+    THUMB,
+    NONE,
+}
+
 data class KeynearPalette(
     val canvas: Color,
     val surface: Color,
@@ -42,6 +52,16 @@ data class KeynearPalette(
     val trackWell: Color,
     val visibilityWell: Color,
     val scrim: Color,
+    val onCanvas: Color,
+    val loadingHover: Color,
+    val loadingInk: Color,
+    val errorInk: Color,
+    val errorActionHover: Color,
+    val notifSubCard: Color,
+    val qsOn: Color,
+    val qsHover: Color,
+    val mapContour: Color,
+    val mapContourFar: Color,
     val waveSpoke: Color,
     val waveRing: Color,
     val waveEcho: Color,
@@ -83,6 +103,16 @@ val LightKeynearPalette = KeynearPalette(
     trackWell = Color(0xFFE7EDF8),
     visibilityWell = Color(0xFFD2DFF4),
     scrim = Color(0x7300021E),
+    onCanvas = Color(0xFF07132B),
+    loadingHover = Color(0xFF0195D4),
+    loadingInk = Color(0xFF0195D4),
+    errorInk = Color(0xFFE84201),
+    errorActionHover = Color(0xFFFFCFCF),
+    notifSubCard = Color(0xFFE9EFFB),
+    qsOn = Color(0xFF07132B),
+    qsHover = Color(0xFFF3F7FD),
+    mapContour = Color(0x33004CED),
+    mapContourFar = Color(0x26004CED),
     waveSpoke = Color(0x2E94B3D9),
     waveRing = Color(0x5C38A8EE),
     waveEcho = Color(0x427DCCFA),
@@ -124,6 +154,16 @@ val DarkKeynearPalette = KeynearPalette(
     trackWell = Color(0xFF0D1018),
     visibilityWell = Color(0xFF0D1018),
     scrim = Color(0x99000000),
+    onCanvas = Color(0xFFF7F6F7),
+    loadingHover = Color(0xFF0195D4),
+    loadingInk = Color(0xFF0195D4),
+    errorInk = Color(0xFFE84201),
+    errorActionHover = Color(0xFF5E040F),
+    notifSubCard = Color(0xFF0D1018),
+    qsOn = Color(0xFFE9E9EC),
+    qsHover = Color(0xFF1D1F2A),
+    mapContour = Color(0x334199FF),
+    mapContourFar = Color(0x264199FF),
     waveSpoke = Color(0x2E94B3D9),
     waveRing = Color(0x5C38A8EE),
     waveEcho = Color(0x427DCCFA),
@@ -135,6 +175,8 @@ object KeynearRadii {
     val Xl = 12.dp
     val TwoXl = 16.dp
     val ThreeXl = 24.dp
+    val Md10 = 10.dp
+    val Lg14 = 14.dp
 }
 
 object KeynearShapes {
@@ -157,6 +199,23 @@ object KeynearSpacing {
     val MinTouchTarget = MIN_TOUCH_TARGET_DP.dp
 }
 
+object KeynearDimensions {
+    val Dp2 = 2.dp
+    val Dp5 = 5.dp
+    val Dp6 = 6.dp
+    val Dp10 = 10.dp
+    val Dp13 = 13.dp
+    val Dp17 = 17.dp
+    val Dp18 = 18.dp
+    val Dp20 = 20.dp
+    val Dp26 = 26.dp
+    val Dp34 = 34.dp
+    val Dp52 = 52.dp
+    val Dp58 = 58.dp
+    val Dp62 = 62.dp
+    val Dp128 = 128.dp
+}
+
 object KeynearLayout {
     val ScreenPaddingHorizontal = 16.dp
     val ScreenPaddingVertical = 16.dp
@@ -170,7 +229,21 @@ object KeynearLayout {
     val RowVerticalPadding = 10.dp
     val RowMinHeight = 66.dp
     val CardPadding = 16.dp
-    val CardPaddingLarge = 20.dp
+    val CardPaddingLarge = KeynearDimensions.Dp20
+    val ActionButtonHorizontalPadding = KeynearDimensions.Dp20
+    val ControlMinHeight = KeynearDimensions.Dp52
+    val ContentGap = KeynearDimensions.Dp10
+    val SelectionTileMinHeight = KeynearDimensions.Dp128
+    val SwitchTrackWidth = KeynearDimensions.Dp58
+    val SwitchTrackHeight = KeynearDimensions.Dp34
+    val SwitchThumbSize = KeynearDimensions.Dp26
+    val SwitchMinWidth = KeynearDimensions.Dp62
+    val CompactGap = KeynearDimensions.Dp6
+    val SwitchDragThreshold = KeynearDimensions.Dp18
+    val SwitchThumbRadius = KeynearDimensions.Dp13
+    val SwitchTrackRadius = KeynearDimensions.Dp17
+    val TextSubtitleGap = KeynearDimensions.Dp2
+    val ChevronIconSize = KeynearDimensions.Dp20
 }
 
 object KeynearTypeSizes {
@@ -179,6 +252,9 @@ object KeynearTypeSizes {
     val Body = 16.sp
     val Description = 14.sp
     val Caption = 12.sp
+    val Micro = 0.8.sp
+    val Sp4 = 4.sp
+    val Sp11 = 11.sp
 }
 
 object KeynearLineHeights {
@@ -193,6 +269,18 @@ object KeynearMotion {
     const val SETTLE_DURATION_MS = 240
     const val FADE_DURATION_MS = 180
     const val SHORT_DURATION_MS = 150
+}
+
+object KeynearOpacity {
+    const val DISABLED_CONTAINER = 0.45f
+    const val DISABLED_CONTENT = 0.65f
+    const val WAVE_MOTE = 0.5f
+    const val PRESSED_OVERLAY = 0.12f
+}
+
+object KeynearStates {
+    val FocusOutlineWidth = 2.dp
+    val FocusCornerRadius = KeynearRadii.Xl
 }
 
 data class KeynearOuterShadow(

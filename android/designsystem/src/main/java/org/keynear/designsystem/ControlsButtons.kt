@@ -23,14 +23,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-
-private val ActionButtonHorizontalPadding = 20.dp
-private val ControlMinHeight = 52.dp
-private val ContentGap = 10.dp
-private val SelectionTileMinHeight = 128.dp
-private const val DISABLED_CONTAINER_ALPHA = 0.45f
-private const val DISABLED_CONTENT_ALPHA = 0.65f
 
 @Composable
 fun SelectionTile(
@@ -46,7 +38,7 @@ fun SelectionTile(
     val textColor = if (active) palette.onLoadingTonal else palette.textPrimary
 
     TactileSurface(
-        modifier = modifier.heightIn(min = SelectionTileMinHeight),
+        modifier = modifier.heightIn(min = KeynearLayout.SelectionTileMinHeight),
         shape = KeynearShapes.Card,
         containerColor = bg,
         tone = if (active) TactileTone.TONAL else TactileTone.SURFACE,
@@ -56,7 +48,7 @@ fun SelectionTile(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = SelectionTileMinHeight)
+                .heightIn(min = KeynearLayout.SelectionTileMinHeight)
                 .padding(KeynearLayout.CardPaddingLarge),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
@@ -122,8 +114,8 @@ fun ActionButton(
     val palette = LocalKeynearPalette.current
     val container = actionContainerColor(palette, danger, errorTonal, tonalSurface, primary)
     val content = actionContentColor(palette, danger, errorTonal, tonalSurface, primary)
-    val effectiveContainer = if (enabled) container else container.copy(alpha = DISABLED_CONTAINER_ALPHA)
-    val effectiveContent = if (enabled) content else content.copy(alpha = DISABLED_CONTENT_ALPHA)
+    val effectiveContainer = if (enabled) container else container.copy(alpha = KeynearOpacity.DISABLED_CONTAINER)
+    val effectiveContent = if (enabled) content else content.copy(alpha = KeynearOpacity.DISABLED_CONTENT)
     val buttonTone = actionTone(enabled, primary)
 
     TactileSurface(
@@ -138,7 +130,7 @@ fun ActionButton(
         Row(
             modifier = Modifier
                 .heightIn(min = minHeight)
-                .padding(horizontal = ActionButtonHorizontalPadding, vertical = ContentGap),
+                .padding(horizontal = KeynearLayout.ActionButtonHorizontalPadding, vertical = KeynearLayout.ContentGap),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -169,7 +161,7 @@ fun RecessedInput(
     val palette = LocalKeynearPalette.current
     Box(
         modifier = modifier
-            .heightIn(min = ControlMinHeight)
+            .heightIn(min = KeynearLayout.ControlMinHeight)
             .clip(KeynearShapes.Xl)
             .background(palette.input)
             .tactileCushion(

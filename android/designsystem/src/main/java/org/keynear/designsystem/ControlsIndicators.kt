@@ -28,17 +28,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-private val ControlMinHeight = 52.dp
-private val SwitchTrackWidth = 58.dp
-private val CompactGap = 6.dp
-private val ContentGap = 10.dp
-private val SwitchDragThreshold = 18.dp
-private val SwitchMinWidth = 62.dp
-private val SwitchThumbRadius = 13.dp
-private val SwitchThumbSize = 26.dp
-private val SwitchTrackHeight = 34.dp
-private val SwitchTrackRadius = 17.dp
-
 @Composable
 fun KeynearSwitch(
     checked: Boolean,
@@ -58,7 +47,7 @@ fun KeynearSwitch(
 
     Box(
         modifier = modifier
-            .defaultMinSize(minWidth = SwitchMinWidth, minHeight = ControlMinHeight)
+            .defaultMinSize(minWidth = KeynearLayout.SwitchMinWidth, minHeight = KeynearLayout.ControlMinHeight)
             .pointerInput(checked, onCheckedChange) {
                 var dragOffset = 0f
                 detectHorizontalDragGestures(
@@ -66,7 +55,7 @@ fun KeynearSwitch(
                     onHorizontalDrag = { change, dragAmount ->
                         change.consume()
                         dragOffset += dragAmount
-                        val threshold = SwitchDragThreshold.toPx()
+                        val threshold = KeynearLayout.SwitchDragThreshold.toPx()
                         when {
                             dragOffset > threshold && !checked -> {
                                 onCheckedChange(true)
@@ -87,27 +76,27 @@ fun KeynearSwitch(
     ) {
         Box(
             modifier = Modifier
-                .width(SwitchTrackWidth)
-                .height(SwitchTrackHeight)
+                .width(KeynearLayout.SwitchTrackWidth)
+                .height(KeynearLayout.SwitchTrackHeight)
                 .tactileShadow(
                     tone = trackTone,
                     isDark = palette.isDark,
-                    cornerRadius = SwitchTrackRadius,
+                    cornerRadius = KeynearLayout.SwitchTrackRadius,
                 )
                 .clip(CircleShape)
                 .background(trackColor)
-                .tactileCushion(tone = trackTone, isDark = palette.isDark, cornerRadius = SwitchTrackRadius)
+                .tactileCushion(tone = trackTone, isDark = palette.isDark, cornerRadius = KeynearLayout.SwitchTrackRadius)
                 .padding(KeynearSpacing.Xs),
             contentAlignment = Alignment.CenterStart,
         ) {
             Box(
                 modifier = Modifier
                     .offset(x = thumbOffset)
-                    .size(SwitchThumbSize)
+                    .size(KeynearLayout.SwitchThumbSize)
                     .tactileShadow(
                         tone = TactileTone.THUMB,
                         isDark = palette.isDark,
-                        cornerRadius = SwitchThumbRadius,
+                        cornerRadius = KeynearLayout.SwitchThumbRadius,
                         isCircle = true,
                     )
                     .clip(CircleShape)
@@ -115,7 +104,7 @@ fun KeynearSwitch(
                     .tactileCushion(
                         tone = TactileTone.THUMB,
                         isDark = palette.isDark,
-                        cornerRadius = SwitchThumbRadius,
+                        cornerRadius = KeynearLayout.SwitchThumbRadius,
                         isCircle = true,
                     ),
             )
@@ -144,7 +133,7 @@ fun WarningBannerCard(
                 .fillMaxWidth()
                 .padding(horizontal = KeynearSpacing.Lg, vertical = KeynearSpacing.Md),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(ContentGap),
+            horizontalArrangement = Arrangement.spacedBy(KeynearLayout.ContentGap),
         ) {
             Text(
                 text = message,
@@ -173,7 +162,7 @@ fun KeynearProgressBar(
         progress = { progress.coerceIn(0f, 1f) },
         modifier = modifier
             .fillMaxWidth()
-            .height(CompactGap)
+            .height(KeynearLayout.CompactGap)
             .clip(CircleShape),
         color = palette.loading,
         trackColor = palette.switchTrackOff,

@@ -14,9 +14,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.vector.PathParser
-import androidx.compose.ui.unit.dp
 
-private val ChevronIconSize = 20.dp
 private const val DEFAULT_STROKE_WIDTH = 2f
 
 
@@ -157,7 +155,7 @@ fun IconArrowLeft(
 
 @Composable
 fun IconChevronRight(
-    modifier: Modifier = Modifier.size(ChevronIconSize),
+    modifier: Modifier = Modifier.size(KeynearLayout.ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.textMuted,
     strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
@@ -171,7 +169,7 @@ fun IconChevronRight(
 
 @Composable
 fun IconChevronDown(
-    modifier: Modifier = Modifier.size(ChevronIconSize),
+    modifier: Modifier = Modifier.size(KeynearLayout.ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.textMuted,
     strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
@@ -185,7 +183,7 @@ fun IconChevronDown(
 
 @Composable
 fun IconChevronUp(
-    modifier: Modifier = Modifier.size(ChevronIconSize),
+    modifier: Modifier = Modifier.size(KeynearLayout.ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.textMuted,
     strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
@@ -362,7 +360,7 @@ fun IconRadio(
 
 @Composable
 fun IconAlertTriangle(
-    modifier: Modifier = Modifier.size(ChevronIconSize),
+    modifier: Modifier = Modifier.size(KeynearLayout.ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.onDangerTonal,
     strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
@@ -380,7 +378,7 @@ fun IconAlertTriangle(
 
 @Composable
 fun IconClose(
-    modifier: Modifier = Modifier.size(ChevronIconSize),
+    modifier: Modifier = Modifier.size(KeynearLayout.ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.error,
     strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
@@ -408,7 +406,7 @@ fun IconCheck(
 
 @Composable
 fun IconRefreshCw(
-    modifier: Modifier = Modifier.size(ChevronIconSize),
+    modifier: Modifier = Modifier.size(KeynearLayout.ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.textPrimary,
     strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {
@@ -427,7 +425,7 @@ fun IconRefreshCw(
 
 @Composable
 fun IconTrash2(
-    modifier: Modifier = Modifier.size(ChevronIconSize),
+    modifier: Modifier = Modifier.size(KeynearLayout.ChevronIconSize),
     tint: Color = LocalKeynearPalette.current.error,
     strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
 ) {

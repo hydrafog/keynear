@@ -20,28 +20,13 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-
-private val CaptionLetterSpacing = 0.8.sp
-private val DefaultElevation = 5.dp
-private val TextSubtitleGap = 2.dp
-
-enum class TactileTone {
-    SURFACE,
-    TONAL,
-    ACCENT,
-    SHEET,
-    INSET,
-    THUMB,
-    NONE,
-}
 
 @Composable
 fun TactileSurface(
     modifier: Modifier = Modifier,
     shape: Shape = KeynearShapes.Card,
     containerColor: Color = LocalKeynearPalette.current.surface,
-    shadowElevation: Dp = DefaultElevation,
+    shadowElevation: Dp = KeynearDimensions.Dp5,
     tone: TactileTone = if (shadowElevation == 0.dp) TactileTone.NONE else TactileTone.SURFACE,
     isAccent: Boolean = false,
     cornerRadius: Dp = KeynearRadii.TwoXl,
@@ -73,7 +58,7 @@ fun SectionHeading(
         color = palette.textMuted,
         fontSize = KeynearTypeSizes.Caption,
         fontWeight = FontWeight.Bold,
-        letterSpacing = CaptionLetterSpacing,
+        letterSpacing = KeynearTypeSizes.Micro,
         modifier = modifier.padding(horizontal = KeynearSpacing.Xs),
     )
 }
@@ -135,7 +120,7 @@ fun SettingRow(
             modifier = Modifier
                 .weight(1f)
                 .padding(end = KeynearSpacing.Sm),
-            verticalArrangement = Arrangement.spacedBy(TextSubtitleGap),
+            verticalArrangement = Arrangement.spacedBy(KeynearLayout.TextSubtitleGap),
         ) {
             Text(
                 text = title,

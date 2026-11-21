@@ -9,10 +9,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
-
-private val CaptionLetterSpacing = 0.8.sp
-private val CodeLetterSpacing = 4.sp
 
 @Composable
 fun PairingPromptCard(
@@ -42,14 +38,14 @@ fun PairingPromptCard(
                 color = palette.textMuted,
                 fontSize = KeynearTypeSizes.Caption,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = CaptionLetterSpacing,
+                letterSpacing = KeynearTypeSizes.Micro,
             )
             Text(
                 text = verificationCode,
                 color = palette.textPrimary,
                 fontSize = KeynearTypeSizes.Title,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = CodeLetterSpacing,
+                letterSpacing = KeynearTypeSizes.Sp4,
             )
             Text(
                 text = countdownText,
