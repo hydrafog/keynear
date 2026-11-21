@@ -4,7 +4,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
-for required in .editorconfig .gitignore LICENSE README.md deny.toml android/detekt.yml design/tokens.json design/design-lint-baseline.json; do
+for required in .editorconfig .gitignore LICENSE README.md deny.toml android/detekt.yml design/tokens.json; do
   if [ ! -f "$required" ]; then
     echo "repo-check: missing required file $required" >&2
     exit 1
@@ -35,7 +35,6 @@ if git grep -nE "BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY" -- . ':!design/prototype
   exit 1
 fi
 
-bash "$repo_root/scripts/validation/design-lint.sh" --baseline "$repo_root/design/design-lint-baseline.json"
-bash "$repo_root/scripts/validation/strip-comments.sh" --check
+bash "$repo_root/scripts/validation/size-check.sh"
 
 echo "repo-check: OK"

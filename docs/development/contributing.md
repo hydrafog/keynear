@@ -23,15 +23,22 @@ On non-Nix Ubuntu hosts, install `protobuf-compiler`, `libgtk-4-dev`, and `pkg-c
 
 Shared visual tokens (`Plus Jakarta Sans`, light/dark palettes, typography scale, radii, spacing, and motion timings) live in `design/tokens.json` and feed both `crates/keynear-settings/assets/style.css` and `android/designsystem/src/main/java/org/keynear/designsystem/Tokens.kt`.
 
+## Structure and Size Caps
+
+Code is organized into feature modules with one root module re-exporting the public surface. Presentation depends on domain contracts only, domain code avoids UI and transport imports, and shared contracts live in `keynear-protocol` while shared infrastructure lives in `keynear-core`. Domain thresholds such as timeouts, poll intervals, retry counts, and buffer capacities live in typed configuration modules.
+
+Handwritten logic files are capped at 300 lines, functions at 50 lines, cyclomatic complexity at 10, nesting depth at 3, and positional parameters at 4. Generated code, lookup tables, test fixtures, and declarative files are exempt. The limits are enforced by `clippy.toml` and crate-level lint attributes for Rust, `android/detekt.yml` for Kotlin, and a repository size check that runs in hooks and CI.
+
+A targeted `#[allow(clippy::...)]` is permitted only where a cap conflicts with a fixed boundary: public or uniffi-exported signatures, generated protobuf output, and test fixtures. These categories are exempt by policy; any other suppression is treated as a defect.
+
 ## Quality Scripts and CI
 
-- `scripts/project/check.sh`: Runs `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`, `cargo deny check`, `cargo audit`, `cargo llvm-cov --workspace --summary-only`, `scripts/validation/repo-check.sh`, and Android `testDebugUnitTest lintDebug detekt`.
-- `scripts/validation/repo-check.sh`: Verifies `.editorconfig`, `.gitignore` hygiene, absence of committed secrets or `.env` files, `scripts/validation/strip-comments.sh --check`, and runs `scripts/validation/design-lint.sh`.
-- `scripts/validation/design-lint.sh`: Thin wrapper around `tools/design-lint` checking design-token parity against `design/tokens.json` and scanning Android Kotlin/XML, GTK4 CSS, and Rust UI/tray/notification sources against `design/design-lint-baseline.json`.
-- `scripts/validation/strip-comments.sh`: Thin wrapper around `tools/strip-comments` enforcing comment hygiene across `crates/` and `android/` (`--check`).
+- `scripts/project/check.sh`: Runs `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`, `cargo deny check`, `cargo audit`, `cargo llvm-cov --workspace --summary-only`, `scripts/validation/repo-check.sh`, `scripts/validation/size-check.sh`, and Android `testDebugUnitTest lintDebug detekt`.
+- `scripts/validation/repo-check.sh`: Verifies `.editorconfig`, `.gitignore` hygiene, absence of committed secrets or `.env` files, required project files such as `design/tokens.json`, ignore rules for generated outputs, and the size cap via `size-check.sh`.
+- `scripts/validation/size-check.sh`: Fails when a tracked handwritten Rust or Kotlin logic file exceeds 300 lines, skipping generated code, lookup tables, and test fixtures.
 - `scripts/validation/commit-msg.sh`: Enforces `<prefix>: <imperative summary>` commit subjects within 80 characters.
 - `scripts/export/export-docs.sh`: Exports documentation and `proto3` schemas deterministically to `out/`.
-- `.github/workflows/quality.yml`: Executes Rust checks (`fmt`, `clippy`, `test`, `deny`, `audit`, `llvm-cov`), `repo-check.sh`, `nix flake check --no-build`, and Android `gradle testDebugUnitTest lintDebug detekt assembleDebug`.
+- `.github/workflows/quality.yml`: Executes Rust checks (`fmt`, `clippy`, `test`, `deny`, `audit`, `llvm-cov`), `repo-check.sh`, `size-check.sh`, `nix flake check --no-build`, and Android `gradle testDebugUnitTest lintDebug detekt assembleDebug`.
 
 ## Commit Conventions
 

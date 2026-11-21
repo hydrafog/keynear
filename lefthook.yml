@@ -3,6 +3,8 @@ pre-commit:
   commands:
     repo-check:
       run: bash scripts/validation/repo-check.sh
+    size-check:
+      run: bash scripts/validation/size-check.sh
     rust-fmt:
       glob: "*.rs"
       run: cargo fmt --check

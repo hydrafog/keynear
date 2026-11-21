@@ -22,23 +22,23 @@ complexity:
     active: false
   LongParameterList:
     active: true
-    allowedFunctionParameters: 10
-    allowedConstructorParameters: 10
+    allowedFunctionParameters: 4
+    allowedConstructorParameters: 4
     ignoreAnnotated:
       - "Composable"
   LongMethod:
     active: true
-    allowedLines: 250
+    allowedLines: 50
     ignoreAnnotated:
       - "Composable"
   CyclomaticComplexMethod:
     active: true
-    allowedComplexity: 35
+    allowedComplexity: 10
   ComplexCondition:
     active: false
   NestedBlockDepth:
     active: true
-    allowedDepth: 5
+    allowedDepth: 3
 
 style:
   MagicNumber:

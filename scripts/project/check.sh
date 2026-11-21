@@ -5,6 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
 bash scripts/validation/repo-check.sh
+bash scripts/validation/size-check.sh
 
 run_rust_checks() {
   cargo fmt --check

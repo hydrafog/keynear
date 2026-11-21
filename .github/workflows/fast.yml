@@ -19,5 +19,6 @@ jobs:
         run: |
           bash -n scripts/*/*.sh
           bash scripts/validation/repo-check.sh
+          bash scripts/validation/size-check.sh
       - name: Cargo check
         run: cargo check --workspace
