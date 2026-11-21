@@ -1321,6 +1321,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42703706b716c37f96a77aea830392ad231f44c9e9a67872fa5548707e11b11c"
 
 [[package]]
+name = "fuser"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b82b6597d216503555ead6b358f341ef748869bf5c6fbae6a0cb9dd231baecfd"
+dependencies = [
+ "bitflags",
+ "libc",
+ "log",
+ "memchr",
+ "nix 0.31.3",
+ "num_enum",
+ "page_size",
+ "parking_lot",
+ "pkg-config",
+ "ref-cast",
+ "smallvec",
+ "zerocopy",
+]
+
+[[package]]
 name = "futures"
 version = "0.3.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2486,7 +2506,7 @@ dependencies = [
 
 [[package]]
 name = "keynear-core"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "aes-gcm 0.11.1",
  "hex",
@@ -2511,7 +2531,7 @@ dependencies = [
 
 [[package]]
 name = "keynear-ffi"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "hex",
  "keynear-core",
@@ -2526,22 +2546,24 @@ dependencies = [
 
 [[package]]
 name = "keynear-ipc"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "keynear-protocol",
 ]
 
 [[package]]
 name = "keynear-linux"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "bluer",
+ "fuser",
  "futures-util",
  "hex",
  "keynear-core",
  "keynear-ipc",
  "keynear-protocol",
  "ksni",
+ "libc",
  "oo7",
  "rand 0.10.3",
  "serde",
@@ -2561,7 +2583,7 @@ dependencies = [
 
 [[package]]
 name = "keynear-protocol"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "prost",
  "prost-build",
@@ -2573,7 +2595,7 @@ dependencies = [
 
 [[package]]
 name = "keynear-settings"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "ashpd",
  "gtk4",
@@ -3043,6 +3065,7 @@ dependencies = [
  "cfg-if",
  "cfg_aliases",
  "libc",
+ "memoffset",
 ]
 
 [[package]]
@@ -3398,6 +3421,16 @@ checksum = "9aa2b01e1d916879f73a53d01d1d6cee68adbb31d6d9177a8cfce093cced1d50"
 dependencies = [
  "futures-core",
  "pin-project-lite",
+]
+
+[[package]]
+name = "page_size"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30d5b2194ed13191c1999ae0704b7839fb18384fa22e49b57eeaa97d79ce40da"
+dependencies = [
+ "libc",
+ "winapi",
 ]
 
 [[package]]
@@ -3852,6 +3885,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed2bf2547551a7053d6fdfafda3f938979645c44812fbfcda098faae3f1a362d"
 dependencies = [
  "bitflags",
+]
+
+[[package]]
+name = "ref-cast"
+version = "1.0.27"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e440fb4e4b4147295338efb76001ab9e4efc0e5839df2c47fc5ac2381d365c3"
+dependencies = [
+ "ref-cast-impl",
+]
+
+[[package]]
+name = "ref-cast-impl"
+version = "1.0.27"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92ecd8964f8453721699a1ed72037b0db49ce2f5a5138486ee89bed6f67cdf3a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.10",
 ]
 
 [[package]]

@@ -142,38 +142,42 @@ fn validate_transfer_id(transfer_id: &str) -> Result<(), KeynearError> {
     Ok(())
 }
 
-pub fn resume_from_checkpoint(
-    local_flags: u32,
-    peer_flags: u32,
-    transfer_id: &str,
-    total_bytes: u64,
-    sequence: u64,
-    last_sequence: u64,
-    verified_bytes: u64,
-    bitmap: &ChunkBitmap,
-    rolling_digest: &[u8],
-) -> Result<ResumeDecision, KeynearError> {
-    validate_transfer_id(transfer_id)?;
-    if total_bytes == 0 {
+#[derive(Debug, Clone)]
+pub struct CheckpointInput<'a> {
+    pub local_flags: u32,
+    pub peer_flags: u32,
+    pub transfer_id: &'a str,
+    pub total_bytes: u64,
+    pub sequence: u64,
+    pub last_sequence: u64,
+    pub verified_bytes: u64,
+    pub bitmap: &'a ChunkBitmap,
+    pub rolling_digest: &'a [u8],
+}
+
+pub fn resume_from_checkpoint(input: CheckpointInput<'_>) -> Result<ResumeDecision, KeynearError> {
+    validate_transfer_id(input.transfer_id)?;
+    if input.total_bytes == 0 {
         return Err(KeynearError::Validation {
             field: "totalBytes",
             message: "total_bytes must be positive".to_string(),
         });
     }
-    if rolling_digest.len() != 32 {
+    if input.rolling_digest.len() != 32 {
         return Err(KeynearError::Validation {
             field: "rollingSha256",
             message: "rolling digest must be 32 bytes".to_string(),
         });
     }
 
-    let negotiated = negotiate_capabilities(local_flags, peer_flags) & CAP_RESUMABLE_TRANSFER;
-    if negotiated == 0 || sequence <= last_sequence {
+    let negotiated =
+        negotiate_capabilities(input.local_flags, input.peer_flags) & CAP_RESUMABLE_TRANSFER;
+    if negotiated == 0 || input.sequence <= input.last_sequence {
         return Ok(ResumeDecision::Unavailable);
     }
 
-    let chunk_count = total_bytes.div_ceil(STREAM_CHUNK_BYTES as u64);
-    let bitmap_chunks = bitmap.verified_chunks();
+    let chunk_count = input.total_bytes.div_ceil(STREAM_CHUNK_BYTES as u64);
+    let bitmap_chunks = input.bitmap.verified_chunks();
     if bitmap_chunks > chunk_count {
         return Err(KeynearError::Validation {
             field: "chunkBitmap",
@@ -181,8 +185,8 @@ pub fn resume_from_checkpoint(
         });
     }
     let expected_bytes =
-        (bitmap_chunks as u128 * STREAM_CHUNK_BYTES as u128).min(total_bytes as u128) as u64;
-    if verified_bytes != expected_bytes {
+        (bitmap_chunks as u128 * STREAM_CHUNK_BYTES as u128).min(input.total_bytes as u128) as u64;
+    if input.verified_bytes != expected_bytes {
         return Err(KeynearError::Validation {
             field: "verifiedBytes",
             message: "checkpoint verified bytes do not match the bitmap".to_string(),
@@ -197,133 +201,5 @@ pub fn resume_from_checkpoint(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn flags() -> (u32, u32) {
-        (CAP_RESUMABLE_TRANSFER, CAP_RESUMABLE_TRANSFER)
-    }
-
-    fn bitmap(prefix: u64, count: u64) -> ChunkBitmap {
-        let mut bytes = vec![0u8; count.div_ceil(8) as usize];
-        for index in 0..prefix {
-            bytes[(index / 8) as usize] |= 1 << (index % 8);
-        }
-        ChunkBitmap::new(count, bytes).expect("bitmap")
-    }
-
-    #[test]
-    fn resume_starts_at_first_unverified_chunk() {
-        let (local, peer) = flags();
-        let count = 12;
-        let verified = 7;
-        let map = bitmap(verified, count);
-        let decision = resume_from_checkpoint(
-            local,
-            peer,
-            "tx-1",
-            12 * STREAM_CHUNK_BYTES as u64,
-            3,
-            1,
-            verified * STREAM_CHUNK_BYTES as u64,
-            &map,
-            &[0x44; 32],
-        )
-        .expect("resume decision");
-        assert_eq!(decision, ResumeDecision::FromChunk(verified));
-        assert!(map.is_verified(verified - 1));
-        assert!(!map.is_verified(verified));
-    }
-
-    #[test]
-    fn peer_without_capability_starts_from_zero() {
-        let decision = resume_from_checkpoint(
-            CAP_RESUMABLE_TRANSFER,
-            0,
-            "tx-1",
-            12 * STREAM_CHUNK_BYTES as u64,
-            3,
-            1,
-            0,
-            &bitmap(7, 12),
-            &[0x44; 32],
-        )
-        .expect("resume decision");
-        assert_eq!(decision, ResumeDecision::Unavailable);
-    }
-
-    #[test]
-    fn invalid_bitmap_is_rejected_before_resume() {
-        let mut bytes = vec![0u8; 2];
-        bytes[0] = 0b0000_0101;
-        let err = ChunkBitmap::new(12, bytes).expect_err("gap must be rejected");
-        assert!(matches!(err, KeynearError::Validation { .. }));
-    }
-
-    #[test]
-    fn bitmap_bit_beyond_chunk_count_is_rejected() {
-        let err = ChunkBitmap::new(3, vec![0b0000_1000]).expect_err("extra bit must be rejected");
-        assert!(matches!(err, KeynearError::Validation { .. }));
-    }
-
-    #[test]
-    fn stale_checkpoint_sequence_is_ignored() {
-        let (local, peer) = flags();
-        let decision = resume_from_checkpoint(
-            local,
-            peer,
-            "tx-1",
-            12 * STREAM_CHUNK_BYTES as u64,
-            2,
-            2,
-            7 * STREAM_CHUNK_BYTES as u64,
-            &bitmap(7, 12),
-            &[0x44; 32],
-        )
-        .expect("resume decision");
-        assert_eq!(decision, ResumeDecision::Unavailable);
-    }
-
-    #[test]
-    fn verified_bytes_must_match_bitmap() {
-        let (local, peer) = flags();
-        let err = resume_from_checkpoint(
-            local,
-            peer,
-            "tx-1",
-            12 * STREAM_CHUNK_BYTES as u64,
-            3,
-            1,
-            8 * STREAM_CHUNK_BYTES as u64,
-            &bitmap(7, 12),
-            &[0x44; 32],
-        )
-        .expect_err("mismatched byte count must fail");
-        assert!(matches!(err, KeynearError::Validation { .. }));
-    }
-
-    #[test]
-    fn rolling_chain_ends_at_final_digest() {
-        let first = vec![0x11u8; STREAM_CHUNK_BYTES];
-        let second = vec![0x22u8; 32];
-        let mut expected = Sha256::new();
-        expected.update(&first);
-        expected.update(&second);
-        let expected: [u8; 32] = expected.finalize().into();
-
-        let mut chain = Sha256Chain::new();
-        chain.extend(&first).expect("extend first");
-        chain.extend(&second).expect("extend final");
-        assert_eq!(chain.chunks(), 2);
-        assert_eq!(chain.finalize(), expected);
-    }
-
-    #[test]
-    fn rolling_chain_rejects_oversized_chunk() {
-        let mut chain = Sha256Chain::new();
-        let err = chain
-            .extend(&vec![0u8; STREAM_CHUNK_BYTES + 1])
-            .expect_err("oversized chunk must fail");
-        assert!(matches!(err, KeynearError::Transfer(_)));
-    }
-}
+#[path = "resume/tests.rs"]
+mod tests;

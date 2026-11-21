@@ -47,6 +47,12 @@ class KeynearDocumentsProvider : DocumentsProvider() {
     override fun queryChildDocuments(
         parentDocumentId: String,
         projection: Array<out String>?,
+        sortOrder: String?,
+    ): Cursor = queryChildDocuments(parentDocumentId, projection, null as Bundle?)
+
+    override fun queryChildDocuments(
+        parentDocumentId: String,
+        projection: Array<out String>?,
         queryArgs: Bundle?,
     ): Cursor {
         val offset = queryArgs?.getInt("offset", 0) ?: 0
@@ -84,6 +90,22 @@ class KeynearDocumentsProvider : DocumentsProvider() {
     }
 
     companion object {
+        private val DEFAULT_ROOT_PROJECTION = arrayOf(
+            DocumentsContract.Root.COLUMN_ROOT_ID,
+            DocumentsContract.Root.COLUMN_DOCUMENT_ID,
+            DocumentsContract.Root.COLUMN_FLAGS,
+            DocumentsContract.Root.COLUMN_TITLE,
+            DocumentsContract.Root.COLUMN_SUMMARY,
+        )
+
+        private val DEFAULT_DOCUMENT_PROJECTION = arrayOf(
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_MIME_TYPE,
+            DocumentsContract.Document.COLUMN_SIZE,
+            DocumentsContract.Document.COLUMN_FLAGS,
+        )
+
         @Volatile
         private var installed: VfsSource = EmptyVfsSource()
 
@@ -92,5 +114,11 @@ class KeynearDocumentsProvider : DocumentsProvider() {
         }
 
         private fun source(): VfsSource = installed
+
+        private fun resolveRootProjection(projection: Array<out String>?): Array<out String> =
+            projection ?: DEFAULT_ROOT_PROJECTION
+
+        private fun resolveDocumentProjection(projection: Array<out String>?): Array<out String> =
+            projection ?: DEFAULT_DOCUMENT_PROJECTION
     }
 }

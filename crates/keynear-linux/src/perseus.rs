@@ -15,12 +15,22 @@ impl Drop for FuseProbeGuard {
 
 pub fn initialize() -> FuseProbeGuard {
     let backend = UnavailableFuseBackend;
-    let availability = backend.availability();
-    tracing::info!(event = "perseus_fuse_probe", available = ?availability);
-
-    let root = RemoteVfsNode::root("keynear", "Keynear").expect("static root is valid");
+    log_availability(backend.available());
+    let root = probe_root();
     let mut controller = VfsFuseController::new(backend);
-    let outcome = controller.start(&root);
-    tracing::info!(event = "perseus_fuse_mount", outcome = ?outcome);
+    controller.start(&root);
+    log_controller_state(&controller);
     FuseProbeGuard { controller }
+}
+
+fn log_availability(available: bool) {
+    tracing::info!(event = "perseus_fuse_probe", available);
+}
+
+fn probe_root() -> RemoteVfsNode {
+    RemoteVfsNode::root("keynear", "Keynear").expect("static root is valid")
+}
+
+fn log_controller_state(controller: &VfsFuseController<UnavailableFuseBackend>) {
+    tracing::info!(event = "perseus_fuse_mount", state = ?controller.state());
 }

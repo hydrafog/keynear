@@ -53,8 +53,8 @@ pub use pairing::{
     EXPORT_CONTRIBUTION_LEN, MAX_GATT_PAIRING_FRAME_BYTES, PAIRING_PROTOCOL,
 };
 pub use resume::{
-    resume_from_checkpoint, ChunkBitmap, ResumeDecision, Sha256Chain, MAX_CHECKPOINT_BITMAP_BYTES,
-    MAX_TRANSFER_ID_LEN,
+    resume_from_checkpoint, CheckpointInput, ChunkBitmap, ResumeDecision, Sha256Chain,
+    MAX_CHECKPOINT_BITMAP_BYTES, MAX_TRANSFER_ID_LEN,
 };
 pub use transfer::{
     sanitize_relative_path, TransferEngine, TransferRegistry, MAX_ACTIVE_TRANSFERS,

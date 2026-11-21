@@ -1,20 +1,8 @@
 use keynear_core::RemoteVfsNode;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MountAvailability {
-    Available,
-    Unavailable,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MountOutcome {
-    Mounted,
-    Unavailable,
-}
-
 pub trait FuseMountBackend: Send {
-    fn availability(&self) -> MountAvailability;
-    fn mount(&self, root: &RemoteVfsNode) -> MountOutcome;
+    fn available(&self) -> bool;
+    fn mount(&self, root: &RemoteVfsNode) -> bool;
     fn unmount(&self) -> bool;
 }
 
@@ -22,17 +10,17 @@ pub trait FuseMountBackend: Send {
 pub struct UnavailableFuseBackend;
 
 impl FuseMountBackend for UnavailableFuseBackend {
-    fn availability(&self) -> MountAvailability {
-        MountAvailability::Unavailable
+    fn available(&self) -> bool {
+        false
     }
 
-    fn mount(&self, root: &RemoteVfsNode) -> MountOutcome {
+    fn mount(&self, root: &RemoteVfsNode) -> bool {
         tracing::warn!(
             event = "perseus_fuse_unavailable",
             root = %root.document_id,
             reason = "libfuse3 or kernel FUSE is unavailable"
         );
-        MountOutcome::Unavailable
+        false
     }
 
     fn unmount(&self) -> bool {

@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use keynear_core::{
-    read_plan, resume_from_checkpoint, ChunkBitmap, RemoteVfsNode, ResumeDecision,
+    read_plan, resume_from_checkpoint, CheckpointInput, ChunkBitmap, RemoteVfsNode, ResumeDecision,
     CAP_RESUMABLE_TRANSFER, STREAM_CHUNK_BYTES,
 };
 
@@ -74,19 +74,20 @@ pub fn perseus_resume_decision(
     last_sequence: u64,
 ) -> Result<FfiResumeDecision, FfiError> {
     let bitmap = ChunkBitmap::new(checkpoint.chunk_count, checkpoint.chunk_bitmap)?;
-    let decision = resume_from_checkpoint(
+    let input = CheckpointInput {
         local_flags,
         peer_flags,
-        &checkpoint.transfer_id,
-        checkpoint
+        transfer_id: &checkpoint.transfer_id,
+        total_bytes: checkpoint
             .chunk_count
             .saturating_mul(STREAM_CHUNK_BYTES as u64),
-        checkpoint.sequence,
+        sequence: checkpoint.sequence,
         last_sequence,
-        checkpoint.verified_bytes,
-        &bitmap,
-        &checkpoint.rolling_sha256,
-    )?;
+        verified_bytes: checkpoint.verified_bytes,
+        bitmap: &bitmap,
+        rolling_digest: &checkpoint.rolling_sha256,
+    };
+    let decision = resume_from_checkpoint(input)?;
     Ok(decision.into())
 }
 

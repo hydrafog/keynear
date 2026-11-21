@@ -17,7 +17,7 @@ class RemoteDocumentStream(private val reader: RemoteChunkReader) {
                     var offset = 0L
                     while (offset < node.sizeBytes) {
                         val chunk = reader(node.documentId, offset, VfsDescriptors.CHUNK_BYTES)
-                        if (chunk.isNullOrEmpty()) break
+                        if (chunk == null || chunk.isEmpty()) break
                         output.write(chunk)
                         offset += chunk.size
                     }

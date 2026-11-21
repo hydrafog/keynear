@@ -67,14 +67,15 @@ fn perseus_tags_and_capability_bits_stay_stable() {
 
 #[test]
 fn perseus_kinds_map_to_stable_control_frames() {
+    use v1::envelope::Payload as P;
     for envelope in sample_perseus_envelopes() {
-        let frame = envelope_to_control_frame(&envelope).expect("perseus control frame");
-        let expected = match frame.payload.as_slice() {
-            _ if frame.kind == "transfer_checkpoint" => "transfer_checkpoint",
-            _ if frame.kind == "transfer_resume_request" => "transfer_resume_request",
-            _ if frame.kind == "transfer_resume_ack" => "transfer_resume_ack",
-            other => panic!("unexpected perseus kind: {other}"),
+        let expected = match &envelope.payload {
+            Some(P::TransferCheckpoint(_)) => "transfer_checkpoint",
+            Some(P::TransferResumeRequest(_)) => "transfer_resume_request",
+            Some(P::TransferResumeAck(_)) => "transfer_resume_ack",
+            _ => panic!("unexpected perseus payload"),
         };
+        let frame = envelope_to_control_frame(&envelope).expect("perseus control frame");
         assert_eq!(frame.kind, expected);
         let decoded = control_frame_to_envelope(&frame).expect("decode perseus frame");
         assert_eq!(decoded, envelope);

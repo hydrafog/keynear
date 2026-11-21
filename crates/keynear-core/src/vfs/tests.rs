@@ -1,5 +1,5 @@
 use super::*;
-use crate::STREAM_CHUNK_BYTES;
+use crate::{KeynearError, STREAM_CHUNK_BYTES};
 
 #[test]
 fn invalid_remote_node_name_is_rejected() {
