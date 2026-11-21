@@ -13,6 +13,8 @@ const NOTIFICATIONS_IFACE: &str = "org.freedesktop.Notifications";
 const APP_NAME: &str = "Keynear";
 const DEFAULT_EXPIRE_MS: i32 = -1;
 
+type ActionStream = zbus::proxy::SignalStream<'static>;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NotificationAction {
     AcceptTransfer(String),
@@ -44,21 +46,23 @@ pub fn parse_notification_action(action_key: &str) -> Option<NotificationAction>
     }
 }
 
+fn transfer_item_summary(session: &TransferSession) -> String {
+    match session.items.len() {
+        0 => "files".to_string(),
+        1 => session.items[0].name.clone(),
+        _ => format!(
+            "{} (+{} more)",
+            session.items[0].name,
+            session.items.len() - 1
+        ),
+    }
+}
+
 pub fn transfer_notification_content(
     session: &TransferSession,
     peer_name: &str,
 ) -> (String, String, Vec<String>) {
-    let item_summary = if session.items.is_empty() {
-        "files".to_string()
-    } else if session.items.len() == 1 {
-        session.items[0].name.clone()
-    } else {
-        format!(
-            "{} (+{} more)",
-            session.items[0].name,
-            session.items.len() - 1
-        )
-    };
+    let item_summary = transfer_item_summary(session);
     match session.state {
         TransferState::PendingConsent => (
             format!("Incoming transfer from {peer_name}"),
@@ -113,56 +117,61 @@ pub struct NotificationsClient {
     proxy: zbus::Proxy<'static>,
 }
 
+fn parse_action_message(msg: &zbus::Message) -> Option<NotificationAction> {
+    let (_nid, key): (u32, String) = msg.body().deserialize().ok()?;
+    parse_notification_action(&key)
+}
+
+fn log_connected() {
+    info!(event = "notifications_connected");
+}
+
+async fn connect_bus() -> Option<zbus::Connection> {
+    zbus::Connection::session()
+        .await
+        .map_err(|err| warn!(event = "notifications_unavailable", error = %err))
+        .ok()
+}
+
+async fn create_proxy(conn: &zbus::Connection) -> Option<zbus::Proxy<'static>> {
+    let args = (NOTIFICATIONS_DEST, NOTIFICATIONS_PATH, NOTIFICATIONS_IFACE);
+    zbus::Proxy::new(conn, args.0, args.1, args.2)
+        .await
+        .map_err(|err| warn!(event = "notifications_proxy_failed", error = %err))
+        .ok()
+}
+
+async fn receive_actions(proxy: &zbus::Proxy<'static>) -> Option<ActionStream> {
+    proxy
+        .receive_signal("ActionInvoked")
+        .await
+        .map_err(|err| warn!(event = "notifications_signal_unavailable", error = %err))
+        .ok()
+}
+
+async fn run_action_listener(mut stream: ActionStream, tx: UnboundedSender<NotificationAction>) {
+    while let Some(msg) = stream.next().await {
+        if let Some(action) = parse_action_message(&msg) {
+            let _ = tx.send(action);
+        }
+    }
+}
+
 impl NotificationsClient {
     pub async fn connect_and_listen(
         action_tx: UnboundedSender<NotificationAction>,
     ) -> Option<(Self, JoinHandle<()>)> {
-        let conn = match zbus::Connection::session().await {
-            Ok(conn) => conn,
-            Err(err) => {
-                warn!(event = "notifications_unavailable", error = %err);
-                return None;
-            }
-        };
+        let conn = connect_bus().await?;
+        let proxy = create_proxy(&conn).await?;
+        let actions_stream = receive_actions(&proxy).await?;
 
-        let proxy = match zbus::Proxy::new(
-            &conn,
-            NOTIFICATIONS_DEST,
-            NOTIFICATIONS_PATH,
-            NOTIFICATIONS_IFACE,
-        )
-        .await
-        {
-            Ok(proxy) => proxy,
-            Err(err) => {
-                warn!(event = "notifications_proxy_failed", error = %err);
-                return None;
-            }
-        };
-
-        let mut actions_stream = match proxy.receive_signal("ActionInvoked").await {
-            Ok(stream) => stream,
-            Err(err) => {
-                warn!(event = "notifications_signal_unavailable", error = %err);
-                return None;
-            }
-        };
-
-        info!(event = "notifications_connected");
-        let handle = tokio::spawn(async move {
-            while let Some(msg) = actions_stream.next().await {
-                let body = msg.body();
-                if let Ok((_nid, action_key)) = body.deserialize::<(u32, String)>() {
-                    if let Some(action) = parse_notification_action(&action_key) {
-                        let _ = action_tx.send(action);
-                    }
-                }
-            }
-        });
+        log_connected();
+        let handle = tokio::spawn(run_action_listener(actions_stream, action_tx));
 
         Some((Self { proxy }, handle))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn notify(
         &self,
         replaces_id: u32,
@@ -175,8 +184,7 @@ impl NotificationsClient {
         let action_refs: Vec<&str> = actions.iter().map(String::as_str).collect();
         let mut hints: HashMap<&str, Variant<'_>> = HashMap::new();
         hints.insert("urgency", Variant::U8(urgency));
-        match self
-            .proxy
+        self.proxy
             .call::<_, _, u32>(
                 "Notify",
                 &(
@@ -191,13 +199,8 @@ impl NotificationsClient {
                 ),
             )
             .await
-        {
-            Ok(nid) => Some(nid),
-            Err(err) => {
-                warn!(event = "notifications_send_failed", error = %err);
-                None
-            }
-        }
+            .map_err(|err| warn!(event = "notifications_send_failed", error = %err))
+            .ok()
     }
 
     pub async fn notify_transfer_session(

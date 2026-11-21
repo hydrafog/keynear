@@ -42,14 +42,42 @@ pub(crate) struct ReceiveTabParts {
     pub(crate) sheet_list_box: gtk4::Box,
 }
 
-pub(crate) fn build_receive_tab(sender: &ComponentSender<SettingsModel>) -> ReceiveTabParts {
-    let root = gtk4::Box::builder()
-        .orientation(gtk4::Orientation::Vertical)
-        .spacing(0)
-        .vexpand(true)
-        .build();
-    root.add_css_class("kn-map-ground");
+struct VisibilityControlsParts {
+    top_controls: gtk4::Box,
+    vis_hidden_btn: gtk4::Button,
+    vis_paired_btn: gtk4::Button,
+    vis_everyone_btn: gtk4::Button,
+}
 
+struct PairingCardParts {
+    pairing_card: gtk4::Box,
+    pairing_peer_label: gtk4::Label,
+    pairing_code_label: gtk4::Label,
+    pairing_timer_label: gtk4::Label,
+}
+
+fn build_visibility_button(
+    sender: &ComponentSender<SettingsModel>,
+    icon_kind: LucideIcon,
+    label: &str,
+    mode: VisibilityMode,
+) -> gtk4::Button {
+    let row = gtk4::Box::builder()
+        .orientation(gtk4::Orientation::Horizontal)
+        .spacing(6)
+        .halign(gtk4::Align::Center)
+        .valign(gtk4::Align::Center)
+        .build();
+    row.append(&lucide_icon(icon_kind, 16));
+    row.append(&gtk4::Label::new(Some(label)));
+    let btn = gtk4::Button::builder().child(&row).build();
+    btn.add_css_class("kn-seg-btn");
+    let s = sender.clone();
+    btn.connect_clicked(move |_| s.input(SettingsMsg::SetVisibility(mode)));
+    btn
+}
+
+fn build_visibility_controls(sender: &ComponentSender<SettingsModel>) -> VisibilityControlsParts {
     let top_controls = gtk4::Box::builder()
         .orientation(gtk4::Orientation::Vertical)
         .spacing(8)
@@ -65,29 +93,16 @@ pub(crate) fn build_receive_tab(sender: &ComponentSender<SettingsModel>) -> Rece
         .build();
     seg_well.add_css_class("kn-track-well");
 
-    let mk_seg = |icon_kind: LucideIcon, label: &str, mode: VisibilityMode| -> gtk4::Button {
-        let row = gtk4::Box::builder()
-            .orientation(gtk4::Orientation::Horizontal)
-            .spacing(6)
-            .halign(gtk4::Align::Center)
-            .valign(gtk4::Align::Center)
-            .build();
-        row.append(&lucide_icon(icon_kind, 16));
-        row.append(&gtk4::Label::new(Some(label)));
-        let btn = gtk4::Button::builder().child(&row).build();
-        btn.add_css_class("kn-seg-btn");
-        let s = sender.clone();
-        btn.connect_clicked(move |_| s.input(SettingsMsg::SetVisibility(mode)));
-        btn
-    };
-
-    let vis_hidden_btn = mk_seg(LucideIcon::EyeOff, "Hidden", VisibilityMode::Hidden);
-    let vis_paired_btn = mk_seg(
+    let vis_hidden_btn =
+        build_visibility_button(sender, LucideIcon::EyeOff, "Hidden", VisibilityMode::Hidden);
+    let vis_paired_btn = build_visibility_button(
+        sender,
         LucideIcon::ShieldCheck,
         "Paired",
         VisibilityMode::PairedOnly,
     );
-    let vis_everyone_btn = mk_seg(
+    let vis_everyone_btn = build_visibility_button(
+        sender,
         LucideIcon::Radio,
         "Everyone",
         VisibilityMode::EveryoneNearby,
@@ -97,11 +112,42 @@ pub(crate) fn build_receive_tab(sender: &ComponentSender<SettingsModel>) -> Rece
     seg_well.append(&vis_paired_btn);
     seg_well.append(&vis_everyone_btn);
     top_controls.append(&seg_well);
-    root.append(&top_controls);
 
-    let radar = build_radar_stage();
-    root.append(&radar.stage);
+    VisibilityControlsParts {
+        top_controls,
+        vis_hidden_btn,
+        vis_paired_btn,
+        vis_everyone_btn,
+    }
+}
 
+fn build_pairing_actions(sender: &ComponentSender<SettingsModel>) -> gtk4::Box {
+    let pairing_actions = gtk4::Box::builder()
+        .orientation(gtk4::Orientation::Horizontal)
+        .spacing(10)
+        .homogeneous(true)
+        .build();
+
+    let pair_reject_btn = gtk4::Button::with_label("Decline");
+    pair_reject_btn.add_css_class("kn-error-action-btn");
+    {
+        let s = sender.clone();
+        pair_reject_btn.connect_clicked(move |_| s.input(SettingsMsg::CancelPairing));
+    }
+
+    let pair_confirm_btn = gtk4::Button::with_label("Confirm");
+    pair_confirm_btn.add_css_class("kn-loading-btn");
+    {
+        let s = sender.clone();
+        pair_confirm_btn.connect_clicked(move |_| s.input(SettingsMsg::ConfirmPairing));
+    }
+
+    pairing_actions.append(&pair_reject_btn);
+    pairing_actions.append(&pair_confirm_btn);
+    pairing_actions
+}
+
+fn build_pairing_card(sender: &ComponentSender<SettingsModel>) -> PairingCardParts {
     let pairing_card = gtk4::Box::builder()
         .orientation(gtk4::Orientation::Vertical)
         .spacing(10)
@@ -131,34 +177,38 @@ pub(crate) fn build_receive_tab(sender: &ComponentSender<SettingsModel>) -> Rece
     let pairing_timer_label = gtk4::Label::builder().label("").xalign(0.5).build();
     pairing_timer_label.add_css_class("keynear-caption");
 
-    let pairing_actions = gtk4::Box::builder()
-        .orientation(gtk4::Orientation::Horizontal)
-        .spacing(10)
-        .homogeneous(true)
-        .build();
+    let pairing_actions = build_pairing_actions(sender);
 
-    let pair_reject_btn = gtk4::Button::with_label("Decline");
-    pair_reject_btn.add_css_class("kn-error-action-btn");
-    {
-        let s = sender.clone();
-        pair_reject_btn.connect_clicked(move |_| s.input(SettingsMsg::CancelPairing));
-    }
-
-    let pair_confirm_btn = gtk4::Button::with_label("Confirm");
-    pair_confirm_btn.add_css_class("kn-loading-btn");
-    {
-        let s = sender.clone();
-        pair_confirm_btn.connect_clicked(move |_| s.input(SettingsMsg::ConfirmPairing));
-    }
-
-    pairing_actions.append(&pair_reject_btn);
-    pairing_actions.append(&pair_confirm_btn);
     pairing_card.append(&pairing_title);
     pairing_card.append(&pairing_peer_label);
     pairing_card.append(&pairing_code_label);
     pairing_card.append(&pairing_timer_label);
     pairing_card.append(&pairing_actions);
-    root.append(&pairing_card);
+
+    PairingCardParts {
+        pairing_card,
+        pairing_peer_label,
+        pairing_code_label,
+        pairing_timer_label,
+    }
+}
+
+pub(crate) fn build_receive_tab(sender: &ComponentSender<SettingsModel>) -> ReceiveTabParts {
+    let root = gtk4::Box::builder()
+        .orientation(gtk4::Orientation::Vertical)
+        .spacing(0)
+        .vexpand(true)
+        .build();
+    root.add_css_class("kn-map-ground");
+
+    let vis = build_visibility_controls(sender);
+    root.append(&vis.top_controls);
+
+    let radar = build_radar_stage();
+    root.append(&radar.stage);
+
+    let pairing = build_pairing_card(sender);
+    root.append(&pairing.pairing_card);
 
     let sheets = build_receive_sheets(sender);
     root.append(&sheets.transfers_card);
@@ -166,19 +216,19 @@ pub(crate) fn build_receive_tab(sender: &ComponentSender<SettingsModel>) -> Rece
 
     ReceiveTabParts {
         root,
-        vis_hidden_btn,
-        vis_paired_btn,
-        vis_everyone_btn,
+        vis_hidden_btn: vis.vis_hidden_btn,
+        vis_paired_btn: vis.vis_paired_btn,
+        vis_everyone_btn: vis.vis_everyone_btn,
         radar_draw_state: radar.radar_draw_state,
         radar_canvas: radar.radar_canvas,
         self_node_circle: radar.self_node_circle,
         self_name_label: radar.self_name_label,
         self_countdown_label: radar.self_countdown_label,
         radar_pins_overlay: radar.radar_pins_overlay,
-        pairing_card,
-        pairing_peer_label,
-        pairing_code_label,
-        pairing_timer_label,
+        pairing_card: pairing.pairing_card,
+        pairing_peer_label: pairing.pairing_peer_label,
+        pairing_code_label: pairing.pairing_code_label,
+        pairing_timer_label: pairing.pairing_timer_label,
         transfers_card: sheets.transfers_card,
         transfers_error_banner: sheets.transfers_error_banner,
         transfers_error_label: sheets.transfers_error_label,

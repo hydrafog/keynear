@@ -1,17 +1,46 @@
+use std::path::PathBuf;
+
 use gtk4::prelude::*;
 use keynear_protocol::{DaemonConfig, VisibilityMode, EVERYONE_NEARBY_TIMEOUT_SECS};
 
-use super::{format_visibility_label, ActiveTab, SettingsInit, SettingsModel, SubScreen};
+use super::{
+    format_visibility_label, ActiveTab, SendQueueItem, SettingsInit, SettingsModel, SubScreen,
+};
 use crate::portal::{item_from_path, persist_config, refresh_from_daemon, sync_visibility};
+
+fn remaining_visibility_secs(init: &SettingsInit) -> u64 {
+    if init.config.visibility_mode == VisibilityMode::EveryoneNearby {
+        init.everyone_remaining_secs
+            .unwrap_or(EVERYONE_NEARBY_TIMEOUT_SECS)
+    } else {
+        0
+    }
+}
+
+fn build_send_queue(paths: &[PathBuf]) -> (Vec<SendQueueItem>, u64) {
+    let mut queue = Vec::with_capacity(paths.len());
+    let mut seq = 1u64;
+    for path in paths {
+        queue.push(item_from_path(seq, path.clone()));
+        seq += 1;
+    }
+    (queue, seq)
+}
+
+fn detect_dark_theme() -> bool {
+    if gtk4::is_initialized() {
+        gtk4::Settings::default()
+            .map(|s| s.is_gtk_application_prefer_dark_theme())
+            .unwrap_or(false)
+    } else {
+        false
+    }
+}
 
 impl SettingsModel {
     pub fn from_init(init: SettingsInit) -> Self {
-        let remaining = if init.config.visibility_mode == VisibilityMode::EveryoneNearby {
-            init.everyone_remaining_secs
-                .unwrap_or(EVERYONE_NEARBY_TIMEOUT_SECS)
-        } else {
-            0
-        };
+        let remaining = remaining_visibility_secs(&init);
+        let (queue, seq) = build_send_queue(&init.send_paths);
         let selected_send_device_id = init
             .selected_send_device_id
             .or_else(|| init.paired_devices.first().map(|dev| dev.device_id.clone()));
@@ -20,12 +49,6 @@ impl SettingsModel {
         } else {
             ActiveTab::Receive
         };
-        let mut queue = Vec::with_capacity(init.send_paths.len());
-        let mut seq = 1u64;
-        for path in &init.send_paths {
-            queue.push(item_from_path(seq, path.clone()));
-            seq += 1;
-        }
         Self {
             visibility_mode: init.config.visibility_mode,
             everyone_remaining_secs: remaining,
@@ -51,13 +74,7 @@ impl SettingsModel {
             text_draft: String::new(),
             mime_editor_open: false,
             new_mime_input: String::new(),
-            dark_theme: if gtk4::is_initialized() {
-                gtk4::Settings::default()
-                    .map(|s| s.is_gtk_application_prefer_dark_theme())
-                    .unwrap_or(false)
-            } else {
-                false
-            },
+            dark_theme: detect_dark_theme(),
             snackbar_message: None,
             snackbar_ttl_secs: 0,
             renaming_device_id: None,

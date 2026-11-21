@@ -1,3 +1,9 @@
+#![deny(
+    clippy::too_many_lines,
+    clippy::cognitive_complexity,
+    clippy::too_many_arguments
+)]
+
 mod ble;
 mod cli;
 mod clipboard;
@@ -9,7 +15,7 @@ mod tray;
 
 use std::process;
 
-use keynear_ipc::daemon_socket_path;
+use keynear_ipc::{daemon_socket_path, IpcRequest};
 use tracing_subscriber::EnvFilter;
 
 use crate::cli::{
@@ -32,23 +38,30 @@ async fn main() {
     };
 
     if let Some(request) = cli_action_to_ipc_request(&action) {
-        let sock = daemon_socket_path();
-        let output =
-            match tokio::task::spawn_blocking(move || run_ipc_command(&sock, &request)).await {
-                Ok(Ok(text)) => text,
-                Ok(Err(err)) => {
-                    eprintln!("error: {err}");
-                    process::exit(1);
-                }
-                Err(err) => {
-                    eprintln!("error: command task failed: {err}");
-                    process::exit(1);
-                }
-            };
-        println!("{output}");
+        handle_ipc_request(request).await;
         return;
     }
 
+    dispatch_action(action).await;
+}
+
+async fn handle_ipc_request(request: IpcRequest) {
+    let sock = daemon_socket_path();
+    let output = match tokio::task::spawn_blocking(move || run_ipc_command(&sock, &request)).await {
+        Ok(Ok(text)) => text,
+        Ok(Err(err)) => {
+            eprintln!("error: {err}");
+            process::exit(1);
+        }
+        Err(err) => {
+            eprintln!("error: command task failed: {err}");
+            process::exit(1);
+        }
+    };
+    println!("{output}");
+}
+
+async fn dispatch_action(action: CliAction) {
     match action {
         CliAction::Version => {
             println!("keynear-linux {}", env!("CARGO_PKG_VERSION"));

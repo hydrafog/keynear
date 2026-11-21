@@ -24,6 +24,7 @@ pub struct BleAdvertisementPayload {
     pub visibility: VisibilityMode,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn build_advertisement_payload(
     visibility: VisibilityMode,
     local_device_id: &str,
@@ -109,6 +110,7 @@ pub fn decode_service_data_for_known_peers(
     Ok(None)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn register_visibility_advertisement(
     adapter: &Adapter,
     visibility: VisibilityMode,

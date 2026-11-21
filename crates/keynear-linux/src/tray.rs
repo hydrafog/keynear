@@ -1,3 +1,8 @@
+mod menu;
+
+#[cfg(test)]
+mod tests;
+
 use std::process::{Command, Stdio};
 
 use keynear_core::{
@@ -8,7 +13,7 @@ use ksni::TrayMethods;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, warn};
 
-const COPY_LATEST_OTP_LABEL: &str = "Copy latest OTP";
+pub(crate) const COPY_LATEST_OTP_LABEL: &str = "Copy latest OTP";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TrayCommand {
@@ -59,22 +64,16 @@ pub fn format_everyone_label(mode: VisibilityMode, remaining_secs: Option<u64>) 
     format!("Everyone ({mins:02}:{rem_secs:02})")
 }
 
-pub fn build_tray_snapshot(state: &TrayState) -> TrayMenuSnapshot {
-    let visibility_selected = match state.visibility_mode {
+fn visibility_index(mode: VisibilityMode) -> usize {
+    match mode {
         VisibilityMode::Hidden => 0,
         VisibilityMode::PairedOnly => 1,
         VisibilityMode::EveryoneNearby => 2,
-    };
-    let visibility_labels = [
-        "Hidden".to_string(),
-        "Paired devices only".to_string(),
-        format_everyone_label(state.visibility_mode, state.everyone_remaining_secs),
-    ];
-    let needs_attention = state
-        .transfers
-        .iter()
-        .any(|t| t.state == TransferState::PendingConsent);
-    let icon_name = if needs_attention {
+    }
+}
+
+fn tray_icon_name(state: &TrayState, needs_attention: bool) -> String {
+    if needs_attention {
         "mail-unread-symbolic".to_string()
     } else if state.mdns_degraded && state.visibility_mode != VisibilityMode::Hidden {
         "dialog-warning-symbolic".to_string()
@@ -86,20 +85,19 @@ pub fn build_tray_snapshot(state: &TrayState) -> TrayMenuSnapshot {
                 "network-wireless-signal-excellent-symbolic".to_string()
             }
         }
-    };
-    let title = format!("Keynear — {}", visibility_labels[visibility_selected]);
-    let paired_device_labels = state
-        .paired_devices
-        .iter()
-        .map(|d| {
-            if d.auto_accept_files {
-                format!("{} (auto-accept)", d.display_name)
-            } else {
-                d.display_name.clone()
-            }
-        })
-        .collect();
-    let transfer_labels = state
+    }
+}
+
+fn paired_device_label(device: &PairedDevice) -> String {
+    if device.auto_accept_files {
+        format!("{} (auto-accept)", device.display_name)
+    } else {
+        device.display_name.clone()
+    }
+}
+
+fn active_transfers(state: &TrayState) -> Vec<&TransferSession> {
+    state
         .transfers
         .iter()
         .filter(|t| {
@@ -108,7 +106,30 @@ pub fn build_tray_snapshot(state: &TrayState) -> TrayMenuSnapshot {
                 TransferState::PendingConsent | TransferState::Active
             )
         })
-        .map(format_transfer_menu_label)
+        .collect()
+}
+
+pub fn build_tray_snapshot(state: &TrayState) -> TrayMenuSnapshot {
+    let visibility_selected = visibility_index(state.visibility_mode);
+    let visibility_labels = [
+        "Hidden".to_string(),
+        "Paired devices only".to_string(),
+        format_everyone_label(state.visibility_mode, state.everyone_remaining_secs),
+    ];
+    let needs_attention = state
+        .transfers
+        .iter()
+        .any(|t| t.state == TransferState::PendingConsent);
+    let icon_name = tray_icon_name(state, needs_attention);
+    let title = format!("Keynear — {}", visibility_labels[visibility_selected]);
+    let paired_device_labels = state
+        .paired_devices
+        .iter()
+        .map(paired_device_label)
+        .collect();
+    let transfer_labels = active_transfers(state)
+        .iter()
+        .map(|t| format_transfer_menu_label(t))
         .collect();
 
     TrayMenuSnapshot {
@@ -180,247 +201,12 @@ pub struct KeynearTray {
     pub cmd_tx: UnboundedSender<TrayCommand>,
 }
 
-impl ksni::Tray for KeynearTray {
-    fn id(&self) -> String {
-        "org.keynear.Daemon".to_string()
-    }
+fn log_tray_registered() {
+    info!(event = "tray_registered");
+}
 
-    fn title(&self) -> String {
-        build_tray_snapshot(&self.state).title
-    }
-
-    fn icon_name(&self) -> String {
-        build_tray_snapshot(&self.state).icon_name
-    }
-
-    fn status(&self) -> ksni::Status {
-        if build_tray_snapshot(&self.state).needs_attention {
-            ksni::Status::NeedsAttention
-        } else {
-            ksni::Status::Active
-        }
-    }
-
-    fn activate(&mut self, _x: i32, _y: i32) {
-        let _ = self.cmd_tx.send(TrayCommand::LaunchSettings);
-    }
-
-    fn menu(&self) -> Vec<ksni::MenuItem<Self>> {
-        use ksni::menu::{CheckmarkItem, MenuItem, RadioGroup, RadioItem, StandardItem, SubMenu};
-
-        let snapshot = build_tray_snapshot(&self.state);
-        let mut items: Vec<MenuItem<Self>> = vec![
-            RadioGroup {
-                selected: snapshot.visibility_selected,
-                select: Box::new(|this: &mut Self, index| {
-                    let next = match index {
-                        0 => VisibilityMode::Hidden,
-                        1 => VisibilityMode::PairedOnly,
-                        _ => VisibilityMode::EveryoneNearby,
-                    };
-                    let _ = this.cmd_tx.send(TrayCommand::SetVisibility(next));
-                }),
-                options: vec![
-                    RadioItem {
-                        label: snapshot.visibility_labels[0].clone(),
-                        ..Default::default()
-                    },
-                    RadioItem {
-                        label: snapshot.visibility_labels[1].clone(),
-                        ..Default::default()
-                    },
-                    RadioItem {
-                        label: snapshot.visibility_labels[2].clone(),
-                        ..Default::default()
-                    },
-                ],
-            }
-            .into(),
-            MenuItem::Separator,
-        ];
-
-        let active_transfers: Vec<&TransferSession> = self
-            .state
-            .transfers
-            .iter()
-            .filter(|t| {
-                matches!(
-                    t.state,
-                    TransferState::PendingConsent | TransferState::Active
-                )
-            })
-            .collect();
-
-        if !active_transfers.is_empty() {
-            let mut transfer_items: Vec<MenuItem<Self>> = Vec::new();
-            for session in active_transfers {
-                let tid = session.transfer_id.clone();
-                let label = format_transfer_menu_label(session);
-                let mut actions: Vec<MenuItem<Self>> = Vec::new();
-                if session.state == TransferState::PendingConsent {
-                    let accept_id = tid.clone();
-                    let decline_id = tid.clone();
-                    actions.push(
-                        StandardItem {
-                            label: "Accept".to_string(),
-                            activate: Box::new(move |this: &mut Self| {
-                                let _ = this
-                                    .cmd_tx
-                                    .send(TrayCommand::AcceptTransfer(accept_id.clone()));
-                            }),
-                            ..Default::default()
-                        }
-                        .into(),
-                    );
-                    actions.push(
-                        StandardItem {
-                            label: "Decline".to_string(),
-                            activate: Box::new(move |this: &mut Self| {
-                                let _ = this
-                                    .cmd_tx
-                                    .send(TrayCommand::DeclineTransfer(decline_id.clone()));
-                            }),
-                            ..Default::default()
-                        }
-                        .into(),
-                    );
-                }
-                let cancel_id = tid;
-                actions.push(
-                    StandardItem {
-                        label: "Cancel".to_string(),
-                        activate: Box::new(move |this: &mut Self| {
-                            let _ = this
-                                .cmd_tx
-                                .send(TrayCommand::CancelTransfer(cancel_id.clone()));
-                        }),
-                        ..Default::default()
-                    }
-                    .into(),
-                );
-                transfer_items.push(
-                    SubMenu {
-                        label,
-                        submenu: actions,
-                        ..Default::default()
-                    }
-                    .into(),
-                );
-            }
-            items.push(
-                SubMenu {
-                    label: format!("Transfers ({})", transfer_items.len()),
-                    submenu: transfer_items,
-                    ..Default::default()
-                }
-                .into(),
-            );
-        }
-
-        let paired_submenu: Vec<MenuItem<Self>> = if self.state.paired_devices.is_empty() {
-            vec![StandardItem {
-                label: "No paired devices".to_string(),
-                enabled: false,
-                ..Default::default()
-            }
-            .into()]
-        } else {
-            self.state
-                .paired_devices
-                .iter()
-                .map(|device| {
-                    let device_id_send = device.device_id.clone();
-                    let device_id_toggle = device.device_id.clone();
-                    let next_enabled = !device.auto_accept_files;
-                    SubMenu {
-                        label: device.display_name.clone(),
-                        submenu: vec![
-                            StandardItem {
-                                label: "Send files...".to_string(),
-                                activate: Box::new(move |this: &mut Self| {
-                                    let _ = this.cmd_tx.send(TrayCommand::LaunchSendPicker {
-                                        device_id: Some(device_id_send.clone()),
-                                    });
-                                }),
-                                ..Default::default()
-                            }
-                            .into(),
-                            CheckmarkItem {
-                                label: "Auto-accept files".to_string(),
-                                checked: device.auto_accept_files,
-                                activate: Box::new(move |this: &mut Self| {
-                                    let _ = this.cmd_tx.send(TrayCommand::SetDeviceAutoAccept {
-                                        device_id: device_id_toggle.clone(),
-                                        enabled: next_enabled,
-                                    });
-                                }),
-                                ..Default::default()
-                            }
-                            .into(),
-                        ],
-                        ..Default::default()
-                    }
-                    .into()
-                })
-                .collect()
-        };
-
-        items.push(
-            SubMenu {
-                label: format!("Paired devices ({})", self.state.paired_devices.len()),
-                submenu: paired_submenu,
-                ..Default::default()
-            }
-            .into(),
-        );
-        items.push(
-            CheckmarkItem {
-                label: "Auto-accept from paired".to_string(),
-                checked: self.state.auto_accept_from_paired,
-                activate: Box::new(|this: &mut Self| {
-                    let next = !this.state.auto_accept_from_paired;
-                    let _ = this.cmd_tx.send(TrayCommand::SetAutoAcceptFromPaired(next));
-                }),
-                ..Default::default()
-            }
-            .into(),
-        );
-        items.push(
-            StandardItem {
-                label: COPY_LATEST_OTP_LABEL.to_string(),
-                enabled: self.state.has_latest_otp,
-                activate: Box::new(|this: &mut Self| {
-                    let _ = this.cmd_tx.send(TrayCommand::CopyLatestOtp);
-                }),
-                ..Default::default()
-            }
-            .into(),
-        );
-        items.push(MenuItem::Separator);
-        items.push(
-            StandardItem {
-                label: "Send files...".to_string(),
-                activate: Box::new(|this: &mut Self| {
-                    let _ = this
-                        .cmd_tx
-                        .send(TrayCommand::LaunchSendPicker { device_id: None });
-                }),
-                ..Default::default()
-            }
-            .into(),
-        );
-        items.push(
-            StandardItem {
-                label: "Settings...".to_string(),
-                activate: Box::new(|this: &mut Self| {
-                    let _ = this.cmd_tx.send(TrayCommand::LaunchSettings);
-                }),
-                ..Default::default()
-            }
-            .into(),
-        );
-        items
-    }
+fn log_tray_unavailable(err: impl std::fmt::Display) {
+    warn!(event = "tray_unavailable", error = %err);
 }
 
 pub async fn spawn_tray(
@@ -430,88 +216,12 @@ pub async fn spawn_tray(
     let tray = KeynearTray { state, cmd_tx };
     match tray.assume_sni_available(false).spawn().await {
         Ok(handle) => {
-            info!(event = "tray_registered");
+            log_tray_registered();
             Some(handle)
         }
         Err(err) => {
-            warn!(event = "tray_unavailable", error = %err);
+            log_tray_unavailable(err);
             None
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use keynear_core::{DeviceRole, TransferItem};
-
-    use super::*;
-
-    #[test]
-    fn tray_snapshot_formats_countdown_and_devices() {
-        let state = TrayState {
-            visibility_mode: VisibilityMode::EveryoneNearby,
-            everyone_remaining_secs: Some(125),
-            auto_accept_from_paired: true,
-            has_latest_otp: true,
-            paired_devices: vec![PairedDevice {
-                device_id: "pixel-9".to_string(),
-                display_name: "Pixel 9".to_string(),
-                device_role: DeviceRole::Mobile,
-                static_x25519_pubkey: "abcd".to_string(),
-                last_ble_address: String::new(),
-                last_lan_address: String::new(),
-                last_endpoint_id: String::new(),
-                capability_flags: 1,
-                auto_accept_files: true,
-                paired_at: "2026-11-14T00:00:00Z".to_string(),
-            }],
-            transfers: Vec::new(),
-            mdns_degraded: false,
-        };
-
-        let snapshot = build_tray_snapshot(&state);
-        assert_eq!(snapshot.visibility_selected, 2);
-        assert_eq!(snapshot.visibility_labels[2], "Everyone (02:05)");
-        assert_eq!(snapshot.title, "Keynear — Everyone (02:05)");
-        assert_eq!(snapshot.paired_device_labels, vec!["Pixel 9 (auto-accept)"]);
-        assert!(!snapshot.needs_attention);
-        assert!(snapshot.has_latest_otp);
-    }
-
-    #[test]
-    fn tray_snapshot_marks_needs_attention_for_pending_consent() {
-        let state = TrayState {
-            visibility_mode: VisibilityMode::PairedOnly,
-            everyone_remaining_secs: None,
-            auto_accept_from_paired: false,
-            has_latest_otp: false,
-            paired_devices: Vec::new(),
-            transfers: vec![TransferSession {
-                transfer_id: "tx-7".to_string(),
-                peer_device_id: "pixel-9".to_string(),
-                direction: TransferDirection::Receive,
-                items: vec![TransferItem {
-                    name: "notes.txt".to_string(),
-                    mime_type: "text/plain".to_string(),
-                    size_bytes: 512,
-                    is_directory: false,
-                    target_path: None,
-                    checksum: None,
-                }],
-                total_bytes: 512,
-                transferred_bytes: 0,
-                state: TransferState::PendingConsent,
-                started_at: "2026-11-14T00:00:00Z".to_string(),
-            }],
-            mdns_degraded: false,
-        };
-
-        let snapshot = build_tray_snapshot(&state);
-        assert!(snapshot.needs_attention);
-        assert_eq!(snapshot.icon_name, "mail-unread-symbolic");
-        assert_eq!(
-            snapshot.transfer_labels,
-            vec!["Incoming: notes.txt from pixel-9"]
-        );
     }
 }
