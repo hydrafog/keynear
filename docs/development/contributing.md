@@ -21,7 +21,7 @@ On non-Nix Ubuntu hosts, install `protobuf-compiler`, `libgtk-4-dev`, and `pkg-c
 
 ## Design System Tokens
 
-Shared visual tokens (`Plus Jakarta Sans`, light/dark palettes, typography scale, radii, spacing, and motion timings) live in `design/tokens.json` and feed both `crates/keynear-settings/assets/style.css` and `android/designsystem/src/main/java/org/keynear/designsystem/Tokens.kt`.
+Shared visual tokens (`Plus Jakarta Sans`, light/dark palettes, typography scale, radii, spacing, and motion timings) live in `design/tokens.json`. The GTK stylesheet in `crates/keynear-settings/assets/style.css` declares these as custom properties on `window.keynear-window` and its `.dark` state and references them with `var()`; GTK 4.16 or newer is required. The Android module in `android/designsystem/src/main/java/org/keynear/designsystem/Tokens.kt` holds the equivalent Kotlin token objects. `python3 scripts/validation/token-check.py` verifies that both derived sources match `design/tokens.json` and that no raw visual literals leak into component styles, and it runs in the project quality script and CI.
 
 ## Structure and Size Caps
 

@@ -215,7 +215,7 @@ pub fn validate_css_tokens() -> Result<(), KeynearError> {
         "#E7EDF8",
         "#1E202B",
         "Plus Jakarta Sans",
-        "min-height: 44px",
+        "min-height: var(--kn-size-touch-gtk)",
         ".keynear-window",
         ".keynear-card",
         ".keynear-code",

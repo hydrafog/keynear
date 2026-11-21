@@ -25,26 +25,34 @@ jobs:
         run: bash scripts/validation/repo-check.sh
       - name: Size cap check
         run: bash scripts/validation/size-check.sh
+      - name: Design token guard
+        run: python3 scripts/validation/token-check.py
       - name: Format check
         run: cargo fmt --check
       - name: Clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
       - name: Workspace tests
-        run: cargo test --workspace
+        run: cargo test --workspace --all-features
       - name: Dependency audit and license policy
         run: |
           cargo deny check
           cargo audit
       - name: Coverage report
-        run: cargo llvm-cov --workspace --summary-only
+        run: cargo llvm-cov --workspace --all-features --summary-only
 
   nix:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: DeterminateSystems/nix-installer-action@v14
-      - name: Nix flake check
-        run: nix flake check --no-build
+      - uses: cachix/cachix-action@v16
+        with:
+          name: hydrafog
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - name: Nix flake check and package builds
+        run: |
+          nix flake check --no-build
+          nix build --no-link .#keynear .#keynear-fuse .#keynear-gnome-extension
 
   android:
     runs-on: ubuntu-latest

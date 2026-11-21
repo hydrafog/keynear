@@ -1,296 +1,417 @@
+/* Design tokens are defined in design/tokens.json; this block is the derived GTK declaration. */
 window.keynear-window {
-    background-color: #F0F4FA;
-    color: #07132B;
-    font-family: "Plus Jakarta Sans", sans-serif;
+    --kn-canvas: #F0F4FA;
+    --kn-text-primary: #07132B;
+    --kn-map-ground: #E7EEF9;
+    --kn-surface: #FAFBFD;
+    --kn-surface-tonal: #E7EDF8;
+    --kn-text-secondary: #283950;
+    --kn-text-muted: #3B4B5E;
+    --kn-loading: #0195D4;
+    --kn-loading-hover: #0195D4;
+    --kn-loading-ink: #0195D4;
+    --kn-loading-tonal: #D1ECF7;
+    --kn-on-loading-tonal: #00425F;
+    --kn-warning-tonal: #FFF6D3;
+    --kn-on-warning-tonal: #863300;
+    --kn-error-tonal: #FFE7E7;
+    --kn-on-danger-tonal: #8B0016;
+    --kn-error-action: #FFE7E7;
+    --kn-on-danger-action: #8B0016;
+    --kn-error-action-hover: #FFCFCF;
+    --kn-error: #E84201;
+    --kn-accent: #004CED;
+    --kn-on-accent: #FFFFFE;
+    --kn-focus-ring: #0172F9;
+    --kn-input: #E8EEFA;
+    --kn-switch-track-off: #DEE6F6;
+    --kn-switch-thumb: #FFFFFE;
+    --kn-snackbar: #0F223E;
+    --kn-on-snackbar: #FFFFFE;
+    --kn-sheet-handle: #CADBEE;
+    --kn-gesture-pill: #819BBB;
+    --kn-qs-hover: #F3F7FD;
+    --kn-track-well: #E7EDF8;
+    --kn-shadow-control: 0 2px 6px rgba(7, 19, 43, 0.08);
+    --kn-shadow-card: 0 2px 8px rgba(7, 19, 43, 0.06);
+    --kn-shadow-nodeActive: 0 4px 14px rgba(1, 149, 212, 0.32);
+    --kn-shadow-nodeHidden: 0 2px 8px rgba(7, 19, 43, 0.08);
+    --kn-shadow-sheet: 0 -2px 12px rgba(7, 19, 43, 0.08);
+    --kn-shadow-pin: 0 4px 10px rgba(7, 19, 43, 0.12);
+    --kn-shadow-snackbar: 0 4px 14px rgba(7, 19, 43, 0.24);
+    --kn-shadow-bottomNav: 0 -2px 10px rgba(7, 19, 43, 0.05);
+    --kn-radius-xl: 12px;
+    --kn-radius-2xl: 16px;
+    --kn-radius-3xl: 24px;
+    --kn-radius-md10: 10px;
+    --kn-radius-lg14: 14px;
+    --kn-radius-pill: 9999px;
+    --kn-space-xs: 4px;
+    --kn-space-sm: 8px;
+    --kn-space-md: 12px;
+    --kn-space-lg: 16px;
+    --kn-space-xl: 24px;
+    --kn-space-2: 2px;
+    --kn-space-6: 6px;
+    --kn-space-10: 10px;
+    --kn-space-14: 14px;
+    --kn-size-touch: 48px;
+    --kn-size-touch-gtk: 44px;
+    --kn-size-26: 26px;
+    --kn-size-34: 34px;
+    --kn-size-54: 54px;
+    --kn-size-58: 58px;
+    --kn-size-128: 128px;
+    --kn-text-title: 24px;
+    --kn-text-body: 16px;
+    --kn-text-description: 14px;
+    --kn-text-caption: 12px;
+    --kn-text-sp13: 13px;
+    --kn-text-sp11: 11px;
+    --kn-tracking-wide: 0.06em;
+    --kn-tracking-code: 0.14em;
+    --kn-font-sans: "Plus Jakarta Sans", sans-serif;
+    --kn-opacity-disabled: 0.45;
+    --kn-focus-width: 2px;
+    --kn-focus-offset: 2px;
 }
 
 window.keynear-window.dark {
-    background-color: #0B1016;
-    color: #F7F6F7;
+    --kn-canvas: #0B1016;
+    --kn-text-primary: #F7F6F7;
+    --kn-map-ground: #080C12;
+    --kn-surface: #161821;
+    --kn-surface-tonal: #1E202B;
+    --kn-text-secondary: #DBD8DB;
+    --kn-text-muted: #9A9AA6;
+    --kn-loading: #0195D4;
+    --kn-loading-hover: #0195D4;
+    --kn-loading-ink: #0195D4;
+    --kn-loading-tonal: #11364C;
+    --kn-on-loading-tonal: #99D5EE;
+    --kn-warning-tonal: #381C00;
+    --kn-on-warning-tonal: #FFEAA5;
+    --kn-error-tonal: #3F0308;
+    --kn-on-danger-tonal: #FFCFCF;
+    --kn-error-action: #4C040B;
+    --kn-on-danger-action: #FFA1A2;
+    --kn-error-action-hover: #5E040F;
+    --kn-error: #E84201;
+    --kn-accent: #004CED;
+    --kn-on-accent: #FFFFFE;
+    --kn-focus-ring: #0172F9;
+    --kn-input: #090E14;
+    --kn-switch-track-off: #10141C;
+    --kn-switch-thumb: #F7F6F7;
+    --kn-snackbar: #1E202B;
+    --kn-on-snackbar: #F7F6F7;
+    --kn-sheet-handle: #474756;
+    --kn-gesture-pill: #474756;
+    --kn-qs-hover: #1D1F2A;
+    --kn-track-well: #0D1018;
+    --kn-shadow-control: 0 2px 6px rgba(0, 0, 0, 0.35);
+    --kn-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.32);
+    --kn-shadow-nodeActive: 0 4px 14px rgba(1, 149, 212, 0.32);
+    --kn-shadow-nodeHidden: 0 2px 8px rgba(7, 19, 43, 0.08);
+    --kn-shadow-sheet: 0 -2px 12px rgba(0, 0, 0, 0.35);
+    --kn-shadow-pin: 0 4px 10px rgba(0, 0, 0, 0.35);
+    --kn-shadow-snackbar: 0 4px 14px rgba(7, 19, 43, 0.24);
+    --kn-shadow-bottomNav: 0 -2px 10px rgba(7, 19, 43, 0.05);
+}
+
+window.keynear-window {
+    background-color: var(--kn-canvas);
+    color: var(--kn-text-primary);
+    font-family: var(--kn-font-sans);
+}
+
+window.keynear-window.dark {
+    background-color: var(--kn-canvas);
+    color: var(--kn-text-primary);
 }
 
 .kn-map-ground {
-    background-color: #E7EEF9;
+    background-color: var(--kn-map-ground);
 }
 
 window.keynear-window.dark .kn-map-ground {
-    background-color: #080C12;
+    background-color: var(--kn-map-ground);
 }
 
 .kn-topbar {
-    padding: 12px 16px;
+    padding: var(--kn-space-md) var(--kn-space-lg);
 }
 
 .kn-back-btn {
-    min-width: 48px;
-    min-height: 48px;
-    border-radius: 16px;
-    background-color: #FAFBFD;
-    color: #07132B;
+    min-width: var(--kn-size-touch);
+    min-height: var(--kn-size-touch);
+    border-radius: var(--kn-radius-2xl);
+    background-color: var(--kn-surface);
+    color: var(--kn-text-primary);
     border: none;
-    box-shadow: 0 2px 6px rgba(7, 19, 43, 0.08);
+    box-shadow: var(--kn-shadow-control);
 }
 
 window.keynear-window.dark .kn-back-btn {
-    background-color: #161821;
-    color: #F7F6F7;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    background-color: var(--kn-surface);
+    color: var(--kn-text-primary);
+    box-shadow: var(--kn-shadow-control);
 }
 
 .keynear-title {
-    font-size: 24px;
+    font-size: var(--kn-text-title);
     font-weight: 700;
-    color: #07132B;
+    color: var(--kn-text-primary);
 }
 
 window.keynear-window.dark .keynear-title {
-    color: #F7F6F7;
+    color: var(--kn-text-primary);
 }
 
 .kn-section-heading {
-    font-size: 12px;
+    font-size: var(--kn-text-caption);
     font-weight: 600;
-    letter-spacing: 0.06em;
-    color: #3B4B5E;
+    letter-spacing: var(--kn-tracking-wide);
+    color: var(--kn-text-muted);
 }
 
 window.keynear-window.dark .kn-section-heading {
-    color: #9A9AA6;
+    color: var(--kn-text-muted);
 }
 
 .keynear-section-title {
-    font-size: 16px;
+    font-size: var(--kn-text-body);
     font-weight: 700;
-    color: #07132B;
+    color: var(--kn-text-primary);
 }
 
 window.keynear-window.dark .keynear-section-title {
-    color: #F7F6F7;
+    color: var(--kn-text-primary);
 }
 
 .keynear-description {
-    font-size: 14px;
+    font-size: var(--kn-text-description);
     font-weight: 500;
-    color: #283950;
+    color: var(--kn-text-secondary);
 }
 
 window.keynear-window.dark .keynear-description {
-    color: #DBD8DB;
+    color: var(--kn-text-secondary);
 }
 
 .keynear-caption {
-    font-size: 12px;
+    font-size: var(--kn-text-caption);
     font-weight: 500;
-    color: #3B4B5E;
+    color: var(--kn-text-muted);
 }
 
 window.keynear-window.dark .keynear-caption {
-    color: #9A9AA6;
+    color: var(--kn-text-muted);
 }
 
 .keynear-card {
-    background-color: #FAFBFD;
-    border-radius: 16px;
-    padding: 16px;
+    background-color: var(--kn-surface);
+    border-radius: var(--kn-radius-2xl);
+    padding: var(--kn-space-lg);
     border: none;
-    box-shadow: 0 2px 8px rgba(7, 19, 43, 0.06);
+    box-shadow: var(--kn-shadow-card);
 }
 
 window.keynear-window.dark .keynear-card {
-    background-color: #161821;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.32);
+    background-color: var(--kn-surface);
+    box-shadow: var(--kn-shadow-card);
 }
 
 .keynear-tonal {
-    background-color: #E7EDF8;
-    border-radius: 12px;
+    background-color: var(--kn-surface-tonal);
+    border-radius: var(--kn-radius-xl);
 }
 
 window.keynear-window.dark .keynear-tonal {
-    background-color: #1E202B;
+    background-color: var(--kn-surface-tonal);
 }
 
 .keynear-code {
-    font-size: 24px;
+    font-size: var(--kn-text-title);
     font-weight: 700;
-    letter-spacing: 0.14em;
-    color: #07132B;
-    background-color: #E7EDF8;
-    border-radius: 12px;
-    padding: 10px 14px;
+    letter-spacing: var(--kn-tracking-code);
+    color: var(--kn-text-primary);
+    background-color: var(--kn-surface-tonal);
+    border-radius: var(--kn-radius-xl);
+    padding: var(--kn-space-10) var(--kn-space-14);
 }
 
 window.keynear-window.dark .keynear-code {
-    color: #F7F6F7;
-    background-color: #1E202B;
+    color: var(--kn-text-primary);
+    background-color: var(--kn-surface-tonal);
 }
 
 .keynear-warning {
-    background-color: #FFF6D3;
-    color: #863300;
-    border-radius: 16px;
-    padding: 12px 14px;
+    background-color: var(--kn-warning-tonal);
+    color: var(--kn-on-warning-tonal);
+    border-radius: var(--kn-radius-2xl);
+    padding: var(--kn-space-md) var(--kn-space-14);
 }
 
 window.keynear-window.dark .keynear-warning {
-    background-color: #381C00;
-    color: #FFEAA5;
+    background-color: var(--kn-warning-tonal);
+    color: var(--kn-on-warning-tonal);
 }
 
 .keynear-error {
-    background-color: #FFE7E7;
-    color: #8B0016;
-    border-radius: 16px;
-    padding: 12px 14px;
+    background-color: var(--kn-error-tonal);
+    color: var(--kn-on-danger-tonal);
+    border-radius: var(--kn-radius-2xl);
+    padding: var(--kn-space-md) var(--kn-space-14);
 }
 
 window.keynear-window.dark .keynear-error {
-    background-color: #3F0308;
-    color: #FFCFCF;
+    background-color: var(--kn-error-tonal);
+    color: var(--kn-on-danger-tonal);
 }
 
 button.keynear-primary {
-    min-height: 44px;
-    min-width: 48px;
-    background-color: #004CED;
-    color: #FFFFFE;
-    border-radius: 12px;
+    min-height: var(--kn-size-touch-gtk);
+    min-width: var(--kn-size-touch);
+    background-color: var(--kn-accent);
+    color: var(--kn-on-accent);
+    border-radius: var(--kn-radius-xl);
     font-weight: 600;
-    padding: 8px 16px;
+    padding: var(--kn-space-sm) var(--kn-space-lg);
     border: none;
 }
 
 button.kn-loading-btn {
-    min-height: 48px;
-    min-width: 48px;
-    background-color: #0195D4;
-    color: #FFFFFE;
-    border-radius: 12px;
+    min-height: var(--kn-size-touch);
+    min-width: var(--kn-size-touch);
+    background-color: var(--kn-loading);
+    color: var(--kn-on-accent);
+    border-radius: var(--kn-radius-xl);
     font-weight: 600;
-    padding: 8px 16px;
+    padding: var(--kn-space-sm) var(--kn-space-lg);
     border: none;
 }
 
 button.kn-loading-btn:disabled {
-    opacity: 0.45;
+    opacity: var(--kn-opacity-disabled);
 }
 
 button.kn-tonal-action-btn {
-    min-height: 48px;
-    min-width: 48px;
-    background-color: #D1ECF7;
-    color: #00425F;
-    border-radius: 12px;
+    min-height: var(--kn-size-touch);
+    min-width: var(--kn-size-touch);
+    background-color: var(--kn-loading-tonal);
+    color: var(--kn-on-loading-tonal);
+    border-radius: var(--kn-radius-xl);
     font-weight: 600;
-    padding: 8px 14px;
+    padding: var(--kn-space-sm) var(--kn-space-14);
     border: none;
 }
 
 window.keynear-window.dark button.kn-tonal-action-btn {
-    background-color: #11364C;
-    color: #99D5EE;
+    background-color: var(--kn-loading-tonal);
+    color: var(--kn-on-loading-tonal);
 }
 
 button.kn-error-action-btn {
-    min-height: 44px;
-    min-width: 48px;
-    background-color: #FFE7E7;
-    color: #8B0016;
-    border-radius: 12px;
+    min-height: var(--kn-size-touch-gtk);
+    min-width: var(--kn-size-touch);
+    background-color: var(--kn-error-action);
+    color: var(--kn-on-danger-action);
+    border-radius: var(--kn-radius-xl);
     font-weight: 600;
-    padding: 6px 12px;
+    padding: var(--kn-space-6) var(--kn-space-md);
     border: none;
 }
 
 window.keynear-window.dark button.kn-error-action-btn {
-    background-color: #4C040B;
-    color: #FFA1A2;
+    background-color: var(--kn-error-action);
+    color: var(--kn-on-danger-action);
 }
 
 button.keynear-danger-btn {
-    min-height: 48px;
-    min-width: 48px;
-    background-color: #E84201;
-    color: #FFFFFE;
-    border-radius: 12px;
+    min-height: var(--kn-size-touch);
+    min-width: var(--kn-size-touch);
+    background-color: var(--kn-error);
+    color: var(--kn-on-accent);
+    border-radius: var(--kn-radius-xl);
     font-weight: 600;
-    padding: 8px 16px;
+    padding: var(--kn-space-sm) var(--kn-space-lg);
     border: none;
 }
 
 button:focus-visible {
-    outline: 2px solid #0172F9;
-    outline-offset: 2px;
+    outline: var(--kn-focus-width) solid var(--kn-focus-ring);
+    outline-offset: var(--kn-focus-offset);
 }
 
 .kn-track-well {
-    background-color: #E7EDF8;
-    border-radius: 16px;
-    padding: 4px;
+    background-color: var(--kn-track-well);
+    border-radius: var(--kn-radius-2xl);
+    padding: var(--kn-space-xs);
 }
 
 window.keynear-window.dark .kn-track-well {
-    background-color: #0D1018;
+    background-color: var(--kn-track-well);
 }
 
 button.kn-seg-btn {
-    min-height: 48px;
-    min-width: 48px;
+    min-height: var(--kn-size-touch);
+    min-width: var(--kn-size-touch);
     background-color: transparent;
-    color: #283950;
-    border-radius: 12px;
+    color: var(--kn-text-secondary);
+    border-radius: var(--kn-radius-xl);
     font-weight: 600;
     border: none;
 }
 
 window.keynear-window.dark button.kn-seg-btn {
-    color: #DBD8DB;
+    color: var(--kn-text-secondary);
 }
 
 button.kn-seg-btn-active {
-    min-height: 48px;
-    min-width: 48px;
-    background-color: #0195D4;
-    color: #FFFFFE;
-    border-radius: 12px;
+    min-height: var(--kn-size-touch);
+    min-width: var(--kn-size-touch);
+    background-color: var(--kn-loading);
+    color: var(--kn-on-accent);
+    border-radius: var(--kn-radius-xl);
     font-weight: 600;
     border: none;
 }
 
 .kn-center-node-active {
-    border-radius: 9999px;
-    background-color: #0195D4;
-    color: #FFFFFE;
-    box-shadow: 0 4px 14px rgba(1, 149, 212, 0.32);
+    border-radius: var(--kn-radius-pill);
+    background-color: var(--kn-loading);
+    color: var(--kn-on-accent);
+    box-shadow: var(--kn-shadow-nodeActive);
 }
 
 .kn-center-node-hidden {
-    border-radius: 9999px;
-    background-color: #FAFBFD;
-    color: #3B4B5E;
-    box-shadow: 0 2px 8px rgba(7, 19, 43, 0.08);
+    border-radius: var(--kn-radius-pill);
+    background-color: var(--kn-surface);
+    color: var(--kn-text-muted);
+    box-shadow: var(--kn-shadow-nodeHidden);
 }
 
 window.keynear-window.dark .kn-center-node-hidden {
-    background-color: #161821;
-    color: #9A9AA6;
+    background-color: var(--kn-surface);
+    color: var(--kn-text-muted);
 }
 
 .kn-center-pill {
-    background-color: #FAFBFD;
-    border-radius: 12px;
-    padding: 4px 12px;
-    box-shadow: 0 2px 6px rgba(7, 19, 43, 0.08);
+    background-color: var(--kn-surface);
+    border-radius: var(--kn-radius-xl);
+    padding: var(--kn-space-xs) var(--kn-space-md);
+    box-shadow: var(--kn-shadow-control);
 }
 
 window.keynear-window.dark .kn-center-pill {
-    background-color: #161821;
+    background-color: var(--kn-surface);
 }
 
 .kn-countdown-text {
-    font-size: 13px;
+    font-size: var(--kn-text-sp13);
     font-weight: 700;
-    color: #0195D4;
+    color: var(--kn-loading-ink);
 }
 
 button.kn-pin-btn {
@@ -300,346 +421,378 @@ button.kn-pin-btn {
 }
 
 .kn-pin-circle {
-    border-radius: 9999px;
-    background-color: #FAFBFD;
-    box-shadow: 0 4px 10px rgba(7, 19, 43, 0.12);
+    border-radius: var(--kn-radius-pill);
+    background-color: var(--kn-surface);
+    box-shadow: var(--kn-shadow-pin);
 }
 
 window.keynear-window.dark .kn-pin-circle {
-    background-color: #161821;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+    background-color: var(--kn-surface);
+    box-shadow: var(--kn-shadow-pin);
 }
 
 .kn-pin-icon {
-    color: #0195D4;
+    color: var(--kn-loading-ink);
 }
 
 .kn-pin-card {
-    background-color: #FAFBFD;
-    border-radius: 10px;
-    padding: 4px 8px;
-    box-shadow: 0 2px 6px rgba(7, 19, 43, 0.08);
+    background-color: var(--kn-surface);
+    border-radius: var(--kn-radius-md10);
+    padding: var(--kn-space-xs) var(--kn-space-sm);
+    box-shadow: var(--kn-shadow-control);
 }
 
 window.keynear-window.dark .kn-pin-card {
-    background-color: #161821;
+    background-color: var(--kn-surface);
 }
 
 .kn-pin-state-online {
-    font-size: 11px;
+    font-size: var(--kn-text-sp11);
     font-weight: 600;
-    color: #0195D4;
+    color: var(--kn-loading-ink);
 }
 
 .kn-pin-state-pair {
-    font-size: 11px;
+    font-size: var(--kn-text-sp11);
     font-weight: 600;
-    color: #863300;
+    color: var(--kn-on-warning-tonal);
 }
 
 window.keynear-window.dark .kn-pin-state-pair {
-    color: #FFEAA5;
+    color: var(--kn-on-warning-tonal);
 }
 
 .kn-bottom-sheet {
-    background-color: #FAFBFD;
-    border-top-left-radius: 24px;
-    border-top-right-radius: 24px;
-    padding: 12px 16px 14px 16px;
-    box-shadow: 0 -2px 12px rgba(7, 19, 43, 0.08);
+    background-color: var(--kn-surface);
+    border-top-left-radius: var(--kn-radius-3xl);
+    border-top-right-radius: var(--kn-radius-3xl);
+    padding: var(--kn-space-md) var(--kn-space-lg) var(--kn-space-14) var(--kn-space-lg);
+    box-shadow: var(--kn-shadow-sheet);
 }
 
 window.keynear-window.dark .kn-bottom-sheet {
-    background-color: #161821;
-    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.35);
+    background-color: var(--kn-surface);
+    box-shadow: var(--kn-shadow-sheet);
 }
 
 .kn-sheet-handle {
-    background-color: #CADBEE;
-    border-radius: 9999px;
+    background-color: var(--kn-sheet-handle);
+    border-radius: var(--kn-radius-pill);
 }
 
 window.keynear-window.dark .kn-sheet-handle {
-    background-color: #474756;
+    background-color: var(--kn-sheet-handle);
 }
 
 .kn-sheet-row {
-    padding: 8px 6px;
-    border-radius: 12px;
+    padding: var(--kn-space-sm) var(--kn-space-6);
+    border-radius: var(--kn-radius-xl);
 }
 
 .kn-loading-tonal-badge {
-    background-color: #D1ECF7;
-    color: #00425F;
-    border-radius: 12px;
+    background-color: var(--kn-loading-tonal);
+    color: var(--kn-on-loading-tonal);
+    border-radius: var(--kn-radius-xl);
 }
 
 window.keynear-window.dark .kn-loading-tonal-badge {
-    background-color: #11364C;
-    color: #99D5EE;
+    background-color: var(--kn-loading-tonal);
+    color: var(--kn-on-loading-tonal);
 }
 
 .kn-surface-tonal-badge {
-    background-color: #E7EDF8;
-    color: #3B4B5E;
-    border-radius: 12px;
+    background-color: var(--kn-surface-tonal);
+    color: var(--kn-text-muted);
+    border-radius: var(--kn-radius-xl);
 }
 
 window.keynear-window.dark .kn-surface-tonal-badge {
-    background-color: #1E202B;
-    color: #9A9AA6;
+    background-color: var(--kn-surface-tonal);
+    color: var(--kn-text-muted);
 }
 
 button.kn-link-btn {
-    min-height: 44px;
-    min-width: 48px;
+    min-height: var(--kn-size-touch-gtk);
+    min-width: var(--kn-size-touch);
     background-color: transparent;
     border: none;
-    padding: 4px 8px;
+    padding: var(--kn-space-xs) var(--kn-space-sm);
 }
 
 .kn-link-label {
-    font-size: 13px;
+    font-size: var(--kn-text-sp13);
     font-weight: 600;
-    color: #0195D4;
+    color: var(--kn-loading-ink);
 }
 
 button.kn-selection-tile {
-    min-height: 128px;
-    min-width: 48px;
-    background-color: #FAFBFD;
-    color: #07132B;
-    border-radius: 16px;
-    padding: 16px;
+    min-height: var(--kn-size-128);
+    min-width: var(--kn-size-touch);
+    background-color: var(--kn-surface);
+    color: var(--kn-text-primary);
+    border-radius: var(--kn-radius-2xl);
+    padding: var(--kn-space-lg);
     border: none;
-    box-shadow: 0 2px 8px rgba(7, 19, 43, 0.06);
+    box-shadow: var(--kn-shadow-card);
 }
 
 window.keynear-window.dark button.kn-selection-tile {
-    background-color: #161821;
-    color: #F7F6F7;
+    background-color: var(--kn-surface);
+    color: var(--kn-text-primary);
 }
 
 button.kn-selection-tile-active {
-    min-height: 128px;
-    min-width: 48px;
-    background-color: #D1ECF7;
-    color: #00425F;
-    border-radius: 16px;
-    padding: 16px;
+    min-height: var(--kn-size-128);
+    min-width: var(--kn-size-touch);
+    background-color: var(--kn-loading-tonal);
+    color: var(--kn-on-loading-tonal);
+    border-radius: var(--kn-radius-2xl);
+    padding: var(--kn-space-lg);
     border: none;
 }
 
 window.keynear-window.dark button.kn-selection-tile-active {
-    background-color: #11364C;
-    color: #99D5EE;
+    background-color: var(--kn-loading-tonal);
+    color: var(--kn-on-loading-tonal);
 }
 
 .kn-tile-icon {
-    color: #283950;
+    color: var(--kn-text-secondary);
 }
 
 window.keynear-window.dark .kn-tile-icon {
-    color: #DBD8DB;
+    color: var(--kn-text-secondary);
 }
 
 .kn-tile-label {
-    font-size: 16px;
+    font-size: var(--kn-text-body);
     font-weight: 700;
 }
 
 .kn-recessed-entry {
-    min-height: 44px;
-    background-color: #E8EEFA;
-    color: #07132B;
-    border-radius: 12px;
-    padding: 8px 12px;
+    min-height: var(--kn-size-touch-gtk);
+    background-color: var(--kn-input);
+    color: var(--kn-text-primary);
+    border-radius: var(--kn-radius-xl);
+    padding: var(--kn-space-sm) var(--kn-space-md);
     border: none;
 }
 
 window.keynear-window.dark .kn-recessed-entry {
-    background-color: #090E14;
-    color: #F7F6F7;
+    background-color: var(--kn-input);
+    color: var(--kn-text-primary);
 }
 
 .kn-queue-row {
-    min-height: 54px;
-    background-color: #E7EDF8;
-    border-radius: 12px;
-    padding: 8px 10px;
+    min-height: var(--kn-size-54);
+    background-color: var(--kn-surface-tonal);
+    border-radius: var(--kn-radius-xl);
+    padding: var(--kn-space-sm) var(--kn-space-10);
 }
 
 window.keynear-window.dark .kn-queue-row {
-    background-color: #1E202B;
+    background-color: var(--kn-surface-tonal);
 }
 
 .kn-setting-row {
-    min-height: 48px;
+    min-height: var(--kn-size-touch);
 }
 
 button.kn-setting-row-btn {
-    min-height: 48px;
+    min-height: var(--kn-size-touch);
     background-color: transparent;
     border: none;
-    padding: 4px 0;
+    padding: var(--kn-space-xs) 0;
 }
 
 .kn-count-badge {
-    background-color: #D1ECF7;
-    color: #00425F;
-    border-radius: 9999px;
-    padding: 2px 10px;
-    font-size: 12px;
+    background-color: var(--kn-loading-tonal);
+    color: var(--kn-on-loading-tonal);
+    border-radius: var(--kn-radius-pill);
+    padding: var(--kn-space-2) var(--kn-space-10);
+    font-size: var(--kn-text-caption);
     font-weight: 700;
 }
 
 window.keynear-window.dark .kn-count-badge {
-    background-color: #11364C;
-    color: #99D5EE;
+    background-color: var(--kn-loading-tonal);
+    color: var(--kn-on-loading-tonal);
 }
 
 .kn-mime-row {
-    background-color: #E7EDF8;
-    border-radius: 12px;
-    padding: 6px 10px;
+    background-color: var(--kn-surface-tonal);
+    border-radius: var(--kn-radius-xl);
+    padding: var(--kn-space-6) var(--kn-space-10);
 }
 
 window.keynear-window.dark .kn-mime-row {
-    background-color: #1E202B;
+    background-color: var(--kn-surface-tonal);
 }
 
 switch.keynear-switch {
-    min-width: 58px;
-    min-height: 34px;
-    border-radius: 9999px;
-    background-color: #DEE6F6;
+    min-width: var(--kn-size-58);
+    min-height: var(--kn-size-34);
+    border-radius: var(--kn-radius-pill);
+    background-color: var(--kn-switch-track-off);
     border: none;
 }
 
 switch.keynear-switch:checked {
-    background-color: #0195D4;
+    background-color: var(--kn-loading);
 }
 
 window.keynear-window.dark switch.keynear-switch {
-    background-color: #10141C;
+    background-color: var(--kn-switch-track-off);
 }
 
 window.keynear-window.dark switch.keynear-switch:checked {
-    background-color: #0195D4;
+    background-color: var(--kn-loading);
 }
 
 switch.keynear-switch > slider {
-    min-width: 26px;
-    min-height: 26px;
-    border-radius: 9999px;
-    background-color: #FFFFFE;
-    margin: 4px;
+    min-width: var(--kn-size-26);
+    min-height: var(--kn-size-26);
+    border-radius: var(--kn-radius-pill);
+    background-color: var(--kn-switch-thumb);
+    margin: var(--kn-space-xs);
 }
 
 window.keynear-window.dark switch.keynear-switch > slider {
-    background-color: #F7F6F7;
+    background-color: var(--kn-switch-thumb);
 }
 
 .keynear-transfer-row {
-    background-color: #E7EDF8;
-    border-radius: 12px;
-    padding: 10px 12px;
+    background-color: var(--kn-surface-tonal);
+    border-radius: var(--kn-radius-xl);
+    padding: var(--kn-space-10) var(--kn-space-md);
 }
 
 window.keynear-window.dark .keynear-transfer-row {
-    background-color: #1E202B;
+    background-color: var(--kn-surface-tonal);
 }
 
 progressbar.keynear-progress > trough {
-    min-height: 6px;
-    border-radius: 9999px;
-    background-color: #DEE6F6;
+    min-height: var(--kn-space-6);
+    border-radius: var(--kn-radius-pill);
+    background-color: var(--kn-switch-track-off);
 }
 
 window.keynear-window.dark progressbar.keynear-progress > trough {
-    background-color: #10141C;
+    background-color: var(--kn-switch-track-off);
 }
 
 progressbar.keynear-progress > trough > progress {
-    border-radius: 9999px;
-    background-color: #0195D4;
+    border-radius: var(--kn-radius-pill);
+    background-color: var(--kn-loading);
 }
 
 .kn-snackbar {
-    background-color: #0F223E;
-    border-radius: 14px;
-    padding: 10px 16px;
-    box-shadow: 0 4px 14px rgba(7, 19, 43, 0.24);
+    background-color: var(--kn-snackbar);
+    border-radius: var(--kn-radius-lg14);
+    padding: var(--kn-space-10) var(--kn-space-lg);
+    box-shadow: var(--kn-shadow-snackbar);
 }
 
 window.keynear-window.dark .kn-snackbar {
-    background-color: #1E202B;
+    background-color: var(--kn-snackbar);
 }
 
 .kn-snackbar-text {
-    color: #FFFFFE;
-    font-size: 13px;
+    color: var(--kn-on-snackbar);
+    font-size: var(--kn-text-sp13);
     font-weight: 600;
 }
 
 window.keynear-window.dark .kn-snackbar-text {
-    color: #F7F6F7;
+    color: var(--kn-on-snackbar);
 }
 
 .kn-bottom-nav {
-    background-color: #FAFBFD;
-    padding: 8px 16px 10px 16px;
-    box-shadow: 0 -2px 10px rgba(7, 19, 43, 0.05);
+    background-color: var(--kn-surface);
+    padding: var(--kn-space-sm) var(--kn-space-lg) var(--kn-space-10) var(--kn-space-lg);
+    box-shadow: var(--kn-shadow-bottomNav);
 }
 
 window.keynear-window.dark .kn-bottom-nav {
-    background-color: #161821;
+    background-color: var(--kn-surface);
 }
 
 button.kn-nav-tab-btn {
-    min-height: 48px;
-    min-width: 48px;
+    min-height: var(--kn-size-touch);
+    min-width: var(--kn-size-touch);
     background-color: transparent;
     border: none;
-    padding: 2px 4px;
+    padding: var(--kn-space-2) var(--kn-space-xs);
 }
 
 .kn-nav-pill-active {
-    background-color: #D1ECF7;
-    color: #00425F;
-    border-radius: 9999px;
+    background-color: var(--kn-loading-tonal);
+    color: var(--kn-on-loading-tonal);
+    border-radius: var(--kn-radius-pill);
 }
 
 window.keynear-window.dark .kn-nav-pill-active {
-    background-color: #11364C;
-    color: #99D5EE;
+    background-color: var(--kn-loading-tonal);
+    color: var(--kn-on-loading-tonal);
 }
 
 .kn-nav-pill-inactive {
     background-color: transparent;
-    color: #3B4B5E;
-    border-radius: 9999px;
+    color: var(--kn-text-muted);
+    border-radius: var(--kn-radius-pill);
 }
 
 window.keynear-window.dark .kn-nav-pill-inactive {
-    color: #9A9AA6;
+    color: var(--kn-text-muted);
 }
 
 .kn-nav-text-active {
-    font-size: 12px;
+    font-size: var(--kn-text-caption);
     font-weight: 700;
-    color: #07132B;
+    color: var(--kn-text-primary);
 }
 
 window.keynear-window.dark .kn-nav-text-active {
-    color: #F7F6F7;
+    color: var(--kn-text-primary);
 }
 
 .kn-gesture-pill {
-    background-color: #819BBB;
-    border-radius: 9999px;
+    background-color: var(--kn-gesture-pill);
+    border-radius: var(--kn-radius-pill);
 }
 
 window.keynear-window.dark .kn-gesture-pill {
-    background-color: #474756;
+    background-color: var(--kn-gesture-pill);
+}
+
+button.keynear-primary:hover,
+button.kn-loading-btn:hover,
+button.kn-seg-btn-active:hover,
+button.kn-center-node-active:hover {
+    background-color: var(--kn-loading-hover);
+}
+
+button.kn-error-action-btn:hover {
+    background-color: var(--kn-error-action-hover);
+}
+
+button.kn-nav-tab-btn:hover,
+button.kn-link-btn:hover {
+    background-color: var(--kn-qs-hover);
+    border-radius: var(--kn-radius-xl);
+}
+
+button.keynear-primary:active,
+button.kn-loading-btn:active,
+button.kn-danger-btn:active {
+    box-shadow: var(--kn-shadow-control);
+}
+
+button.keynear-primary:disabled,
+button.kn-danger-btn:disabled,
+button.kn-tonal-action-btn:disabled,
+button.kn-seg-btn-active:disabled,
+button.kn-link-btn:disabled,
+button.kn-nav-tab-btn:disabled {
+    opacity: var(--kn-opacity-disabled);
 }
