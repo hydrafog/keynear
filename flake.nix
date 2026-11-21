@@ -1,5 +1,5 @@
 {
-  description = "Keynear continuity service development environment";
+  description = "Keynear continuity service packages, NixOS/Home Manager modules, and development environments";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -14,8 +14,32 @@
       systems = [ "x86_64-linux" "aarch64-linux" ];
       forAllSystems = f:
         nixpkgs.lib.genAttrs systems (system: f system);
+      mkPackages = pkgs: {
+        keynear = pkgs.callPackage ./packaging/nixos/package.nix { };
+        keynear-fuse = pkgs.callPackage ./packaging/nixos/package.nix { enableFuse = true; };
+        keynear-gnome-extension = pkgs.callPackage ./packaging/nixos/gnome-extension.nix { };
+      };
     in
     {
+      overlays.default = final: _prev: mkPackages final;
+
+      nixosModules = {
+        default = self.nixosModules.keynear;
+        keynear = import ./packaging/nixos/nixos-module.nix;
+      };
+
+      homeManagerModules = {
+        default = self.homeManagerModules.keynear;
+        keynear = import ./packaging/nixos/home-manager-module.nix;
+      };
+
+      packages = forAllSystems (system:
+        let
+          pkgs = import nixpkgs { inherit system; };
+          built = mkPackages pkgs;
+        in
+        built // { default = built.keynear; });
+
       devShells = forAllSystems (system:
         let
           pkgs = import nixpkgs { inherit system; };
