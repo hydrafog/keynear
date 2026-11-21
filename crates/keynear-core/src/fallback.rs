@@ -1,12 +1,14 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum FallbackMedia {
+    #[default]
     None,
     WifiAwareNan,
     WifiDirectR2,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum FallbackStatus {
+    #[default]
     Unavailable,
     Available,
     Disallowed,
@@ -16,18 +18,6 @@ pub enum FallbackStatus {
 pub struct FallbackProbeResult {
     pub media: FallbackMedia,
     pub status: FallbackStatus,
-}
-
-impl Default for FallbackMedia {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
-impl Default for FallbackStatus {
-    fn default() -> Self {
-        Self::Unavailable
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

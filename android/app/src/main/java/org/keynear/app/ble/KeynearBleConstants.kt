@@ -30,8 +30,7 @@ object KeynearBleConstants {
     const val CAP_AUDIO_HANDOFF: UInt = 0x08u
     const val CAP_WIFI_AWARE: UInt = 0x40u
     const val CAP_WIFI_DIRECT_R2: UInt = 0x80u
-    const val ANDROID_CAPABILITY_FLAGS: UInt =
-        CAP_FILE_TRANSFER or CAP_CLIPBOARD or CAP_AUDIO_HANDOFF or CAP_WIFI_AWARE or CAP_WIFI_DIRECT_R2
+    const val ANDROID_CAPABILITY_FLAGS: UInt = 0xCBu
 
     fun requiredPermissions(sdkInt: Int): List<String> = buildList {
         add(Manifest.permission.BLUETOOTH_SCAN)
