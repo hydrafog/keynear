@@ -4,18 +4,33 @@
     clippy::too_many_arguments
 )]
 
+pub mod audio;
+pub mod capability;
 pub mod clipboard;
+pub mod fallback;
 pub mod keyring;
 pub mod pairing;
 pub mod transfer;
 pub mod transport;
 
+pub use audio::{
+    AudioHandoffEngine, AudioHandoffPlan, AudioHandoffState, AudioSinkProfile, HandoffPhase,
+    MAX_PERIPHERAL_ID_LEN,
+};
+pub use capability::{
+    negotiate_capabilities, ranging_method, RangingMethod, VegaCapabilities, CAP_AUDIO_HANDOFF,
+    CAP_CLIPBOARD, CAP_FILE_TRANSFER, CAP_LEGACY_RESERVED, CAP_RANGING_CS, CAP_RANGING_UWB,
+    CAP_WIFI_AWARE, CAP_WIFI_DIRECT_R2,
+};
 pub use clipboard::{
     is_image_mime, normalize_mime_type, pick_preferred_image_mime, read_clipboard_blob,
     should_ignore_mime_offers, write_clipboard_blob, ClipboardEngine, ClipboardItem,
     ClipboardPolicy, DelayedClipboardOffer, DelayedRenderCallback, BUILT_IN_IGNORED_MIMES,
     CLIPBOARD_OFFER_TTL_SECS, DEFAULT_TEXT_MIME, MAX_CLIPBOARD_IMAGE_BYTES, MAX_CLIPBOARD_QUEUE,
     MAX_INLINE_CLIPBOARD_BYTES,
+};
+pub use fallback::{
+    select_fallback, FallbackChoice, FallbackMedia, FallbackProbeResult, FallbackStatus,
 };
 pub use keynear_protocol::{
     control_frame_to_envelope, decode_control_frame, decode_envelope, default_config_dir,

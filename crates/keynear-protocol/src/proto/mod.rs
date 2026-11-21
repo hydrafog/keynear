@@ -106,37 +106,32 @@ pub fn decode_envelope(bytes: &[u8]) -> Result<v1::Envelope, KeynearError> {
     Ok(envelope)
 }
 
+fn payload_kind_and_bytes(payload: &v1::envelope::Payload) -> (&'static str, Vec<u8>) {
+    use v1::envelope::Payload as P;
+    match payload {
+        P::Handshake(value) => ("handshake", value.encode_to_vec()),
+        P::TransferOffer(value) => ("transfer_offer", value.encode_to_vec()),
+        P::Clipboard(value) => ("clipboard", value.encode_to_vec()),
+        P::AudioState(value) => ("audio_state", value.encode_to_vec()),
+        P::ControlAck(value) => ("control_ack", value.encode_to_vec()),
+        P::LanEndpoint(value) => ("lan_endpoint", value.encode_to_vec()),
+        P::TransferConsent(value) => ("transfer_consent", value.encode_to_vec()),
+        P::TransferCancel(value) => ("transfer_cancel", value.encode_to_vec()),
+        P::TransferComplete(value) => ("transfer_complete", value.encode_to_vec()),
+        P::ClipboardOffer(value) => ("clipboard_offer", value.encode_to_vec()),
+        P::ClipboardFetch(value) => ("clipboard_fetch", value.encode_to_vec()),
+        P::AudioHandoff(value) => ("audio_handoff", value.encode_to_vec()),
+        P::CapabilityNegotiation(value) => ("capability_negotiation", value.encode_to_vec()),
+        P::FallbackProbe(value) => ("fallback_probe", value.encode_to_vec()),
+    }
+}
+
 pub fn envelope_to_control_frame(envelope: &v1::Envelope) -> Result<ControlFrame, KeynearError> {
-    let (kind, payload) = match envelope.payload.as_ref() {
-        Some(v1::envelope::Payload::Handshake(inner)) => ("handshake", inner.encode_to_vec()),
-        Some(v1::envelope::Payload::TransferOffer(inner)) => {
-            ("transfer_offer", inner.encode_to_vec())
-        }
-        Some(v1::envelope::Payload::Clipboard(inner)) => ("clipboard", inner.encode_to_vec()),
-        Some(v1::envelope::Payload::AudioState(inner)) => ("audio_state", inner.encode_to_vec()),
-        Some(v1::envelope::Payload::ControlAck(inner)) => ("control_ack", inner.encode_to_vec()),
-        Some(v1::envelope::Payload::LanEndpoint(inner)) => ("lan_endpoint", inner.encode_to_vec()),
-        Some(v1::envelope::Payload::TransferConsent(inner)) => {
-            ("transfer_consent", inner.encode_to_vec())
-        }
-        Some(v1::envelope::Payload::TransferCancel(inner)) => {
-            ("transfer_cancel", inner.encode_to_vec())
-        }
-        Some(v1::envelope::Payload::TransferComplete(inner)) => {
-            ("transfer_complete", inner.encode_to_vec())
-        }
-        Some(v1::envelope::Payload::ClipboardOffer(inner)) => {
-            ("clipboard_offer", inner.encode_to_vec())
-        }
-        Some(v1::envelope::Payload::ClipboardFetch(inner)) => {
-            ("clipboard_fetch", inner.encode_to_vec())
-        }
-        None => {
-            return Err(KeynearError::Protocol(
-                "envelope payload must not be empty".to_string(),
-            ))
-        }
-    };
+    let payload = envelope
+        .payload
+        .as_ref()
+        .ok_or_else(|| KeynearError::Protocol("envelope payload must not be empty".to_string()))?;
+    let (kind, payload) = payload_kind_and_bytes(payload);
 
     let frame = ControlFrame {
         version: envelope.version,
@@ -157,50 +152,36 @@ pub fn envelope_to_control_frame(envelope: &v1::Envelope) -> Result<ControlFrame
     Ok(frame)
 }
 
-fn decode_frame_payload(frame: &ControlFrame) -> Result<v1::envelope::Payload, KeynearError> {
-    let slice = frame.payload.as_slice();
-    let decoded = |err: prost::DecodeError| KeynearError::Protocol(err.to_string());
-    let payload = match frame.kind.as_str() {
-        "handshake" => {
-            v1::envelope::Payload::Handshake(v1::HandshakePayload::decode(slice).map_err(decoded)?)
-        }
-        "transfer_offer" => {
-            v1::envelope::Payload::TransferOffer(v1::TransferOffer::decode(slice).map_err(decoded)?)
-        }
-        "clipboard" => {
-            v1::envelope::Payload::Clipboard(v1::ClipboardPayload::decode(slice).map_err(decoded)?)
-        }
-        "audio_state" => v1::envelope::Payload::AudioState(
-            v1::AudioStatePayload::decode(slice).map_err(decoded)?,
-        ),
-        "control_ack" => {
-            v1::envelope::Payload::ControlAck(v1::ControlAck::decode(slice).map_err(decoded)?)
-        }
-        "lan_endpoint" => {
-            v1::envelope::Payload::LanEndpoint(v1::LanEndpoint::decode(slice).map_err(decoded)?)
-        }
-        "transfer_consent" => v1::envelope::Payload::TransferConsent(
-            v1::TransferConsent::decode(slice).map_err(decoded)?,
-        ),
-        "transfer_cancel" => v1::envelope::Payload::TransferCancel(
-            v1::TransferCancel::decode(slice).map_err(decoded)?,
-        ),
-        "transfer_complete" => v1::envelope::Payload::TransferComplete(
-            v1::TransferComplete::decode(slice).map_err(decoded)?,
-        ),
-        "clipboard_offer" => v1::envelope::Payload::ClipboardOffer(
-            v1::ClipboardOffer::decode(slice).map_err(decoded)?,
-        ),
-        "clipboard_fetch" => v1::envelope::Payload::ClipboardFetch(
-            v1::ClipboardFetch::decode(slice).map_err(decoded)?,
-        ),
+fn decode_payload(kind: &str, slice: &[u8]) -> Result<v1::envelope::Payload, KeynearError> {
+    use v1::envelope::Payload as P;
+    fn decode<T: prost::Message + Default>(slice: &[u8]) -> Result<T, KeynearError> {
+        T::decode(slice).map_err(|err| KeynearError::Protocol(err.to_string()))
+    }
+    Ok(match kind {
+        "handshake" => P::Handshake(decode(slice)?),
+        "transfer_offer" => P::TransferOffer(decode(slice)?),
+        "clipboard" => P::Clipboard(decode(slice)?),
+        "audio_state" => P::AudioState(decode(slice)?),
+        "control_ack" => P::ControlAck(decode(slice)?),
+        "lan_endpoint" => P::LanEndpoint(decode(slice)?),
+        "transfer_consent" => P::TransferConsent(decode(slice)?),
+        "transfer_cancel" => P::TransferCancel(decode(slice)?),
+        "transfer_complete" => P::TransferComplete(decode(slice)?),
+        "clipboard_offer" => P::ClipboardOffer(decode(slice)?),
+        "clipboard_fetch" => P::ClipboardFetch(decode(slice)?),
+        "audio_handoff" => P::AudioHandoff(decode(slice)?),
+        "capability_negotiation" => P::CapabilityNegotiation(decode(slice)?),
+        "fallback_probe" => P::FallbackProbe(decode(slice)?),
         other => {
             return Err(KeynearError::Protocol(format!(
                 "unknown control frame kind '{other}'"
             )))
         }
-    };
-    Ok(payload)
+    })
+}
+
+fn decode_frame_payload(frame: &ControlFrame) -> Result<v1::envelope::Payload, KeynearError> {
+    decode_payload(&frame.kind, frame.payload.as_slice())
 }
 
 pub fn control_frame_to_envelope(frame: &ControlFrame) -> Result<v1::Envelope, KeynearError> {

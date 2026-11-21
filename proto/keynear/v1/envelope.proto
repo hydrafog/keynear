@@ -19,6 +19,9 @@ message Envelope {
     TransferComplete transfer_complete = 18;
     ClipboardOffer clipboard_offer = 19;
     ClipboardFetch clipboard_fetch = 20;
+    AudioHandoff audio_handoff = 21;
+    CapabilityNegotiation capability_negotiation = 22;
+    FallbackProbe fallback_probe = 23;
   }
 }
 
@@ -97,5 +100,61 @@ message ClipboardOffer {
 message ClipboardFetch {
   string offer_id = 1;
   string mime_type = 2;
+}
+
+enum HandoffPhase {
+  HANDOFF_UNSPECIFIED = 0;
+  HANDOFF_PREPARE = 1;
+  HANDOFF_RELEASED = 2;
+  HANDOFF_CLAIMED = 3;
+  HANDOFF_RESUMED = 4;
+  HANDOFF_ABORTED = 5;
+}
+
+enum SinkProfile {
+  SINK_UNSPECIFIED = 0;
+  SINK_BAP = 1;
+  SINK_A2DP = 2;
+  SINK_HFP_HF = 3;
+}
+
+message AudioHandoff {
+  string peripheral_id = 1;
+  uint64 sequence = 2;
+  HandoffPhase phase = 3;
+  SinkProfile sink_profile = 4;
+  bool playback_paused = 5;
+  string reason = 6;
+}
+
+enum RangingMethod {
+  RANGING_NONE = 0;
+  RANGING_BLE_CS = 1;
+  RANGING_UWB = 2;
+}
+
+message CapabilityNegotiation {
+  uint32 local_flags = 1;
+  uint32 peer_flags = 2;
+  uint32 negotiated_flags = 3;
+  RangingMethod preferred_ranging = 4;
+}
+
+enum FallbackMedia {
+  MEDIA_NONE = 0;
+  MEDIA_WIFI_AWARE_NAN = 1;
+  MEDIA_WIFI_DIRECT_R2 = 2;
+}
+
+enum FallbackStatus {
+  STATUS_UNAVAILABLE = 0;
+  STATUS_AVAILABLE = 1;
+  STATUS_DISALLOWED = 2;
+}
+
+message FallbackProbe {
+  FallbackMedia media = 1;
+  FallbackStatus status = 2;
+  string detail = 3;
 }
 
