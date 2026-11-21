@@ -16,8 +16,8 @@ android {
         applicationId = "org.keynear.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 5
-        versionName = "0.5.0-draco"
+        versionCode = 6
+        versionName = "1.0.0-vega"
     }
 
     buildFeatures {

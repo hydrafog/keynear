@@ -1,6 +1,6 @@
 # Android Build
 
-The Android companion app (`org.keynear.app`, `versionCode = 5`, `versionName = "0.5.0-draco"`) compiles `keynear-ffi` (`libkeynear_core.so`) into `android/core-ffi/src/main/jniLibs` with `cargo-ndk` using 16 KB ELF page alignment before assembling the multi-module Gradle build (`:core-ffi`, `:designsystem`, `:app`).
+The Android companion app (`org.keynear.app`, `versionCode = 6`, `versionName = "1.0.0-vega"`) compiles `keynear-ffi` (`libkeynear_core.so`) into `android/core-ffi/src/main/jniLibs` with `cargo-ndk` using 16 KB ELF page alignment before assembling the multi-module Gradle build (`:core-ffi`, `:designsystem`, `:app`).
 
 ## Native Library Compilation
 

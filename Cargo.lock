@@ -2486,7 +2486,7 @@ dependencies = [
 
 [[package]]
 name = "keynear-core"
-version = "0.5.0"
+version = "1.0.0"
 dependencies = [
  "aes-gcm 0.11.1",
  "hex",
@@ -2511,7 +2511,7 @@ dependencies = [
 
 [[package]]
 name = "keynear-ffi"
-version = "0.5.0"
+version = "1.0.0"
 dependencies = [
  "hex",
  "keynear-core",
@@ -2526,14 +2526,14 @@ dependencies = [
 
 [[package]]
 name = "keynear-ipc"
-version = "0.5.0"
+version = "1.0.0"
 dependencies = [
  "keynear-protocol",
 ]
 
 [[package]]
 name = "keynear-linux"
-version = "0.5.0"
+version = "1.0.0"
 dependencies = [
  "bluer",
  "futures-util",
@@ -2561,7 +2561,7 @@ dependencies = [
 
 [[package]]
 name = "keynear-protocol"
-version = "0.5.0"
+version = "1.0.0"
 dependencies = [
  "prost",
  "prost-build",
@@ -2573,7 +2573,7 @@ dependencies = [
 
 [[package]]
 name = "keynear-settings"
-version = "0.5.0"
+version = "1.0.0"
 dependencies = [
  "ashpd",
  "gtk4",
