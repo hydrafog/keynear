@@ -1,12 +1,13 @@
+#![allow(dead_code)]
+
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::path::Path;
-use std::sync::Mutex;
 use std::time::{Duration, UNIX_EPOCH};
 
 use fuser::{
-    FileAttr, FileType, Filesystem, ReplyAttr, ReplyData, ReplyDirectory, ReplyEntry, ReplyOpen,
-    Request, FUSE_ROOT_ID,
+    Config, Errno, FileAttr, FileHandle, FileType, Filesystem, FopenFlags, Generation, INodeNo,
+    LockOwner, OpenFlags, ReplyAttr, ReplyData, ReplyDirectory, ReplyEntry, ReplyOpen, Request,
 };
 use keynear_core::{read_plan, RemoteVfsNode, STREAM_CHUNK_BYTES};
 
@@ -20,14 +21,14 @@ pub struct KeynearFuseFs {
 impl KeynearFuseFs {
     pub fn new(root: RemoteVfsNode, children: Vec<RemoteVfsNode>, reader: RemoteReader) -> Self {
         let mut nodes = BTreeMap::new();
-        nodes.insert(FUSE_ROOT_ID, root);
+        nodes.insert(INodeNo::ROOT.0, root);
         for (index, child) in children.into_iter().enumerate() {
-            nodes.insert(FUSE_ROOT_ID + 1 + index as u64, child);
+            nodes.insert(INodeNo::ROOT.0 + 1 + index as u64, child);
         }
         Self { nodes, reader }
     }
 
-    fn attr(&self, ino: u64, node: &RemoteVfsNode) -> FileAttr {
+    fn attr(&self, ino: INodeNo, node: &RemoteVfsNode) -> FileAttr {
         let now = UNIX_EPOCH + Duration::from_secs(1_763_000_000);
         FileAttr {
             ino,
@@ -54,17 +55,17 @@ impl KeynearFuseFs {
 }
 
 impl Filesystem for KeynearFuseFs {
-    fn getattr(&mut self, ino: u64, _req: Request, reply: ReplyAttr) {
-        match self.nodes.get(&ino) {
+    fn getattr(&self, _req: &Request, ino: INodeNo, _fh: Option<FileHandle>, reply: ReplyAttr) {
+        match self.nodes.get(&ino.0) {
             Some(node) => {
                 let ttl = Duration::from_secs(1);
                 reply.attr(&ttl, &self.attr(ino, node));
             }
-            None => reply.error(libc::ENOENT),
+            None => reply.error(Errno::ENOENT),
         }
     }
 
-    fn lookup(&mut self, _parent: u64, name: &OsStr, _req: Request, reply: ReplyEntry) {
+    fn lookup(&self, _req: &Request, _parent: INodeNo, name: &OsStr, reply: ReplyEntry) {
         let name = name.to_string_lossy();
         let found = self
             .nodes
@@ -73,15 +74,22 @@ impl Filesystem for KeynearFuseFs {
         match found {
             Some((&ino, node)) => {
                 let ttl = Duration::from_secs(1);
-                reply.entry(&ttl, &self.attr(ino, node), 0);
+                reply.entry(&ttl, &self.attr(INodeNo(ino), node), Generation(0));
             }
-            None => reply.error(libc::ENOENT),
+            None => reply.error(Errno::ENOENT),
         }
     }
 
-    fn readdir(&mut self, ino: u64, offset: i64, _req: Request, mut reply: ReplyDirectory) {
-        if ino != FUSE_ROOT_ID {
-            reply.error(libc::ENOENT);
+    fn readdir(
+        &self,
+        _req: &Request,
+        ino: INodeNo,
+        _fh: FileHandle,
+        offset: u64,
+        mut reply: ReplyDirectory,
+    ) {
+        if ino != INodeNo::ROOT {
+            reply.error(Errno::ENOENT);
             return;
         }
         for (index, (&child_ino, node)) in self.nodes.iter().enumerate().skip(offset as usize) {
@@ -90,49 +98,46 @@ impl Filesystem for KeynearFuseFs {
             } else {
                 FileType::RegularFile
             };
-            if reply.add(child_ino, index as i64 + 1, kind, &node.name) {
+            if reply.add(INodeNo(child_ino), index as u64 + 1, kind, &node.name) {
                 break;
             }
         }
         reply.ok();
     }
 
-    fn open(&mut self, _ino: u64, _flags: i32, _req: Request, reply: ReplyOpen) {
-        reply.opened(0, 0);
+    fn open(&self, _req: &Request, _ino: INodeNo, _flags: OpenFlags, reply: ReplyOpen) {
+        reply.opened(FileHandle(0), FopenFlags::empty());
     }
 
     fn read(
-        &mut self,
-        ino: u64,
-        _fh: u64,
-        offset: i64,
+        &self,
+        _req: &Request,
+        ino: INodeNo,
+        _fh: FileHandle,
+        offset: u64,
         size: u32,
-        _flags: i32,
-        _req: Request,
+        _flags: OpenFlags,
+        _lock_owner: Option<LockOwner>,
         reply: ReplyData,
     ) {
-        if offset < 0 {
-            reply.error(libc::EINVAL);
-            return;
-        }
-        let Some(node) = self.nodes.get(&ino) else {
-            reply.error(libc::ENOENT);
+        let Some(node) = self.nodes.get(&ino.0) else {
+            reply.error(Errno::ENOENT);
             return;
         };
         let requested = (size as usize).min(STREAM_CHUNK_BYTES);
-        let Ok(plan) = read_plan(node.size_bytes, offset as u64, requested.max(1)) else {
-            reply.error(libc::EIO);
+        let Ok(plan) = read_plan(node.size_bytes, offset, requested.max(1)) else {
+            reply.error(Errno::EIO);
             return;
         };
         if plan.length == 0 {
             reply.data(&[]);
             return;
         }
-        let bytes = (self.reader)(ino, plan.offset, plan.length);
+        let bytes = (self.reader)(ino.0, plan.offset, plan.length);
         reply.data(&bytes);
     }
 }
 
 pub fn mount_keynear_fuse(mountpoint: &Path, fs: KeynearFuseFs) -> std::io::Result<()> {
-    fuser::Session::new(fs, mountpoint, &[] as &[&OsStr]).run()
+    fuser::Session::new(fs, mountpoint, &Config::default())?.run()
 }

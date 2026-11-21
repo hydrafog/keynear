@@ -65,6 +65,9 @@ rustPlatform.buildRustPackage {
     "keynear-linux"
     "-p"
     "keynear-settings"
+  ] ++ lib.optionals enableFuse [
+    "--features"
+    "keynear-linux/fuse"
   ];
 
   postInstall = ''
