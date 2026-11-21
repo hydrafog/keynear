@@ -25,7 +25,7 @@ hkdf = "0.13"
 hmac = "0.13"
 iroh = { version = "1.4.1", default-features = false, features = ["tls-aws-lc-rs"] }
 ksni = "0.3.7"
-mdns-sd = "0.21.7"
+mdns-sd = "0.22.0"
 oo7 = "0.7"
 prost = "0.14"
 prost-build = "0.14"
@@ -46,7 +46,7 @@ uuid = { version = "1.29", features = ["v4"] }
 wayland-client = "0.31.15"
 wayland-protocols = { version = "0.32.13", features = ["client", "staging"] }
 wayland-protocols-wlr = { version = "0.3.12", features = ["client"] }
-x11rb = { version = "0.13.2", default-features = false, features = ["xfixes"] }
+x11rb = { version = "0.14.0", default-features = false, features = ["xfixes"] }
 x25519-dalek = { version = "3.0", features = ["static_secrets", "getrandom"] }
 zbus = { version = "6.3.0", features = ["tokio"] }
 zeroize = { version = "1.9", features = ["derive"] }
