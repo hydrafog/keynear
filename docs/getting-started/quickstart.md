@@ -1,6 +1,6 @@
 # Quickstart
 
-Pair a Linux desktop running `keynear-linux` and `keynear-settings` with an Android phone running `org.keynear.app` (`1.0.0-vega`), then share files, clipboard items, and one-time codes over direct Wi-Fi QUIC.
+Pair a Linux desktop running `keynear-linux` and `keynear-settings` with an Android phone running `org.keynear.app` (`1.1.0-perseus`), then share files, clipboard items, and one-time codes over direct Wi-Fi QUIC.
 
 ## Pairing
 
@@ -32,6 +32,6 @@ Pair a Linux desktop running `keynear-linux` and `keynear-settings` with an Andr
 
 ## Audio Handoff and Fallbacks
 
-- `1.0.0-vega` is the current production release. Smart audio handoff pauses MPRIS2 playback and releases the matching `bap_sink`, `a2dp_sink`, or `hfp_hf` profile before the phone claims a shared headset, then reclaims it on release.
+- `1.1.0-perseus` is the current production release. Interrupted multi-gigabyte drops resume from the last verified 60 KiB chunk, and paired shared directories are browsable on demand through a Linux FUSE mount and an Android `DocumentsProvider`. Smart audio handoff pauses MPRIS2 playback and releases the matching `bap_sink`, `a2dp_sink`, or `hfp_hf` profile before the phone claims a shared headset, then reclaims it on release.
 - When no shared Wi-Fi network exists, peers negotiate Wi-Fi Aware NAN ahead of Wi-Fi Direct R2. `RangingManager` closeness gating activates only when both peers advertise the capability, the hardware supports it, and the device runs API 36 or later.
 - Under GNOME Mutter, install the optional bridge in `packaging/gnome/keynear-clipboard@hydrafog.github.com/` for background clipboard sync. Every backend degrades to a typed unavailable state when its OS service is missing.

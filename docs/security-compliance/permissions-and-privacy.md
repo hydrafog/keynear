@@ -1,6 +1,6 @@
 # Permissions and Privacy
 
-`Keynear` (`1.0.0-vega`) requests only the OS permissions needed for local peer discovery, notifications, clipboard continuity, direct Wi-Fi QUIC transfers, and negotiated proximity features.
+`Keynear` (`1.1.0-perseus`) requests only the OS permissions needed for local peer discovery, notifications, clipboard continuity, direct Wi-Fi QUIC transfers, and negotiated proximity features.
 
 ## Android Permissions
 
@@ -24,5 +24,6 @@
 - Incoming Android file receives write directly to `MediaStore.Downloads` with `IS_PENDING = 1`, clearing `IS_PENDING = 0` upon completion or deleting the pending row on error or cancellation without requesting broad external storage permissions.
 - Clipboard policy inspects offered MIME targets before reading any payload bytes and skips `x-kde-passwordManagerHint`, `application/x-password`, `ClipDescription.EXTRA_IS_SENSITIVE`, and user-configured `ignoredMimeTypes`.
 - Vega ranging and direct-path fallbacks require no new Android permission. `RangingManager` (`android.ranging.RangingManager`) is used only on API 36 or later, only when both peers negotiated the capability and the hardware reports support; `AwarePairingConfig` and `WifiP2pPairingBootstrappingConfig` are used only through the existing `NEARBY_WIFI_DEVICES` and local-network permissions and degrade to an unavailable result on unsupported hardware. Audio handoff reads BlueZ and MPRIS2 D-Bus objects without storing credentials, and no peer-supplied peripheral identifier or ranging measurement is written to `config.toml` or `devices.toml`.
+- The Android `DocumentsProvider` is reached through Storage Access Framework intents and URI permission grants, is protected by `MANAGE_DOCUMENTS`, and requires no new Android permission. Remote root and document names are bounded to 128 characters and passed through `sanitize_relative_path` before use, so a peer cannot inject a path or read another peer's tree. Checkpoint bitmaps, rolling digests, and resume byte counts stay in memory and are never serialized to `config.toml` or `devices.toml`.
 - Android OTP forwarding relies on Google Play Services SMS User Consent (`SmsRetriever.SEND_PERMISSION` + `com.google.android.gms` `EXTRA_CONSENT_INTENT` check) without requesting `READ_SMS`. Verified OTPs stay in Linux daemon memory only and are never written to `config.toml`, `devices.toml`, `DaemonStatus`, or logs.
 - `Keynear` ships under the [GNU General Public License v3.0](../../LICENSE).

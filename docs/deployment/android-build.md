@@ -1,6 +1,6 @@
 # Android Build
 
-The Android companion app (`org.keynear.app`, `versionCode = 6`, `versionName = "1.0.0-vega"`) compiles `keynear-ffi` (`libkeynear_core.so`) into `android/core-ffi/src/main/jniLibs` with `cargo-ndk` using 16 KB ELF page alignment before assembling the multi-module Gradle build (`:core-ffi`, `:designsystem`, `:app`).
+The Android companion app (`org.keynear.app`, `versionCode = 7`, `versionName = "1.1.0-perseus"`) compiles `keynear-ffi` (`libkeynear_core.so`) into `android/core-ffi/src/main/jniLibs` with `cargo-ndk` using 16 KB ELF page alignment before assembling the multi-module Gradle build (`:core-ffi`, `:designsystem`, `:app`).
 
 ## Native Library Compilation
 
@@ -16,7 +16,7 @@ Verify that every `LOAD` program header reports `0x4000` alignment.
 
 ## UniFFI Kotlin Bindings
 
-`crates/keynear-ffi` exposes `uniffi-bindgen` (`src/bin/uniffi_bindgen.rs`) behind the `bindgen-cli` feature. `:core-ffi:generateUniffiBindings` generates `uniffi/keynear_core/keynear_core.kt` into `android/core-ffi/build/generated/source/uniffi/` during Gradle builds:
+`crates/keynear-ffi` exposes `uniffi-bindgen` (`src/bin/uniffi_bindgen.rs`) behind the `bindgen-cli` feature. `:core-ffi:generateUniffiBindings` generates `uniffi/keynear_core/keynear_core.kt` into `android/core-ffi/build/generated/source/uniffi/` during Gradle builds. Perseus adds `FfiChunkCheckpoint`, `FfiReadPlan`, `FfiVfsNode`, `FfiResumeDecision`, and the `perseus_*` exports; `provide_vfs_read_fd` consumes the write end of a `ParcelFileDescriptor` pipe created by `RemoteDocumentStream`:
 
 ```bash
 nix develop .#android --command bash -c 'cd android && gradle :core-ffi:generateUniffiBindings'

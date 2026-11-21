@@ -30,7 +30,13 @@ Use these checks to diagnose discovery, Noise XX pairing, keyring, local network
 - If GTK4 file or folder pickers fail to open in `keynear-settings`, verify that a desktop `xdg-desktop-portal` backend is running for your session (`ashpd`) and confirm `daemon.sock` exists (`0o600` inside a `0o700` config directory) or retry via the inline offline banner.
 - Ensure Nautilus (`~/.local/share/nautilus/scripts/Send via Keynear`), Dolphin (`~/.local/share/kio/servicemenus/keynear-send.desktop`), or Yazi (`~/.config/yazi/plugins/keynear.yazi/main.lua`) can resolve `keynear-settings` on `PATH` (for example under `~/.local/bin`).
 
-## Wayland Clipboard Permissions (`1.0.0-vega`)
+## Resumable Transfers and Virtual Filesystem (`1.1.0-perseus`)
+
+- If an interrupted transfer restarts from chunk zero, verify that both peers advertise `CAP_RESUMABLE_TRANSFER` (`0x100`) and that the incoming `TransferCheckpoint` carries a contiguous verified-chunk bitmap, a 32-byte rolling digest, and a byte count matching that bitmap. A stale or duplicate checkpoint is ignored rather than applied.
+- If the on-demand mount does not appear, check the daemon log for `perseus_fuse_unavailable`. Kernel FUSE and `fusermount3` must be present, and the optional `fuser` adapter must be built with the `fuse` Cargo feature; the default headless build intentionally reports unavailable instead of failing startup. `services.keynear.fuse = true` in `packaging/nixos/default.nix` sets `KEYNEAR_FUSE=1`.
+- If a paired Linux directory is missing from the Android `Files` app, confirm the provider is enabled for the `org.keynear.app.vfs.provider` authority and that at least one peer is paired. `queryRoots` returns an empty cursor when no peer is paired; the provider adds no new Android permission.
+
+## Wayland Clipboard Permissions
 
 - Compositors with `ext-data-control-v1` or `zwlr-data-control-v1` support (KDE KWin, COSMIC, Sway, Hyprland) work directly through `crates/keynear-linux/src/clipboard.rs`, which logs `clipboard_backend_selected` (`ext-data-control-v1`, `zwlr-data-control-v1`, `x11`, or `headless-unavailable`). GNOME Mutter uses the shipped GNOME Shell D-Bus clipboard bridge in `packaging/gnome/keynear-clipboard@hydrafog.github.com/`; install and enable it when `clipboard_backend_selected` reports `headless-unavailable`.
 - When clipboard images or password-manager entries appear skipped, verify `clipboardImagesEnabled` and `ignoredMimeTypes` (`x-kde-passwordManagerHint`, `application/x-password`, max `128` IPC entries) in `keynear-settings`. On Android devices without Google Play services, SMS User Consent posts an availability status notification while manual clipboard sync continues working.

@@ -30,4 +30,4 @@ See [Linux systemd Deployment](../deployment/linux-systemd.md) for enabling and 
 
 ## Android
 
-Build the native libraries and companion APK (`1.0.0-vega`, `versionCode = 6`) inside `nix develop .#android` using `cargo-ndk` and `gradle assembleDebug` as detailed in [Android Build](../deployment/android-build.md), then install it on the target device and follow the collapsible onboarding checklist in `MainActivity` for `NEARBY_DEVICES`, `NEARBY_WIFI_DEVICES`, `POST_NOTIFICATIONS`, and background battery-optimization exemption.
+Build the native libraries and companion APK (`1.1.0-perseus`, `versionCode = 7`) inside `nix develop .#android` using `cargo-ndk` and `gradle assembleDebug` as detailed in [Android Build](../deployment/android-build.md), then install it on the target device and follow the collapsible onboarding checklist in `MainActivity` for `NEARBY_DEVICES`, `NEARBY_WIFI_DEVICES`, `POST_NOTIFICATIONS`, and background battery-optimization exemption.

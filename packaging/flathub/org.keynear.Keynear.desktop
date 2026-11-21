@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Keynear
+Comment=Continuity between Linux and Android
+Exec=keynear-settings
+Icon=keynear
+Terminal=false
+Categories=Utility;

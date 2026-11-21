@@ -1,0 +1,23 @@
+app-id: org.keynear.Keynear
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+command: keynear-settings
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  - --filesystem=xdg-download
+modules:
+  - name: keynear
+    buildsystem: simple
+    build-commands:
+      - cargo build --release -p keynear-linux -p keynear-settings
+      - install -Dm755 target/release/keynear-linux /app/bin/keynear-linux
+      - install -Dm755 target/release/keynear-settings /app/bin/keynear-settings
+      - install -Dm644 packaging/flathub/org.keynear.Keynear.desktop /app/share/applications/org.keynear.Keynear.desktop
+    sources:
+      - type: dir
+        path: ../..

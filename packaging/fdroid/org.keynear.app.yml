@@ -1,0 +1,23 @@
+Categories:
+  - Connectivity
+  - System
+License: GPL-3.0-only
+AuthorName: Hydrafog
+WebSite: https://github.com/hydrafog/keynear
+SourceCode: https://github.com/hydrafog/keynear
+IssueTracker: https://github.com/hydrafog/keynear/issues
+Summary: Direct, private continuity between Linux and Android
+Description: |
+  Keynear pairs a Linux desktop with an Android phone over authenticated,
+  relay-free QUIC. It streams files with resumable 60 KiB checkpoints, syncs
+  clipboard and one-time codes, hands off Bluetooth audio, and exposes paired
+  shared directories through a native document provider.
+RepoType: git
+Repo: https://github.com/hydrafog/keynear
+Builds:
+  - versionName: 1.1.0-perseus
+    versionCode: 7
+    commit: 1.1.0-perseus
+    subdir: android
+    gradle:
+      - assembleDebug
