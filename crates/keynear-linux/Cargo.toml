@@ -29,3 +29,16 @@ wayland-protocols-wlr.workspace = true
 x11rb.workspace = true
 zbus.workspace = true
 zeroize.workspace = true
+
+[features]
+default = []
+fuse = ["dep:fuser", "dep:libc"]
+
+[dependencies.fuser]
+version = "0.18"
+optional = true
+default-features = false
+
+[dependencies.libc]
+version = "0.2"
+optional = true

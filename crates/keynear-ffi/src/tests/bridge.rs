@@ -12,7 +12,7 @@ fn rename_paired_device_updates_store_and_validates_input() {
     let devices_str = devices_path.to_string_lossy().to_string();
 
     let handle = CoreHandle::new();
-    assert_eq!(get_core_status().version, "1.0.0");
+    assert_eq!(get_core_status().version, "1.1.0");
 
     let seeded = FfiPairedDevice {
         device_id: "phone-1".to_string(),

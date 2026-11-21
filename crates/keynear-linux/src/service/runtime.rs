@@ -93,6 +93,7 @@ impl DaemonRuntime {
         config.validate()?;
         let state = init_state(config, &options);
         crate::vega::initialize(config).await;
+        let _perseus_fuse_guard = crate::perseus::initialize();
         let mut services = init_services(InitParams {
             config,
             options: &options,

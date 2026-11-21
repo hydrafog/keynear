@@ -7,6 +7,7 @@
 pub mod callbacks;
 pub mod clipboard;
 pub mod pairing;
+pub mod perseus;
 pub mod transfer;
 pub mod vega;
 
@@ -30,6 +31,10 @@ pub use clipboard::FfiClipboardItem;
 pub use pairing::{
     FfiEveryoneNearbyBeacon, FfiNoisePairingSession, FfiPairedBeaconState, FfiPairingCompleted,
     FfiPairingRole, FfiPairingState, FfiPairingStep, FfiStaticKeypair,
+};
+pub use perseus::{
+    perseus_capability_flags, perseus_read_plan, perseus_resume_decision, perseus_root_node,
+    provide_vfs_read_fd, FfiChunkCheckpoint, FfiReadPlan, FfiResumeDecision, FfiVfsNode,
 };
 pub use transfer::{FfiTransferDirection, FfiTransferItem, FfiTransferSession, FfiTransferState};
 pub use vega::{
