@@ -129,6 +129,7 @@ private fun GattSession.completeGattServerPairing(
     BleScanner.notifyUiRefresh()
 }
 
+@SuppressLint("MissingPermission")
 internal fun GattSession.handleLanEndpointWrite(
     context: Context,
     device: BluetoothDevice,
