@@ -25,6 +25,12 @@ message Envelope {
     TransferCheckpoint transfer_checkpoint = 24;
     TransferResumeRequest transfer_resume_request = 25;
     TransferResumeAck transfer_resume_ack = 26;
+    MirroredNotification mirrored_notification = 27;
+    NotificationAction notification_action = 28;
+    CallAlert call_alert = 29;
+    CallAction call_action = 30;
+    MediaSessionState media_session_state = 31;
+    MediaCommand media_command = 32;
   }
 }
 
@@ -183,5 +189,97 @@ message TransferResumeAck {
   bool accepted = 3;
   uint64 resume_from_chunk = 4;
   string reason = 5;
+}
+
+message MirroredNotification {
+  string notification_key = 1;
+  string package_name = 2;
+  string title = 3;
+  string body = 4;
+  string category = 5;
+  uint64 sequence = 6;
+  bool supports_reply = 7;
+  bool supports_mark_read = 8;
+  bool supports_dismiss = 9;
+}
+
+enum NotificationActionKind {
+  NOTIFICATION_ACTION_UNSPECIFIED = 0;
+  NOTIFICATION_ACTION_REPLY = 1;
+  NOTIFICATION_ACTION_MARK_READ = 2;
+  NOTIFICATION_ACTION_DISMISS = 3;
+}
+
+message NotificationAction {
+  string notification_key = 1;
+  NotificationActionKind kind = 2;
+  string reply_text = 3;
+  uint64 sequence = 4;
+}
+
+enum CallState {
+  CALL_STATE_UNSPECIFIED = 0;
+  CALL_STATE_INCOMING = 1;
+  CALL_STATE_ACTIVE = 2;
+  CALL_STATE_ENDED = 3;
+}
+
+enum CallActionKind {
+  CALL_ACTION_UNSPECIFIED = 0;
+  CALL_ACTION_ANSWER = 1;
+  CALL_ACTION_DECLINE = 2;
+  CALL_ACTION_MUTE = 3;
+}
+
+message CallAlert {
+  string call_id = 1;
+  string caller = 2;
+  CallState state = 3;
+  SinkProfile sink_profile = 4;
+  uint64 sequence = 5;
+  bool supports_answer = 6;
+  bool supports_decline = 7;
+  bool supports_mute = 8;
+}
+
+message CallAction {
+  string call_id = 1;
+  CallActionKind kind = 2;
+  uint64 sequence = 3;
+}
+
+enum PlaybackState {
+  PLAYBACK_UNSPECIFIED = 0;
+  PLAYBACK_PLAYING = 1;
+  PLAYBACK_PAUSED = 2;
+  PLAYBACK_STOPPED = 3;
+}
+
+enum MediaCommandKind {
+  MEDIA_COMMAND_UNSPECIFIED = 0;
+  MEDIA_COMMAND_PLAY = 1;
+  MEDIA_COMMAND_PAUSE = 2;
+  MEDIA_COMMAND_NEXT = 3;
+  MEDIA_COMMAND_PREVIOUS = 4;
+}
+
+message MediaSessionState {
+  string player_id = 1;
+  string title = 2;
+  string artist = 3;
+  string album = 4;
+  PlaybackState playback = 5;
+  uint64 position_ms = 6;
+  uint64 duration_ms = 7;
+  uint64 sequence = 8;
+  bool can_pause = 9;
+  bool can_next = 10;
+  bool can_previous = 11;
+}
+
+message MediaCommand {
+  string player_id = 1;
+  MediaCommandKind kind = 2;
+  uint64 sequence = 3;
 }
 

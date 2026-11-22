@@ -1,0 +1,81 @@
+use keynear_protocol::KeynearError;
+
+use super::*;
+use crate::audio::AudioSinkProfile;
+
+fn begin(engine: &mut CallAlertEngine, seq: u64) -> CallPlan {
+    engine
+        .begin(seq, "call-1", "Pixel 9", AudioSinkProfile::HfpHf)
+        .expect("begin")
+}
+
+#[test]
+fn incoming_call_releases_headset_and_decline_reclaims_it() {
+    let mut engine = CallAlertEngine::new();
+    let start = begin(&mut engine, 1);
+    assert!(start.release_sink && !start.reclaim_sink);
+    assert_eq!(engine.snapshot().expect("state").phase, CallPhase::Incoming);
+    let declined = engine
+        .apply(2, "call-1", CallActionKind::Decline)
+        .expect("decline");
+    assert!(declined.reclaim_sink);
+    assert_eq!(engine.snapshot().expect("state").phase, CallPhase::Ended);
+}
+
+#[test]
+fn answer_then_mute_then_end() {
+    let mut engine = CallAlertEngine::new();
+    begin(&mut engine, 1);
+    engine
+        .apply(2, "call-1", CallActionKind::Answer)
+        .expect("answer");
+    assert_eq!(engine.snapshot().expect("state").phase, CallPhase::Active);
+    let muted = engine
+        .apply(3, "call-1", CallActionKind::Mute)
+        .expect("mute");
+    assert!(muted.mute);
+    assert!(engine.snapshot().expect("state").muted);
+    let ended = engine.end(4, "call-1").expect("end");
+    assert!(ended.reclaim_sink);
+}
+
+#[test]
+fn stale_call_action_is_rejected() {
+    let mut engine = CallAlertEngine::new();
+    begin(&mut engine, 5);
+    let stale = engine
+        .apply(4, "call-1", CallActionKind::Decline)
+        .expect("stale");
+    assert_eq!(stale, CallPlan::default());
+    let wrong_call = engine.apply(6, "call-2", CallActionKind::Decline);
+    assert!(matches!(wrong_call, Err(KeynearError::Protocol(_))));
+}
+
+#[test]
+fn mute_before_answer_is_rejected() {
+    let mut engine = CallAlertEngine::new();
+    begin(&mut engine, 1);
+    let err = engine
+        .apply(2, "call-1", CallActionKind::Mute)
+        .expect_err("mute requires active call");
+    assert!(matches!(err, KeynearError::Protocol(_)));
+}
+
+#[test]
+fn invalid_caller_is_rejected_before_state_change() {
+    let mut engine = CallAlertEngine::new();
+    let err = engine
+        .begin(1, "call-1", "", AudioSinkProfile::HfpHf)
+        .expect_err("empty caller rejected");
+    assert!(matches!(err, KeynearError::Validation { .. }));
+    assert!(engine.snapshot().is_none());
+    let err = engine
+        .begin(
+            2,
+            "call-1",
+            &"x".repeat(MAX_CALLER_LEN + 1),
+            AudioSinkProfile::BapSink,
+        )
+        .expect_err("long caller rejected");
+    assert!(matches!(err, KeynearError::Validation { .. }));
+}

@@ -5,6 +5,7 @@
 )]
 
 pub mod callbacks;
+pub mod carina;
 pub mod clipboard;
 pub mod pairing;
 pub mod perseus;
@@ -26,6 +27,12 @@ pub use callbacks::{
     everyone_nearby_timeout_secs, get_core_status, lan_endpoint_char_uuid16,
     lan_endpoint_char_uuid_string, pairing_timeout_secs, CoreStatus, FfiDaemonConfig,
     FfiDeviceRole, FfiError, FfiLanEndpoint, FfiPairedDevice, FfiVisibilityMode,
+};
+pub use carina::{
+    carina_call_action_allowed, carina_capability_flags, carina_media_command_allowed,
+    carina_mirror_notification, carina_validate_reply, FfiCallAction, FfiCallPhase,
+    FfiMediaCommand, FfiMediaState, FfiMirroredNotification, FfiNotificationAction,
+    FfiNotificationDescriptor, FfiPlayback,
 };
 pub use clipboard::FfiClipboardItem;
 pub use pairing::{

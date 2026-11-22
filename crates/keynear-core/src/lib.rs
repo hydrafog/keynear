@@ -5,10 +5,13 @@
 )]
 
 pub mod audio;
+pub mod call;
 pub mod capability;
 pub mod clipboard;
 pub mod fallback;
 pub mod keyring;
+pub mod media;
+pub mod notifications;
 pub mod pairing;
 pub mod resume;
 pub mod transfer;
@@ -19,10 +22,15 @@ pub use audio::{
     AudioHandoffEngine, AudioHandoffPlan, AudioHandoffState, AudioSinkProfile, HandoffPhase,
     MAX_PERIPHERAL_ID_LEN,
 };
+pub use call::{
+    CallActionKind, CallAlertEngine, CallAlertState, CallPhase, CallPlan, MAX_CALLER_LEN,
+    MAX_CALL_ID_LEN,
+};
 pub use capability::{
     negotiate_capabilities, ranging_method, RangingMethod, VegaCapabilities, CAP_AUDIO_HANDOFF,
-    CAP_CLIPBOARD, CAP_FILE_TRANSFER, CAP_LEGACY_RESERVED, CAP_RANGING_CS, CAP_RANGING_UWB,
-    CAP_RESUMABLE_TRANSFER, CAP_WIFI_AWARE, CAP_WIFI_DIRECT_R2,
+    CAP_CALL_ALERTS, CAP_CLIPBOARD, CAP_FILE_TRANSFER, CAP_LEGACY_RESERVED, CAP_MEDIA_BRIDGE,
+    CAP_NOTIFICATION_MIRROR, CAP_RANGING_CS, CAP_RANGING_UWB, CAP_RESUMABLE_TRANSFER,
+    CAP_WIFI_AWARE, CAP_WIFI_DIRECT_R2,
 };
 pub use clipboard::{
     is_image_mime, normalize_mime_type, pick_preferred_image_mime, read_clipboard_blob,
@@ -47,6 +55,15 @@ pub use keynear_protocol::{
 pub use keyring::{
     commit_paired_device, remove_paired_device, InMemorySecretStore, PeerSecrets, SecretStore,
     StaticKeypairRecord,
+};
+pub use media::{
+    validate_metadata, MediaCommandKind, MediaCommandPlan, MediaMetadata, MediaSessionBridge,
+    PlaybackState, MAX_METADATA_LEN, MAX_PLAYER_ID_LEN,
+};
+pub use notifications::{
+    is_package_excluded, validate_descriptor, validate_reply_text, MirrorEngine,
+    MirroredNotificationView, NotificationDescriptor, MAX_CATEGORY_LEN, MAX_NOTIFICATION_BODY_LEN,
+    MAX_NOTIFICATION_KEY_LEN, MAX_NOTIFICATION_TITLE_LEN, MAX_PACKAGE_NAME_LEN,
 };
 pub use pairing::{
     NoisePairingSession, PairingCompleted, PairingPeerMetadata, PairingRole, PairingState,

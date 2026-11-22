@@ -1,5 +1,6 @@
 use super::*;
 
+mod carina;
 mod perseus;
 mod vega;
 

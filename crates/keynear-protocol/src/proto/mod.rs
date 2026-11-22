@@ -126,6 +126,12 @@ fn payload_kind_and_bytes(payload: &v1::envelope::Payload) -> (&'static str, Vec
         P::TransferCheckpoint(value) => ("transfer_checkpoint", value.encode_to_vec()),
         P::TransferResumeRequest(value) => ("transfer_resume_request", value.encode_to_vec()),
         P::TransferResumeAck(value) => ("transfer_resume_ack", value.encode_to_vec()),
+        P::MirroredNotification(value) => ("mirrored_notification", value.encode_to_vec()),
+        P::NotificationAction(value) => ("notification_action", value.encode_to_vec()),
+        P::CallAlert(value) => ("call_alert", value.encode_to_vec()),
+        P::CallAction(value) => ("call_action", value.encode_to_vec()),
+        P::MediaSessionState(value) => ("media_session_state", value.encode_to_vec()),
+        P::MediaCommand(value) => ("media_command", value.encode_to_vec()),
     }
 }
 
@@ -178,6 +184,12 @@ fn decode_payload(kind: &str, slice: &[u8]) -> Result<v1::envelope::Payload, Key
         "transfer_checkpoint" => P::TransferCheckpoint(decode(slice)?),
         "transfer_resume_request" => P::TransferResumeRequest(decode(slice)?),
         "transfer_resume_ack" => P::TransferResumeAck(decode(slice)?),
+        "mirrored_notification" => P::MirroredNotification(decode(slice)?),
+        "notification_action" => P::NotificationAction(decode(slice)?),
+        "call_alert" => P::CallAlert(decode(slice)?),
+        "call_action" => P::CallAction(decode(slice)?),
+        "media_session_state" => P::MediaSessionState(decode(slice)?),
+        "media_command" => P::MediaCommand(decode(slice)?),
         other => {
             return Err(KeynearError::Protocol(format!(
                 "unknown control frame kind '{other}'"
