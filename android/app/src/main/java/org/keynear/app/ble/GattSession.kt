@@ -42,6 +42,9 @@ object GattSession {
     @Volatile
     internal var pendingPeerExport: ByteArray? = null
 
+    @Volatile
+    internal var pendingLanExchangePeerId: String? = null
+
     @SuppressLint("MissingPermission")
     fun ensureGattServer(context: Context, manager: BluetoothManager) {
         if (gattServer != null || !KeynearBleConstants.hasConnectPermission(context)) return
@@ -116,6 +119,7 @@ object GattSession {
             activePeerAddress = peerAddress
             pendingLocalExport = null
             pendingPeerExport = null
+            pendingLanExchangePeerId = null
             activeClientGatt?.close()
             activeClientGatt = device.connectGatt(
                 context,
@@ -170,7 +174,15 @@ object GattSession {
         val peerAddr = activePeerAddress ?: return
         if (clientGatt == null) return
         pendingPeerExport = null
-        completeGattClientPairing(context, client, session, clientGatt, peerAddr, buffered)
+        completeGattClientPairing(
+            context,
+            client,
+            session,
+            clientGatt,
+            peerAddr,
+            buffered,
+            deferLanExchange = true,
+        )
     }
 
     fun rejectActivePairing(context: Context) {
@@ -179,6 +191,7 @@ object GattSession {
         activePeerAddress = null
         pendingLocalExport = null
         pendingPeerExport = null
+        pendingLanExchangePeerId = null
         CoreClientProvider.init(context).setPendingPairing(null)
         PairingNotifier.cancel(context)
         BleScanner.notifyUiRefresh()

@@ -21,8 +21,20 @@ object ReceiveStateHolder {
                 ),
             )
         }
+        val pairedAddresses = snapshot.pairedDevices
+            .mapNotNull { dev -> dev.lastBleAddress.takeIf { it.isNotBlank() }?.lowercase() }
+            .toSet()
+        val pairedNames = snapshot.pairedDevices
+            .map { it.displayName.trim().lowercase() }
+            .toSet()
         if (snapshot.visibility != VisibilityState.HIDDEN) {
-            snapshot.nearbyPeers.filter { !it.isPaired }.forEach { peer ->
+            snapshot.nearbyPeers
+                .filter { peer ->
+                    !peer.isPaired &&
+                        peer.address.lowercase() !in pairedAddresses &&
+                        peer.displayName.trim().lowercase() !in pairedNames
+                }
+                .forEach { peer ->
                 result.add(
                     OrbitPinUi(
                         id = peer.address,

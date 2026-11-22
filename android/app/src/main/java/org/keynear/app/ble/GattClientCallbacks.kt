@@ -72,10 +72,16 @@ internal fun GattSession.buildGattClientCallback(context: Context, peerAddress: 
             characteristic: BluetoothGattCharacteristic,
             status: Int,
         ) {
-            if (status == BluetoothGatt.GATT_SUCCESS &&
-                characteristic.uuid == KeynearBleConstants.LAN_ENDPOINT_CHAR_UUID
-            ) {
-                runCatching { gatt.readCharacteristic(characteristic) }
+            if (status != BluetoothGatt.GATT_SUCCESS) return
+            when (characteristic.uuid) {
+                KeynearBleConstants.PAIRING_TX_CHAR_UUID -> {
+                    val peerId = pendingLanExchangePeerId ?: return
+                    pendingLanExchangePeerId = null
+                    exchangeLanEndpointWithGatt(context, gatt, peerId)
+                }
+                KeynearBleConstants.LAN_ENDPOINT_CHAR_UUID -> {
+                    runCatching { gatt.readCharacteristic(characteristic) }
+                }
             }
         }
 
@@ -199,6 +205,7 @@ internal fun GattSession.completeGattClientPairing(
     gatt: BluetoothGatt,
     peerAddress: String,
     value: ByteArray,
+    deferLanExchange: Boolean = false,
 ) {
     val completed = runCatching { session.completeWithPeerExport(value) }.getOrNull() ?: return
     try {
@@ -216,7 +223,11 @@ internal fun GattSession.completeGattClientPairing(
     }
     activeSession = null
     client.setPendingPairing(null)
-    exchangeLanEndpointWithGatt(context, gatt, completed.peerDeviceId)
+    if (deferLanExchange) {
+        pendingLanExchangePeerId = completed.peerDeviceId
+    } else {
+        exchangeLanEndpointWithGatt(context, gatt, completed.peerDeviceId)
+    }
     BleScanner.notifyUiRefresh()
 }
 
