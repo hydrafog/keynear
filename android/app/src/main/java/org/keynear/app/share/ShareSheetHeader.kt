@@ -105,7 +105,7 @@ internal fun ShareSheetHeader(
         ) {
             Surface(modifier = Modifier.size(CloseBadgeSize), shape = CircleShape, color = palette.surfaceTonal) {
                 Box(contentAlignment = Alignment.Center) {
-                    ShareCloseIcon(color = palette.error, size = KeynearSpacing.Lg)
+                    ShareCloseIcon(color = palette.textSecondary, size = KeynearSpacing.Lg)
                 }
             }
         }

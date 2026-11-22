@@ -150,7 +150,7 @@ SettingsSection(title = "Clipboard") {
                             )
                             TactileSurface(
                                 shape = KeynearShapes.Lg,
-                                containerColor = palette.errorAction,
+                                containerColor = palette.surfaceTonal,
                                 tone = TactileTone.TONAL,
                                 cornerRadius = KeynearRadii.Lg,
                                 onClick = {
@@ -169,7 +169,7 @@ SettingsSection(title = "Clipboard") {
                                 ) {
                                     IconClose(
                                         modifier = Modifier.size(KeynearSpacing.Lg),
-                                        tint = palette.error,
+                                        tint = palette.textSecondary,
                                     )
                                 }
                             }

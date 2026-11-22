@@ -1,7 +1,9 @@
 package org.keynear.app.ui.receive
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -86,8 +88,9 @@ internal fun VisibilitySegmentedControl(
         Triple(VisibilityState.EVERYONE_NEARBY, "Everyone", 2),
     )
     val selectedIndex = items.indexOfFirst { it.first == current }.coerceAtLeast(0)
-    val wellColor = palette.visibilityWell
+    val wellColor = palette.visibilityWell.copy(alpha = 0.93f)
     val density = LocalDensity.current
+    val pillEasing = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
 
     Box(
         modifier = Modifier
@@ -105,6 +108,7 @@ internal fun VisibilitySegmentedControl(
             val slotWidth = maxWidth / 3f
             val indicatorOffset by animateDpAsState(
                 targetValue = slotWidth * selectedIndex,
+                animationSpec = tween(durationMillis = 320, easing = pillEasing),
                 label = "visibilityPill",
             )
 
@@ -218,7 +222,7 @@ internal fun CenterSelfNode(
 
         TactileSurface(
             shape = KeynearShapes.Xl,
-            containerColor = palette.surface,
+            containerColor = palette.surface.copy(alpha = 0.94f),
             tone = TactileTone.SURFACE,
             cornerRadius = KeynearRadii.Xl,
         ) {
@@ -238,7 +242,7 @@ internal fun CenterSelfNode(
                     val secs = remainingSecs.coerceAtLeast(0L) % 60L
                     Text(
                         text = "$mins:${secs.toString().padStart(2, '0')}",
-                        color = palette.loading,
+                        color = palette.loadingInk,
                         fontSize = KeynearTypeSizes.Description,
                         fontWeight = FontWeight.Bold,
                     )

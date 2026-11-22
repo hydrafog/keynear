@@ -1,7 +1,9 @@
 package org.keynear.app.ui.navigation
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -70,12 +72,15 @@ fun KeynearBottomNav(
         ) {
             KeynearTab.entries.forEach { tab ->
                 val active = subScreen == null && activeTab == tab
+                val navEasing = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
                 val pillWidth by animateDpAsState(
                     targetValue = if (active) ActivePillWidth else InactivePillWidth,
+                    animationSpec = tween(durationMillis = 320, easing = navEasing),
                     label = "navPillWidth",
                 )
                 val tint by animateColorAsState(
                     targetValue = if (active) palette.onLoadingTonal else palette.textMuted,
+                    animationSpec = tween(durationMillis = 220, easing = navEasing),
                     label = "navTint",
                 )
                 Column(

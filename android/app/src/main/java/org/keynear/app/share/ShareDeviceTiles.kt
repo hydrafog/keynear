@@ -88,7 +88,7 @@ internal fun ShareDeviceTile(
                 Surface(
                     modifier = Modifier.size(DeviceIconContainerSize),
                     shape = RoundedCornerShape(DeviceIconContainerRadius),
-                    color = if (device.isOnline) palette.loadingTonal else palette.surface,
+                    color = palette.loadingTonal,
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         if (isSending) {
@@ -100,7 +100,7 @@ internal fun ShareDeviceTile(
                         } else {
                             ShareRoleIcon(
                                 role = device.role,
-                                color = if (device.isOnline) palette.onLoadingTonal else palette.textMuted,
+                                color = palette.onLoadingTonal,
                                 size = 22.dp,
                             )
                         }

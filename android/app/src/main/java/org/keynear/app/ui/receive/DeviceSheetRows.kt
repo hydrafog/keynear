@@ -76,13 +76,6 @@ internal fun EmptyDevicesSheetContent(
             .fillMaxWidth()
             .height(currentHeight)
             .then(dragModifier)
-            .clip(KeynearShapes.Xl)
-            .background(palette.trackWell)
-            .tactileCushion(
-                tone = TactileTone.INSET,
-                isDark = palette.isDark,
-                cornerRadius = KeynearRadii.Xl,
-            )
             .padding(KeynearSpacing.Lg),
         contentAlignment = Alignment.Center,
     ) {
@@ -90,12 +83,27 @@ internal fun EmptyDevicesSheetContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
         ) {
-            IconRadio(modifier = Modifier.size(EmptyIconSize), tint = palette.textMuted)
+            TactileSurface(
+                modifier = Modifier.size(RowIconSize),
+                shape = KeynearShapes.Xl,
+                containerColor = palette.loadingTonal,
+                tone = TactileTone.TONAL,
+                cornerRadius = KeynearRadii.Xl,
+            ) {
+                Box(modifier = Modifier.size(RowIconSize), contentAlignment = Alignment.Center) {
+                    IconRadio(modifier = Modifier.size(EmptyIconSize), tint = palette.onLoadingTonal)
+                }
+            }
             Text(
-                text = "No computers in range",
-                color = palette.textMuted,
+                text = "No computers nearby",
+                color = palette.textPrimary,
                 fontSize = KeynearTypeSizes.Description,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = "Switch visibility to Paired or Everyone",
+                color = palette.textMuted,
+                fontSize = KeynearTypeSizes.Caption,
             )
         }
     }

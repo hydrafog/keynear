@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import org.keynear.designsystem.TactileSurface
 import org.keynear.designsystem.TactileTone
 import org.keynear.designsystem.IconArrowLeft
+import org.keynear.designsystem.IconKeynearSymbolic
 import org.keynear.designsystem.KeynearRadii
 import org.keynear.designsystem.KeynearShapes
 import org.keynear.designsystem.KeynearSpacing
@@ -52,50 +53,48 @@ fun KeynearTopAppBar(
     val title = topAppBarTitle(activeTab, subScreen, deviceDisplayName)
 
     val isReceiveHome = subScreen == null && activeTab == KeynearTab.RECEIVE
-    Box(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(if (isReceiveHome) palette.mapBlue else palette.canvas),
+            .background(palette.canvas)
+            .statusBarsPadding()
+            .height(ActivePillWidth)
+            .padding(horizontal = KeynearSpacing.Lg),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Md),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(KeynearShapes.TopBar)
-                .background(palette.canvas)
-                .statusBarsPadding()
-                .height(ActivePillWidth)
-                .padding(horizontal = KeynearSpacing.Lg),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Md),
-        ) {
-            if (subScreen != null) {
-                TactileSurface(
+        if (subScreen != null) {
+            TactileSurface(
+                modifier = Modifier.size(KeynearSpacing.MinTouchTarget),
+                shape = KeynearShapes.Card,
+                containerColor = palette.surface,
+                tone = TactileTone.SURFACE,
+                cornerRadius = KeynearRadii.TwoXl,
+                onClick = onBack,
+            ) {
+                Box(
                     modifier = Modifier.size(KeynearSpacing.MinTouchTarget),
-                    shape = KeynearShapes.Card,
-                    containerColor = palette.surface,
-                    tone = TactileTone.SURFACE,
-                    cornerRadius = KeynearRadii.TwoXl,
-                    onClick = onBack,
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Box(
-                        modifier = Modifier.size(KeynearSpacing.MinTouchTarget),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        IconArrowLeft(modifier = Modifier.size(KeynearSpacing.Xl), tint = palette.textPrimary)
-                    }
+                    IconArrowLeft(modifier = Modifier.size(KeynearSpacing.Xl), tint = palette.textPrimary)
                 }
             }
-
-            Text(
-                text = title,
-                color = palette.textPrimary,
-                fontSize = KeynearTypeSizes.Title,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = (-0.6).sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+        } else if (isReceiveHome) {
+            IconKeynearSymbolic(
+                modifier = Modifier.size(KeynearSpacing.Xl),
+                tint = palette.textPrimary,
             )
         }
+
+        Text(
+            text = title,
+            color = palette.textPrimary,
+            fontSize = KeynearTypeSizes.Title,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = (-0.6).sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

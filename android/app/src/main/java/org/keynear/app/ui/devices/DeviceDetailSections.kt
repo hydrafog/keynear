@@ -68,12 +68,12 @@ TactileSurface(
         TactileSurface(
             modifier = Modifier.size(HeaderIconSize),
             shape = KeynearShapes.Xl,
-            containerColor = if (device.isOnline) palette.loadingTonal else palette.surfaceTonal,
+            containerColor = palette.loadingTonal,
             tone = TactileTone.TONAL,
             cornerRadius = KeynearRadii.Xl,
         ) {
             Box(modifier = Modifier.size(HeaderIconSize), contentAlignment = Alignment.Center) {
-                val iconTint = if (device.isOnline) palette.onLoadingTonal else palette.textMuted
+                val iconTint = palette.onLoadingTonal
                 if (device.role == DeviceRoleUi.DESKTOP) {
                     IconLaptop(modifier = Modifier.size(SectionIconSize), tint = iconTint)
                 } else {

@@ -117,7 +117,7 @@ Column(verticalArrangement = Arrangement.spacedBy(KeynearLayout.SectionHeadingBo
                         TactileSurface(
                             modifier = Modifier.size(KeynearSpacing.MinTouchTarget),
                             shape = KeynearShapes.Xl,
-                            containerColor = palette.surfaceTonal,
+                            containerColor = palette.loadingTonal,
                             tone = TactileTone.TONAL,
                             cornerRadius = KeynearRadii.Xl,
                         ) {
@@ -125,7 +125,7 @@ Column(verticalArrangement = Arrangement.spacedBy(KeynearLayout.SectionHeadingBo
                                 modifier = Modifier.size(KeynearSpacing.MinTouchTarget),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                val iconTint = palette.textSecondary
+                                val iconTint = palette.onLoadingTonal
                                 if (device.role == DeviceRoleUi.DESKTOP) {
                                     IconLaptop(modifier = Modifier.size(KeynearSpacing.Xl), tint = iconTint)
                                 } else {

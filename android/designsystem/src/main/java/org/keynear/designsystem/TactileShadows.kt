@@ -4,13 +4,16 @@ import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Paint as AndroidPaint
 import android.graphics.Path as AndroidPath
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Dp
@@ -193,4 +196,53 @@ fun Modifier.tactileCushion(
         }
         drawContent()
     }
+}
+
+internal val KeynearSpringEasing = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
+internal const val SWITCH_GLIDE_DURATION_MS = 360
+internal const val SYMBOLIC_STEM_ALPHA = 0.55f
+internal const val SYMBOLIC_ARM_ALPHA = 0.75f
+internal const val SYMBOLIC_OUTER_ARC_ALPHA = 0.58f
+
+internal fun tactileSurfaceBrush(
+    tone: TactileTone,
+    containerColor: Color,
+    palette: KeynearPalette,
+): Brush {
+    val alpha = containerColor.alpha
+    val base = containerColor.copy(alpha = 1f)
+    val stops = when (tone) {
+        TactileTone.ACCENT -> listOf(
+            lerp(base, palette.focusRing, 0.36f).copy(alpha = alpha),
+            containerColor,
+            lerp(base, palette.onCanvas, if (palette.isDark) 0.24f else 0.28f).copy(alpha = alpha),
+        )
+        TactileTone.SURFACE -> listOf(
+            lerp(base, palette.onAccent, if (palette.isDark) 0.05f else 0.65f).copy(alpha = alpha),
+            containerColor,
+            lerp(base, palette.canvas, if (palette.isDark) 0.32f else 0.42f).copy(alpha = alpha),
+        )
+        TactileTone.SHEET -> listOf(
+            lerp(base, palette.onAccent, if (palette.isDark) 0.05f else 0.72f).copy(alpha = alpha),
+            containerColor,
+            lerp(base, palette.canvas, if (palette.isDark) 0.28f else 0.36f).copy(alpha = alpha),
+        )
+        TactileTone.TONAL -> listOf(
+            lerp(base, palette.onAccent, if (palette.isDark) 0.04f else 0.38f).copy(alpha = alpha),
+            containerColor,
+        )
+        TactileTone.THUMB -> listOf(
+            palette.onAccent.copy(alpha = alpha),
+            lerp(base, palette.canvas, 0.22f).copy(alpha = alpha),
+        )
+        TactileTone.INSET, TactileTone.NONE -> listOf(containerColor, containerColor)
+    }
+    return Brush.verticalGradient(colors = stops)
+}
+
+internal fun tactileSurfaceRimColor(tone: TactileTone, palette: KeynearPalette): Color? = when (tone) {
+    TactileTone.ACCENT -> palette.focusRing.copy(alpha = if (palette.isDark) 0.28f else 0.40f)
+    TactileTone.SURFACE, TactileTone.SHEET, TactileTone.TONAL ->
+        if (palette.isDark) palette.onAccent.copy(alpha = 0.08f) else palette.sheetHandle.copy(alpha = 0.48f)
+    TactileTone.THUMB, TactileTone.INSET, TactileTone.NONE -> null
 }

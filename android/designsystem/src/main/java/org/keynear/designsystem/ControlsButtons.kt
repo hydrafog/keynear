@@ -34,7 +34,7 @@ fun SelectionTile(
 ) {
     val palette = LocalKeynearPalette.current
     val bg = if (active) palette.loadingTonal else palette.surface
-    val iconColor = if (active) palette.onLoadingTonal else palette.textSecondary
+    val iconColor = if (active) palette.onLoadingTonal else palette.loadingInk
     val textColor = if (active) palette.onLoadingTonal else palette.textPrimary
 
     TactileSurface(

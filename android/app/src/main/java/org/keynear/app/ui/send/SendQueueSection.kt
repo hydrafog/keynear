@@ -66,59 +66,64 @@ TactileSurface(
         modifier = Modifier.padding(KeynearLayout.CardPadding),
         verticalArrangement = Arrangement.spacedBy(ContentGap),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(QueueHeaderHeight)
-                .padding(horizontal = TextSubtitleGap),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "${queue.size} item(s) (${formatBytes(totalBytes)})",
-                color = palette.textPrimary,
-                fontSize = KeynearTypeSizes.Description,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f),
-            )
-            if (queue.isNotEmpty()) {
-                ActionButton(
-                    label = "Clear all",
-                    onClick = actions.onClearQueue,
-                    errorTonal = true,
-                    minHeight = QueueHeaderHeight,
-                )
-            }
-        }
-
         if (queue.isEmpty()) {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(RowMinHeight)
-                    .clip(KeynearShapes.Xl)
-                    .background(palette.trackWell)
-                    .tactileCushion(
-                        tone = TactileTone.INSET,
-                        isDark = palette.isDark,
-                        cornerRadius = KeynearRadii.Xl,
-                    )
-                    .padding(horizontal = RowIconSize, vertical = KeynearSpacing.Sm),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(ContentGap),
+                    .padding(vertical = KeynearSpacing.Md),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
             ) {
-                IconFile(
-                    modifier = Modifier.size(ActionIconSize),
-                    tint = palette.textMuted,
+                TactileSurface(
+                    modifier = Modifier.size(ButtonHeight),
+                    shape = KeynearShapes.Xl,
+                    containerColor = palette.loadingTonal,
+                    tone = TactileTone.TONAL,
+                    cornerRadius = KeynearRadii.Xl,
+                ) {
+                    Box(modifier = Modifier.size(ButtonHeight), contentAlignment = Alignment.Center) {
+                        IconFile(
+                            modifier = Modifier.size(ActionIconSize),
+                            tint = palette.onLoadingTonal,
+                        )
+                    }
+                }
+                Text(
+                    text = "Nothing queued yet",
+                    color = palette.textPrimary,
+                    fontSize = KeynearTypeSizes.Description,
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    text = "No items selected",
+                    text = "Pick a file, folder, clipboard, or note above",
                     color = palette.textMuted,
-                    fontSize = KeynearTypeSizes.Description,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    fontSize = KeynearTypeSizes.Caption,
                 )
             }
         } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(QueueHeaderHeight)
+                    .padding(horizontal = TextSubtitleGap),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val countLabel = if (queue.size == 1) "1 item" else "${queue.size} items"
+                Text(
+                    text = "$countLabel · ${formatBytes(totalBytes)}",
+                    color = palette.textPrimary,
+                    fontSize = KeynearTypeSizes.Description,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
+                ActionButton(
+                    label = "Clear all",
+                    onClick = actions.onClearQueue,
+                    tonalSurface = true,
+                    minHeight = QueueHeaderHeight,
+                )
+            }
+
             Column(verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm)) {
                 queue.forEach { item ->
                     TactileSurface(
@@ -139,19 +144,19 @@ TactileSurface(
                             when (item.kind) {
                                 SendItemKind.FOLDER -> IconFolder(
                                     modifier = Modifier.size(ActionIconSize),
-                                    tint = palette.textSecondary,
+                                    tint = palette.loadingInk,
                                 )
                                 SendItemKind.CLIPBOARD -> IconClipboard(
                                     modifier = Modifier.size(ActionIconSize),
-                                    tint = palette.textSecondary,
+                                    tint = palette.loadingInk,
                                 )
                                 SendItemKind.TEXT -> IconPlus(
                                     modifier = Modifier.size(ActionIconSize),
-                                    tint = palette.textSecondary,
+                                    tint = palette.loadingInk,
                                 )
                                 SendItemKind.FILE -> IconFile(
                                     modifier = Modifier.size(ActionIconSize),
-                                    tint = palette.textSecondary,
+                                    tint = palette.loadingInk,
                                 )
                             }
                             Text(
@@ -170,7 +175,7 @@ TactileSurface(
                             TactileSurface(
                                 modifier = Modifier.size(ButtonHeight),
                                 shape = KeynearShapes.Xl,
-                                containerColor = palette.errorAction,
+                                containerColor = palette.surfaceTonal,
                                 tone = TactileTone.TONAL,
                                 cornerRadius = KeynearRadii.Xl,
                                 onClick = { actions.onRemoveQueueItem(item.id) },
@@ -181,7 +186,7 @@ TactileSurface(
                                 ) {
                                     IconClose(
                                         modifier = Modifier.size(ActionIconSize),
-                                        tint = palette.error,
+                                        tint = palette.textSecondary,
                                     )
                                 }
                             }

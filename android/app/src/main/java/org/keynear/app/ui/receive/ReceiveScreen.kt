@@ -7,10 +7,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.keynear.app.ui.components.ActiveTransfersStrip
 import org.keynear.app.ui.components.PendingPairingBanner
@@ -22,6 +26,7 @@ import org.keynear.designsystem.LocalKeynearPalette
 
 private val ContentGap = 10.dp
 private val MapTopInset = 80.dp
+private val SelfAuraSize = 260.dp
 
 @Composable
 fun ReceiveScreen(
@@ -39,13 +44,7 @@ fun ReceiveScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    0.0f to palette.mapBlue,
-                    0.65f to palette.mapBlue,
-                    1.0f to palette.canvas,
-                ),
-            ),
+            .background(palette.canvas),
     ) {
         Box(
             modifier = Modifier
@@ -63,6 +62,20 @@ fun ReceiveScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
+                    if (radarActive) {
+                        Box(
+                            modifier = Modifier
+                                .size(SelfAuraSize)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.radialGradient(
+                                        0.0f to palette.loading.copy(alpha = if (palette.isDark) 0.16f else 0.14f),
+                                        0.45f to palette.loading.copy(alpha = 0.05f),
+                                        1.0f to Color.Transparent,
+                                    ),
+                                ),
+                        )
+                    }
                     CenterSelfNode(
                         localDeviceName = localDeviceName,
                         visibility = snapshot.visibility,

@@ -108,23 +108,23 @@ internal fun OrbitPinsLayer(
             TactileSurface(
                 modifier = Modifier.size(PinNodeSize),
                 shape = CircleShape,
-                containerColor = palette.surface,
+                containerColor = palette.surface.copy(alpha = 0.94f),
                 tone = TactileTone.SURFACE,
                 cornerRadius = KeynearSpacing.TwoXl,
                 isCircle = true,
             ) {
                 Box(modifier = Modifier.size(PinNodeSize), contentAlignment = Alignment.Center) {
                     if (pin.role == DeviceRoleUi.DESKTOP) {
-                        IconLaptop(modifier = Modifier.size(PinIconSize), tint = palette.loading)
+                        IconLaptop(modifier = Modifier.size(PinIconSize), tint = palette.loadingInk)
                     } else {
-                        IconSmartphone(modifier = Modifier.size(PinIconSize), tint = palette.loading)
+                        IconSmartphone(modifier = Modifier.size(PinIconSize), tint = palette.loadingInk)
                     }
                 }
             }
 
             TactileSurface(
                 shape = KeynearShapes.Xl,
-                containerColor = palette.surface,
+                containerColor = palette.surface.copy(alpha = 0.94f),
                 tone = TactileTone.SURFACE,
                 cornerRadius = KeynearRadii.Xl,
             ) {

@@ -88,27 +88,36 @@ fun ActiveTransfersStrip(
     TactileSurface(
         modifier = modifier.fillMaxWidth(),
         shape = KeynearShapes.Card,
-        containerColor = palette.surface,
+        containerColor = palette.surface.copy(alpha = 0.94f),
         tone = TactileTone.SURFACE,
         cornerRadius = KeynearRadii.TwoXl,
     ) {
         Column(
-            modifier = Modifier.padding(KeynearLayout.CardPadding),
-            verticalArrangement = Arrangement.spacedBy(ContentGap),
+            modifier = Modifier.padding(KeynearLayout.CardPaddingLarge),
+            verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Lg),
         ) {
             transfers.take(2).forEach { tx ->
-                Column(verticalArrangement = Arrangement.spacedBy(CompactGap)) {
+                val fraction = if (tx.totalBytes > 0L) {
+                    (tx.transferredBytes.toFloat() / tx.totalBytes.toFloat()).coerceIn(0f, 1f)
+                } else {
+                    0f
+                }
+                val pct = (fraction * 100f).toInt()
+                Column(verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Md)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Md),
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Xs),
+                        ) {
                             Text(
                                 text = tx.summaryName,
                                 color = palette.textPrimary,
-                                fontSize = KeynearTypeSizes.Description,
-                                fontWeight = FontWeight.SemiBold,
+                                fontSize = KeynearTypeSizes.Body,
+                                fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -116,41 +125,54 @@ fun ActiveTransfersStrip(
                             Text(
                                 text = "$dir ${tx.peerDisplayName} · ${formatBytes(tx.totalBytes)}",
                                 color = palette.textMuted,
-                                fontSize = KeynearTypeSizes.Caption,
+                                fontSize = KeynearTypeSizes.Description,
                             )
                         }
-                        when (tx.state) {
-                            TransferStateUi.PENDING_CONSENT -> {
+                        if (tx.state == TransferStateUi.ACTIVE) {
+                            Text(
+                                text = "$pct%",
+                                color = palette.loadingInk,
+                                fontSize = KeynearTypeSizes.Description,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
+                    if (tx.state == TransferStateUi.ACTIVE) {
+                        KeynearProgressBar(progress = fraction)
+                    }
+                    when (tx.state) {
+                        TransferStateUi.PENDING_CONSENT -> {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
+                            ) {
                                 ActionButton(
                                     label = "Decline",
                                     onClick = { onDecline(tx.transferId) },
-                                    errorTonal = true,
-                                    minHeight = TransferActionMinHeight,
+                                    tonalSurface = true,
+                                    minHeight = KeynearSpacing.MinTouchTarget,
+                                    modifier = Modifier.weight(1f),
                                 )
                                 ActionButton(
                                     label = "Accept",
                                     onClick = { onAccept(tx.transferId) },
                                     primary = true,
-                                    minHeight = TransferActionMinHeight,
+                                    minHeight = KeynearSpacing.MinTouchTarget,
+                                    modifier = Modifier.weight(1f),
                                 )
                             }
-                            TransferStateUi.ACTIVE -> {
-                                ActionButton(
-                                    label = "Cancel",
-                                    onClick = { onCancel(tx.transferId) },
-                                    errorTonal = true,
-                                    minHeight = TransferActionMinHeight,
-                                )
-                            }
-                            else -> {}
                         }
+                        TransferStateUi.ACTIVE -> {
+                            ActionButton(
+                                label = "Cancel transfer",
+                                onClick = { onCancel(tx.transferId) },
+                                tonalSurface = true,
+                                minHeight = KeynearSpacing.MinTouchTarget,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                        else -> {}
                     }
-                    val fraction = if (tx.totalBytes > 0L) {
-                        (tx.transferredBytes.toFloat() / tx.totalBytes.toFloat()).coerceIn(0f, 1f)
-                    } else {
-                        0f
-                    }
-                    KeynearProgressBar(progress = fraction)
                 }
             }
         }

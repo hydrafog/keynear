@@ -30,8 +30,8 @@ import org.keynear.designsystem.LocalKeynearPalette
 private data class PermissionRow(
     val title: String,
     val description: String,
-    val granted: Boolean = false,
-    val action: (() -> Unit)? = null,
+    val granted: Boolean,
+    val action: () -> Unit,
 )
 
 @Composable
@@ -53,11 +53,6 @@ fun PermissionsScreen(
             description = "Direct peer-to-peer transfers over your local Wi-Fi.",
             granted = permissions.localNetworkGranted,
             action = actions.onRequestLocalNetworkPermission,
-        ),
-        PermissionRow(
-            title = "Companion device association",
-            description = "Not an app permission. Android manages companion associations " +
-                "under Settings > Connected devices. Keynear does not request one automatically.",
         ),
         PermissionRow(
             title = "Notifications",
@@ -122,20 +117,12 @@ fun PermissionsScreen(
                                 lineHeight = KeynearTypeSizes.Sp19,
                             )
                         }
-                        if (row.action != null) {
-                            ActionButton(
-                                label = if (row.granted) "Allowed" else "Allow",
-                                primary = !row.granted,
-                                minHeight = KeynearSpacing.MinTouchTarget,
-                                onClick = row.action,
-                            )
-                        } else {
-                            Text(
-                                text = "Not a permission",
-                                color = palette.textMuted,
-                                fontSize = KeynearTypeSizes.Caption,
-                            )
-                        }
+                        ActionButton(
+                            label = if (row.granted) "Allowed" else "Allow",
+                            primary = !row.granted,
+                            minHeight = KeynearSpacing.MinTouchTarget,
+                            onClick = row.action,
+                        )
                     }
                 }
             }

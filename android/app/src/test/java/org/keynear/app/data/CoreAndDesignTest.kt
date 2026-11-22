@@ -111,7 +111,7 @@ class CoreAndDesignTest {
     @Test
     fun designTokensMatchPrototypePaletteAndTouchFloor() {
         assertEquals(Color(0xFFF0F4FA), LightKeynearPalette.canvas)
-        assertEquals(Color(0xFF0B1016), DarkKeynearPalette.canvas)
+        assertEquals(Color(0xFF0F1014), DarkKeynearPalette.canvas)
         assertEquals(Color(0xFF004CED), LightKeynearPalette.accent)
         assertEquals(Color(0xFF0172F9), LightKeynearPalette.focusRing)
         assertEquals(48, KeynearSpacing.MIN_TOUCH_TARGET_DP)

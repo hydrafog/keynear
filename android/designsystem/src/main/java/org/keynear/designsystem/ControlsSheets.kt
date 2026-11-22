@@ -59,7 +59,7 @@ fun PairingPromptCard(
                 ActionButton(
                     label = declineLabel,
                     onClick = onDecline,
-                    errorTonal = true,
+                    tonalSurface = true,
                     modifier = Modifier.weight(1f),
                 )
                 ActionButton(

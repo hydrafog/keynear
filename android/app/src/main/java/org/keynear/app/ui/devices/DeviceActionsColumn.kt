@@ -86,8 +86,8 @@ Column(verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Md)) {
                 .fillMaxWidth()
                 .heightIn(min = DetailRowMinHeight),
             shape = KeynearShapes.Xl,
-            containerColor = palette.surface,
-            tone = TactileTone.SURFACE,
+            containerColor = palette.surfaceTonal,
+            tone = TactileTone.TONAL,
             cornerRadius = KeynearRadii.Xl,
             onClick = { actions.onRequestUnpair(device.deviceId) },
         ) {
@@ -99,11 +99,11 @@ Column(verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Md)) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
-                IconTrash2(modifier = Modifier.size(ActionIconSize), tint = palette.error)
+                IconTrash2(modifier = Modifier.size(ActionIconSize), tint = palette.textSecondary)
                 Spacer(modifier = Modifier.size(ContentGap))
                 Text(
                     text = "Remove device",
-                    color = palette.error,
+                    color = palette.textPrimary,
                     fontSize = KeynearTypeSizes.Description,
                     fontWeight = FontWeight.Bold,
                 )

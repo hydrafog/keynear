@@ -2,6 +2,7 @@ package org.keynear.designsystem
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -37,10 +38,12 @@ fun KeynearSwitch(
     val palette = LocalKeynearPalette.current
     val trackColor by animateColorAsState(
         targetValue = if (checked) palette.loading else palette.switchTrackOff,
+        animationSpec = tween(durationMillis = SWITCH_GLIDE_DURATION_MS, easing = KeynearSpringEasing),
         label = "switchTrack",
     )
     val thumbOffset by animateDpAsState(
         targetValue = if (checked) KeynearSpacing.Xl else 0.dp,
+        animationSpec = tween(durationMillis = SWITCH_GLIDE_DURATION_MS, easing = KeynearSpringEasing),
         label = "switchThumb",
     )
     val trackTone = if (checked) TactileTone.ACCENT else TactileTone.INSET

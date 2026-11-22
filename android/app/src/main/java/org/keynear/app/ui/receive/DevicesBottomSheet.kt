@@ -136,7 +136,7 @@ internal fun DevicesBottomSheet(
             .fillMaxWidth()
             .padding(horizontal = KeynearSpacing.Lg),
         shape = KeynearShapes.Sheet,
-        containerColor = palette.surface,
+        containerColor = palette.surface.copy(alpha = 0.95f),
         tone = TactileTone.SHEET,
         cornerRadius = KeynearRadii.ThreeXl,
     ) {
@@ -189,18 +189,20 @@ private fun SheetHeaderBar(
                 .clip(CircleShape)
                 .background(palette.sheetHandle),
         )
-        Spacer(modifier = Modifier.height(ContentGap))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Start,
-        ) {
-            Text(
-                text = "$count computer(s) in range",
-                color = palette.textPrimary,
-                fontSize = KeynearTypeSizes.Description,
-                fontWeight = FontWeight.Bold,
-            )
+        if (count > 0) {
+            Spacer(modifier = Modifier.height(ContentGap))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+            ) {
+                Text(
+                    text = if (count == 1) "1 computer in range" else "$count computers in range",
+                    color = palette.textPrimary,
+                    fontSize = KeynearTypeSizes.Description,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
         }
     }
 }

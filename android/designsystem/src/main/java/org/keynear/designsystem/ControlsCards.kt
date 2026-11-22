@@ -1,6 +1,7 @@
 package org.keynear.designsystem
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,13 +36,16 @@ fun TactileSurface(
     enabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    val isDark = LocalKeynearPalette.current.isDark
+    val palette = LocalKeynearPalette.current
+    val isDark = palette.isDark
     val effectiveTone = if (isAccent) TactileTone.ACCENT else tone
+    val rimColor = tactileSurfaceRimColor(effectiveTone, palette)
     Box(
         modifier = modifier
             .tactileShadow(effectiveTone, isDark, cornerRadius, isCircle)
             .clip(shape)
-            .background(containerColor)
+            .background(tactileSurfaceBrush(effectiveTone, containerColor, palette))
+            .let { m -> if (rimColor != null) m.border(KeynearDimensions.Dp1, rimColor, shape) else m }
             .tactileCushion(effectiveTone, isDark, cornerRadius, isCircle)
             .let { m -> if (onClick != null && enabled) m.clickable(onClick = onClick) else m },
     ) { content() }
