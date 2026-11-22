@@ -21,10 +21,17 @@ internal fun GattSession.buildGattClientCallback(context: Context, peerAddress: 
         @SuppressLint("MissingPermission")
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             if (newState == BluetoothProfile.STATE_CONNECTED && status == BluetoothGatt.GATT_SUCCESS) {
-                gatt.discoverServices()
+                if (!gatt.requestMtu(KeynearBleConstants.MAX_GATT_PAIRING_FRAME_BYTES)) {
+                    gatt.discoverServices()
+                }
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 gatt.close()
             }
+        }
+
+        @SuppressLint("MissingPermission")
+        override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
+            gatt.discoverServices()
         }
 
         @SuppressLint("MissingPermission")
@@ -34,12 +41,42 @@ internal fun GattSession.buildGattClientCallback(context: Context, peerAddress: 
             val rxChar = service.getCharacteristic(KeynearBleConstants.PAIRING_RX_CHAR_UUID) ?: return
             val txChar = service.getCharacteristic(KeynearBleConstants.PAIRING_TX_CHAR_UUID) ?: return
             gatt.setCharacteristicNotification(rxChar, true)
-            rxChar.getDescriptor(KeynearBleConstants.CLIENT_CONFIG_DESCRIPTOR_UUID)?.let { cccd ->
-                KeynearBleGattCompat.writeDescriptorCompat(gatt, cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+            val cccd = rxChar.getDescriptor(KeynearBleConstants.CLIENT_CONFIG_DESCRIPTOR_UUID)
+            if (cccd != null) {
+                KeynearBleGattCompat.writeDescriptorCompat(
+                    gatt,
+                    cccd,
+                    BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE,
+                )
+            } else {
+                sendInitialHandshakeFrame(gatt, txChar)
             }
-            val session = activeSession ?: return
-            val m1 = runCatching { session.startHandshake().outboundFrame }.getOrNull() ?: return
-            KeynearBleGattCompat.writeCharacteristicCompat(gatt, txChar, m1)
+        }
+
+        @SuppressLint("MissingPermission")
+        override fun onDescriptorWrite(
+            gatt: BluetoothGatt,
+            descriptor: BluetoothGattDescriptor,
+            status: Int,
+        ) {
+            if (status != BluetoothGatt.GATT_SUCCESS) return
+            if (descriptor.uuid != KeynearBleConstants.CLIENT_CONFIG_DESCRIPTOR_UUID) return
+            val txChar = gatt.getService(KeynearBleConstants.SERVICE_UUID)
+                ?.getCharacteristic(KeynearBleConstants.PAIRING_TX_CHAR_UUID) ?: return
+            sendInitialHandshakeFrame(gatt, txChar)
+        }
+
+        @SuppressLint("MissingPermission")
+        override fun onCharacteristicWrite(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            status: Int,
+        ) {
+            if (status == BluetoothGatt.GATT_SUCCESS &&
+                characteristic.uuid == KeynearBleConstants.LAN_ENDPOINT_CHAR_UUID
+            ) {
+                runCatching { gatt.readCharacteristic(characteristic) }
+            }
         }
 
         override fun onCharacteristicChanged(
@@ -107,9 +144,20 @@ internal fun GattSession.handleClientNotification(
     when (session.state()) {
         FfiPairingState.HANDSHAKE_M2 ->
             handleClientHandshakeStep(context, client, gatt, session, peerAddress, value)
+        FfiPairingState.AWAITING_CONFIRMATION -> pendingPeerExport = value
         FfiPairingState.APPROVED -> completeGattClientPairing(context, client, session, gatt, peerAddress, value)
         else -> Unit
     }
+}
+
+@SuppressLint("MissingPermission")
+private fun GattSession.sendInitialHandshakeFrame(
+    gatt: BluetoothGatt,
+    txChar: BluetoothGattCharacteristic,
+) {
+    val session = activeSession ?: return
+    val m1 = runCatching { session.startHandshake().outboundFrame }.getOrNull() ?: return
+    KeynearBleGattCompat.writeCharacteristicCompat(gatt, txChar, m1)
 }
 
 
@@ -144,7 +192,7 @@ private fun GattSession.handleClientHandshakeStep(
 }
 
 @SuppressLint("MissingPermission")
-private fun GattSession.completeGattClientPairing(
+internal fun GattSession.completeGattClientPairing(
     context: Context,
     client: org.keynear.app.bridge.EventQueue,
     session: FfiNoisePairingSession,
@@ -186,6 +234,7 @@ internal fun GattSession.exchangeLanEndpointWithGatt(
     val encoded = client.encodeLocalLanEndpointForPeer(peerDeviceId)
     if (encoded != null) {
         KeynearBleGattCompat.writeCharacteristicCompat(gatt, lanChar, encoded)
+    } else {
+        runCatching { gatt.readCharacteristic(lanChar) }
     }
-    runCatching { gatt.readCharacteristic(lanChar) }
 }

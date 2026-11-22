@@ -39,6 +39,9 @@ object GattSession {
     @Volatile
     internal var pendingLocalExport: ByteArray? = null
 
+    @Volatile
+    internal var pendingPeerExport: ByteArray? = null
+
     @SuppressLint("MissingPermission")
     fun ensureGattServer(context: Context, manager: BluetoothManager) {
         if (gattServer != null || !KeynearBleConstants.hasConnectPermission(context)) return
@@ -112,6 +115,7 @@ object GattSession {
             activeSession = session
             activePeerAddress = peerAddress
             pendingLocalExport = null
+            pendingPeerExport = null
             activeClientGatt?.close()
             activeClientGatt = device.connectGatt(
                 context,
@@ -149,9 +153,24 @@ object GattSession {
                 KeynearBleGattCompat.notifyCharacteristicCompat(gattServer, responderDevice, rxChar, export)
             }
             PairingNotifier.cancel(context)
+            completeBufferedPeerExport(context, client, session, clientGatt)
         } catch (_: Throwable) {
             rejectActivePairing(context)
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun completeBufferedPeerExport(
+        context: Context,
+        client: org.keynear.app.bridge.EventQueue,
+        session: FfiNoisePairingSession,
+        clientGatt: BluetoothGatt?,
+    ) {
+        val buffered = pendingPeerExport ?: return
+        val peerAddr = activePeerAddress ?: return
+        if (clientGatt == null) return
+        pendingPeerExport = null
+        completeGattClientPairing(context, client, session, clientGatt, peerAddr, buffered)
     }
 
     fun rejectActivePairing(context: Context) {
@@ -159,6 +178,7 @@ object GattSession {
         activeSession = null
         activePeerAddress = null
         pendingLocalExport = null
+        pendingPeerExport = null
         CoreClientProvider.init(context).setPendingPairing(null)
         PairingNotifier.cancel(context)
         BleScanner.notifyUiRefresh()
