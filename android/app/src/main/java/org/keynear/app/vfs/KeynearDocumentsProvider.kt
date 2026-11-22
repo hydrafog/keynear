@@ -7,7 +7,10 @@ import android.os.CancellationSignal
 import android.os.ParcelFileDescriptor
 import android.provider.DocumentsContract
 import android.provider.DocumentsProvider
+import android.util.Log
 import java.io.FileNotFoundException
+import org.keynear.app.bridge.CoreClientProvider
+import org.keynear.app.ui.model.CoreState
 
 interface VfsSource {
     fun roots(): List<VfsDescriptors.Node>
@@ -26,7 +29,19 @@ class EmptyVfsSource : VfsSource {
 class KeynearDocumentsProvider : DocumentsProvider() {
     override fun onCreate(): Boolean {
         // TODO: Supply paired-peer descriptors when a VFS peer registry is available.
-        install(RemoteVfsSource())
+        val peers = runCatching {
+            val snapshot = when (val state = CoreClientProvider.get().loadState()) {
+                is CoreState.Empty -> state.snapshot
+                is CoreState.Ready -> state.snapshot
+                is CoreState.Error -> state.previous
+                CoreState.Loading -> null
+            }
+            snapshot?.pairedDevices?.map { it.deviceId to it.displayName }.orEmpty()
+        }.getOrElse { err ->
+            Log.w(TAG, "Paired-peer VFS roots unavailable", err)
+            emptyList()
+        }
+        install(RemoteVfsSource(peers))
         return true
     }
 
@@ -94,6 +109,8 @@ class KeynearDocumentsProvider : DocumentsProvider() {
     }
 
     companion object {
+        private const val TAG = "KeynearVfs"
+
         private val DEFAULT_ROOT_PROJECTION = arrayOf(
             DocumentsContract.Root.COLUMN_ROOT_ID,
             DocumentsContract.Root.COLUMN_DOCUMENT_ID,
