@@ -1,0 +1,405 @@
+@utility kn-backdrop {
+  background-color: var(--kn-backdrop);
+  background-image: var(--kn-grad-backdrop);
+}
+
+@utility kn-canvas {
+  background-color: var(--kn-dark-canvas-neutral, var(--kn-canvas));
+  color: var(--kn-on-canvas);
+}
+
+@utility kn-map-ground {
+  background-color: var(--kn-map-ground);
+}
+
+@utility kn-map-glow {
+  background-image: var(--kn-map-glow);
+}
+
+@utility kn-map-aura {
+  background: var(--kn-map-aura);
+}
+
+@utility kn-brand-aura {
+  background: var(--kn-brand-aura);
+}
+
+@utility kn-map-ring {
+  border-color: var(--kn-map-ring);
+}
+
+@utility kn-map-contour {
+  border-color: var(--kn-map-contour);
+}
+
+@utility kn-map-contour-far {
+  border-color: var(--kn-map-contour-far);
+}
+
+@utility kn-sheet-handle {
+  background-color: var(--kn-sheet-handle);
+}
+
+@utility kn-gesture-pill {
+  background-color: var(--kn-gesture-pill);
+}
+
+@utility kn-surface {
+  background-color: var(--kn-surface);
+  background-image: var(--kn-grad-surface);
+  box-shadow: var(--kn-depth-surface), var(--kn-brand-surface-rim);
+}
+
+@utility kn-surface-tonal {
+  background-color: var(--kn-surface-tonal);
+  background-image: var(--kn-grad-surface-tonal);
+  box-shadow: var(--kn-depth-tonal), var(--kn-brand-tonal-rim);
+}
+
+@utility kn-surface-hover {
+  @variant hover {
+    background-color: var(--kn-surface-hover);
+    background-image: var(--kn-grad-surface-hover);
+  }
+}
+
+@utility kn-text-primary {
+  color: var(--kn-text-primary);
+}
+
+@utility kn-text-secondary {
+  color: var(--kn-text-secondary);
+}
+
+@utility kn-text-muted {
+  color: var(--kn-text-muted);
+}
+
+@utility kn-loading-text {
+  color: var(--kn-brand-ink);
+}
+
+@utility kn-loading-bg {
+  background-color: var(--kn-brand-ink);
+  background-image: var(--kn-grad-accent);
+  color: #FFFFFE;
+  box-shadow: var(--kn-brand-depth-accent), var(--kn-brand-accent-rim);
+
+  @variant hover {
+    background-image: var(--kn-grad-accent-hover);
+  }
+
+  &:active {
+    box-shadow: var(--kn-brand-depth-accent-pressed), var(--kn-brand-accent-rim);
+  }
+}
+
+@utility kn-loading-tonal {
+  background-color: var(--kn-loading-tonal);
+  background-image: var(--kn-grad-accent-tonal);
+  color: var(--kn-on-brand-tonal);
+  box-shadow: var(--kn-depth-tonal), var(--kn-brand-accent-rim);
+}
+
+@utility kn-error-tonal {
+  background-color: var(--kn-error-tonal);
+  background-image: var(--kn-grad-danger-tonal);
+  color: var(--kn-brand-on-danger-tonal);
+  box-shadow: var(--kn-depth-tonal), var(--kn-brand-danger-rim);
+}
+
+@utility kn-error-action {
+  background-color: var(--kn-error-action);
+  background-image: var(--kn-grad-danger-tonal);
+  color: var(--kn-brand-on-danger-tonal);
+  box-shadow: var(--kn-depth-tonal), var(--kn-brand-danger-rim);
+
+  @variant hover {
+    background-image: var(--kn-grad-danger-tonal-hover);
+  }
+}
+
+@utility kn-ripple {
+  border-width: var(--kn-ripple-width);
+  border-color: color-mix(in oklab, var(--kn-brand-ink) 24%, transparent);
+}
+
+@utility kn-error-bg {
+  background-color: var(--kn-brand-danger-ink);
+  background-image: var(--kn-grad-danger);
+  color: #FFFFFE;
+  box-shadow: var(--kn-depth-tonal), var(--kn-brand-danger-rim);
+
+  @variant hover {
+    background-image: var(--kn-grad-danger-hover);
+  }
+}
+
+@utility kn-error-text {
+  color: var(--kn-brand-danger-ink);
+}
+
+@utility kn-input {
+  background-color: var(--kn-input);
+  background-image: var(--kn-grad-well);
+  color: var(--kn-text-primary);
+  box-shadow: var(--kn-depth-inset);
+}
+
+@utility kn-switch-track-off {
+  background-color: var(--kn-switch-track-off);
+  background-image: var(--kn-grad-well);
+  box-shadow: var(--kn-depth-inset);
+}
+
+@utility kn-switch-track-on {
+  background-color: var(--kn-brand-ink);
+  background-image: var(--kn-grad-accent);
+  box-shadow: var(--kn-brand-depth-accent), var(--kn-brand-accent-rim);
+}
+
+@utility kn-switch-thumb {
+  background-color: var(--kn-switch-thumb);
+  background-image: var(--kn-grad-thumb);
+  box-shadow: var(--kn-depth-thumb);
+}
+
+@utility kn-notif-sub-card {
+  background-color: var(--kn-notif-sub-card);
+  background-image: var(--kn-grad-well);
+  box-shadow: var(--kn-depth-inset);
+}
+
+@utility kn-qs-tile {
+  background-color: var(--kn-surface);
+  background-image: var(--kn-grad-surface);
+  color: var(--kn-qs-on);
+  box-shadow: var(--kn-depth-surface), var(--kn-brand-surface-rim);
+
+  @variant hover {
+    background-color: var(--kn-qs-hover);
+    background-image: var(--kn-grad-surface-hover);
+  }
+}
+
+@utility kn-snackbar {
+  background-color: var(--kn-snackbar);
+  background-image: var(--kn-grad-snackbar);
+  color: var(--kn-on-snackbar);
+  box-shadow: var(--kn-depth-snackbar), var(--kn-brand-tonal-rim);
+}
+
+@utility kn-scrim {
+  background-color: var(--kn-scrim);
+}
+
+@utility kn-sheet {
+  background-color: var(--kn-surface);
+  background-image: var(--kn-grad-sheet);
+  box-shadow: var(--kn-depth-sheet), var(--kn-brand-surface-rim);
+}
+
+@utility kn-track-well {
+  background-color: var(--kn-track-well);
+  background-image: var(--kn-grad-well);
+  box-shadow: var(--kn-depth-inset);
+}
+
+@utility kn-fog-well {
+  background-image: var(--kn-fog-well-bg);
+  backdrop-filter: blur(32px) saturate(0.85);
+  -webkit-backdrop-filter: blur(32px) saturate(0.85);
+  box-shadow: var(--kn-depth-inset), var(--kn-brand-tonal-rim);
+}
+
+@utility kn-fog-surface {
+  background-image: var(--kn-fog-surface-bg);
+  backdrop-filter: blur(32px) saturate(0.85);
+  -webkit-backdrop-filter: blur(32px) saturate(0.85);
+  box-shadow: var(--kn-depth-surface), var(--kn-brand-surface-rim);
+}
+
+@utility kn-fog-sheet {
+  background-image: var(--kn-fog-sheet-bg);
+  backdrop-filter: blur(36px) saturate(0.85);
+  -webkit-backdrop-filter: blur(36px) saturate(0.85);
+  box-shadow: var(--kn-depth-sheet), var(--kn-brand-surface-rim);
+}
+
+@utility kn-sys-shade {
+  background-color: var(--kn-sys-shade-bg);
+  color: var(--kn-on-canvas);
+}
+
+@utility kn-sys-notif {
+  background-color: var(--kn-sys-notif-bg);
+  color: var(--kn-text-primary);
+  box-shadow: inset 0 0 0 1px var(--kn-sys-notif-border);
+}
+
+@utility kn-sys-notif-action {
+  background-color: var(--kn-sys-notif-action);
+  color: var(--kn-text-primary);
+
+  @variant hover {
+    background-color: var(--kn-sys-notif-action-hover);
+  }
+}
+
+@utility kn-sys-qs-off {
+  background-color: var(--kn-sys-qs-off);
+  color: var(--kn-text-primary);
+  box-shadow: inset 0 0 0 1px var(--kn-sys-notif-border);
+}
+
+@utility kn-sys-qs-on {
+  background-color: var(--kn-sys-qs-on);
+  color: #FFFFFE;
+}
+
+@utility kn-sys-media {
+  background-image: var(--kn-sys-media-bg);
+  color: #FFFFFE;
+}
+
+@utility kn-sys-call-accept {
+  background-color: var(--kn-sys-call-accept);
+  color: #FFFFFE;
+}
+
+@utility kn-sys-call-decline {
+  background-color: var(--kn-sys-call-decline);
+  color: #FFFFFE;
+}
+
+.kn-sys-theme-tile[aria-pressed='true'] {
+  background-color: var(--kn-sys-qs-on);
+  color: #FFFFFE;
+}
+
+.kn-theme-tile[aria-pressed='true'] {
+  background-color: var(--kn-brand-ink);
+  background-image: var(--kn-grad-accent);
+  color: #FFFFFE;
+  box-shadow: var(--kn-brand-depth-accent), var(--kn-brand-accent-rim);
+}
+
+.kn-theme-tile[aria-pressed='true']:hover {
+  background-image: var(--kn-grad-accent-hover);
+}
+
+.kn-when-dark {
+  display: none;
+}
+
+[data-kn-theme='dark'] .kn-when-dark {
+  display: inline;
+}
+
+[data-kn-theme='dark'] .kn-when-light {
+  display: none;
+}
+
+body {
+  font-family: var(--font-kn-sans);
+}
+
+.kn-scroll-hidden {
+  scrollbar-width: none;
+}
+
+.kn-scroll-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes kn-map-sweep {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes kn-map-wave {
+  0% {
+    opacity: 0.34;
+    transform: scale(0.32);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-kn-fade-in,
+  .animate-kn-screen-in,
+  .animate-kn-modal-in,
+  .animate-kn-shade-down,
+  .animate-kn-sheet-up,
+  .animate-kn-pin-enter,
+  .animate-kn-map-beacon,
+  .animate-kn-map-drift,
+  .animate-kn-map-drift-delayed,
+  .animate-kn-orbit,
+  .animate-kn-orbit-counter,
+  .animate-kn-ripple {
+    animation: none !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .kn-fog-well {
+    background-color: var(--kn-track-well);
+    background-image: var(--kn-grad-well);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .kn-fog-surface {
+    background-color: var(--kn-surface);
+    background-image: var(--kn-grad-surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .kn-fog-sheet {
+    background-color: var(--kn-surface);
+    background-image: var(--kn-grad-sheet);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .kn-surface,
+  .kn-surface-tonal,
+  .kn-loading-bg,
+  .kn-loading-tonal,
+  .kn-error-bg,
+  .kn-error-tonal,
+  .kn-error-action,
+  .kn-input,
+  .kn-switch-track-off,
+  .kn-switch-track-on,
+  .kn-switch-thumb,
+  .kn-qs-tile,
+  .kn-sheet,
+  .kn-snackbar,
+  .kn-track-well,
+  .kn-sys-notif,
+  .kn-sys-qs-off,
+  .kn-sys-qs-on,
+  .kn-sys-media {
+    border: 1px solid CanvasText;
+  }
+
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  a:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}

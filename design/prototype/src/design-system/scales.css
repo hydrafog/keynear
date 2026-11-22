@@ -1,0 +1,44 @@
+
+
+@theme inline {
+  --color-kn-amber-500: #F79801;
+  --color-kn-black: theme(--color-black);
+  --color-kn-blue-500: #0172F9;
+  --color-kn-blue-600: #004CED;
+  --color-kn-emerald-500: #01B37D;
+  --color-kn-red-500: #ED012B;
+  --color-kn-red-700: #A7001A;
+  --color-kn-red-800: #8A0017;
+  --color-kn-slate-400: #819BBB;
+  --color-kn-white: #FFFFFE;
+}
+
+:root {
+  --kn-size-38px: 38px;
+  --kn-size-44px: 44px;
+  --kn-size-46px: 46px;
+  --kn-size-48px: 48px;
+  --kn-size-50px: 50px;
+  --kn-size-52px: 52px;
+  --kn-size-54px: 54px;
+  --kn-size-56px: 56px;
+  --kn-size-58px: 58px;
+  --kn-size-62px: 62px;
+  --kn-size-66px: 66px;
+  --kn-size-68px: 68px;
+  --kn-size-76px: 76px;
+  --kn-size-100svh: 100svh;
+  --kn-size-116px: 116px;
+  --kn-size-128px: 128px;
+  --kn-size-132px: 132px;
+  --kn-size-136px: 136px;
+  --kn-size-240px: 240px;
+  --kn-size-290px: 290px;
+  --kn-size-300px: 300px;
+  --kn-size-360px: 360px;
+  --kn-size-430px: 430px;
+  --kn-press-95: 0.95;
+  --kn-press-97: 0.97;
+  --kn-press-98: 0.98;
+  --kn-press-99: 0.99;
+}

@@ -42,6 +42,7 @@ The repository provides the following quality scripts and CI checks.
 - The script `scripts/validation/size-check.sh` fails when a tracked handwritten Rust or Kotlin logic file exceeds 300 lines. It skips generated code, lookup tables, and test fixtures.
 - The script `scripts/validation/commit-msg.sh` enforces `<prefix>: <imperative summary>` commit subjects within 80 characters.
 - The script `scripts/export/export-docs.sh` exports documentation and `proto3` schemas deterministically to `out/`.
+- The script `scripts/export/export-prototype.sh` exports tracked `design/prototype/` source files deterministically to `out/keynear-prototype.txt`.
 - The workflow `.github/workflows/quality.yml` executes the Rust checks (`fmt`, `clippy`, `test`, `deny`, `audit`, `llvm-cov`), `repo-check.sh`, `size-check.sh`, `nix flake check --no-build`, and Android `gradle testDebugUnitTest lintDebug detekt assembleDebug`.
 
 ## Commit Conventions

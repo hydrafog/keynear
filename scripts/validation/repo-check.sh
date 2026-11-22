@@ -18,19 +18,19 @@ for legacy_dir in exports .prototype systemd integrations; do
   fi
 done
 
-if ! git check-ignore -q design/prototype/ || ! git check-ignore -q out/ || ! git check-ignore -q .env; then
-  echo "repo-check: design/prototype/, out/, and .env must be ignored by .gitignore" >&2
+if ! git check-ignore -q design/prototype/node_modules/ || ! git check-ignore -q design/prototype/dist/ || ! git check-ignore -q out/ || ! git check-ignore -q .env; then
+  echo "repo-check: design/prototype/node_modules/, design/prototype/dist/, out/, and .env must be ignored by .gitignore" >&2
   exit 1
 fi
 
-for forbidden_tracked in .env out/ design/prototype/ exports/ .prototype/; do
+for forbidden_tracked in .env out/ design/prototype/node_modules/ design/prototype/dist/ exports/ .prototype/; do
   if [ -n "$(git ls-files "$forbidden_tracked")" ]; then
     echo "repo-check: '$forbidden_tracked' must not be tracked in git" >&2
     exit 1
   fi
 done
 
-if git grep -nE "BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY" -- . ':!design/prototype/' ':!out/' >/dev/null 2>&1; then
+if git grep -nE "BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY" -- . ':!design/prototype/node_modules/' ':!design/prototype/dist/' ':!out/' >/dev/null 2>&1; then
   echo "repo-check: private key material detected in tracked files" >&2
   exit 1
 fi

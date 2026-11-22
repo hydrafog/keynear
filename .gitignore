@@ -3,7 +3,8 @@ AGENTS.md
 .agents/artifacts/
 __pycache__/
 framework-context.txt
-design/prototype/
+design/prototype/node_modules/
+design/prototype/dist/
 target/
 android/.gradle/
 android/build/
