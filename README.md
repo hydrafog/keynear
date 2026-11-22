@@ -30,7 +30,6 @@ These guides cover installation and first pairing.
 
 | Document | Description |
 |----------|-------------|
-| [Overview](docs/getting-started/index.md) | Documentation home and navigation |
 | [Installation](docs/getting-started/installation.md) | Linux (`systemd --user` / Nix) and Android setup |
 | [Quickstart](docs/getting-started/quickstart.md) | First pairing, visibility modes, and file drop |
 
@@ -43,7 +42,6 @@ These guides cover the system design and the cryptographic protocol.
 
 | Document | Description |
 |----------|-------------|
-| [Overview](docs/architecture/index.md) | System boundaries and design |
 | [System Overview](docs/architecture/overview.md) | Monorepo crates, `proto3`, and Android modules |
 | [Protocol & Crypto](docs/architecture/protocol-and-crypto.md) | BLE tokens, Noise XX, QUIC, and `X25519MLKEM768` |
 
@@ -56,7 +54,6 @@ These guides cover the continuity features Keynear provides.
 
 | Document | Description |
 |----------|-------------|
-| [Overview](docs/features/index.md) | Core continuity capabilities |
 | [File Sharing](docs/features/file-sharing.md) | Streaming transfers, Share Sheet, and portals |
 | [Clipboard & OTP](docs/features/clipboard-and-otp.md) | Wayland clipboard sync and SMS User Consent |
 | [Audio Handoff](docs/features/audio-handoff.md) | PipeWire and MPRIS2 headset handoff |
@@ -70,7 +67,6 @@ These guides cover contributing and the release plan.
 
 | Document | Description |
 |----------|-------------|
-| [Overview](docs/development/index.md) | Contribution and engineering conventions |
 | [Contributing](docs/development/contributing.md) | DevShell, `scripts/`, and commit conventions |
 | [Release Timeline](docs/development/timeline.md) | Dependency-ordered constellation milestones |
 
@@ -83,10 +79,8 @@ These guides cover deployment and runtime recovery.
 
 | Document | Description |
 |----------|-------------|
-| [Deployment Overview](docs/deployment/index.md) | Linux and Android deployment guides |
 | [Linux systemd](docs/deployment/linux-systemd.md) | User unit setup and TOML configuration |
 | [Android Build](docs/deployment/android-build.md) | `cargo-ndk` and Gradle APK/AAB builds |
-| [Operations Overview](docs/operations/index.md) | Runtime diagnostics and recovery |
 | [Troubleshooting](docs/operations/troubleshooting.md) | BLE, local network, Wayland, and keyring fixes |
 
 </details>
@@ -98,7 +92,6 @@ These guides cover the trust model, permissions, and licensing.
 
 | Document | Description |
 |----------|-------------|
-| [Overview](docs/security-compliance/index.md) | Security and compliance boundaries |
 | [Threat Model](docs/security-compliance/threat-model.md) | Trust boundaries and post-quantum transport |
 | [Permissions &amp; Privacy](docs/security-compliance/permissions-and-privacy.md) | OS permissions, MIME exclusion, and GPLv3 |
 
