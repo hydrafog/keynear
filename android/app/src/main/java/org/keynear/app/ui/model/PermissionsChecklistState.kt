@@ -2,7 +2,6 @@ package org.keynear.app.ui.model
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.companion.CompanionDeviceManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -15,7 +14,6 @@ data class PermissionsChecklistState(
     val nearbyGranted: Boolean,
     val notificationsGranted: Boolean,
     val batteryOptimizationIgnored: Boolean,
-    val companionAssociated: Boolean,
     val localNetworkGranted: Boolean = true,
 ) {
     val allRequiredGranted: Boolean
@@ -29,14 +27,12 @@ data class PermissionsChecklistState(
             nearbyGranted,
             notificationsGranted,
             batteryOptimizationIgnored,
-            companionAssociated,
         ).count { it }
 
     val missingPermissionsCount: Int
         get() = listOf(
             nearbyGranted,
             localNetworkGranted,
-            companionAssociated,
             notificationsGranted,
             batteryOptimizationIgnored,
         ).count { !it }
@@ -61,21 +57,10 @@ fun evaluatePermissionsChecklist(
         context.getSystemService(PowerManager::class.java)
             ?.isIgnoringBatteryOptimizations(context.packageName) == true
     }.getOrDefault(false)
-    val companionAssociated = runCatching {
-        val manager = context.getSystemService(CompanionDeviceManager::class.java) ?: return@runCatching false
-        if (sdkInt >= 33) {
-            manager.myAssociations.isNotEmpty()
-        } else {
-            @Suppress("DEPRECATION")
-            manager.associations.isNotEmpty()
-        }
-    }.getOrDefault(false)
-
     return PermissionsChecklistState(
         nearbyGranted = bleReady && wifiNearbyReady,
         notificationsGranted = notificationsReady,
         batteryOptimizationIgnored = batteryIgnored,
-        companionAssociated = companionAssociated,
         localNetworkGranted = lnpReady,
     )
 }

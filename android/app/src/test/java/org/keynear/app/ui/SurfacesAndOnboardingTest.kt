@@ -143,7 +143,6 @@ class SurfacesAndOnboardingTest {
             nearbyGranted = true,
             notificationsGranted = true,
             batteryOptimizationIgnored = false,
-            companionAssociated = false,
         )
         assertTrue(requiredOnly.allRequiredGranted)
         assertFalse(requiredOnly.allRecommendedComplete)
@@ -153,17 +152,15 @@ class SurfacesAndOnboardingTest {
             nearbyGranted = true,
             notificationsGranted = false,
             batteryOptimizationIgnored = true,
-            companionAssociated = true,
         )
         assertFalse(missingNotifications.allRequiredGranted)
         assertFalse(missingNotifications.allRecommendedComplete)
-        assertEquals(3, missingNotifications.completedCount)
+        assertEquals(2, missingNotifications.completedCount)
 
         val fullyReady = PermissionsChecklistState(
             nearbyGranted = true,
             notificationsGranted = true,
             batteryOptimizationIgnored = true,
-            companionAssociated = false,
         )
         assertTrue(fullyReady.allRequiredGranted)
         assertTrue(fullyReady.allRecommendedComplete)
@@ -361,7 +358,6 @@ class SurfacesAndOnboardingTest {
             nearbyGranted = true,
             notificationsGranted = true,
             batteryOptimizationIgnored = true,
-            companionAssociated = true,
             localNetworkGranted = false,
         )
         assertEquals(1, missingOne.missingPermissionsCount)

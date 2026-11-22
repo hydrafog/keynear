@@ -255,6 +255,7 @@ object KeynearTypeSizes {
     val Micro = 0.8.sp
     val Sp4 = 4.sp
     val Sp11 = 11.sp
+    val Sp19 = 19.sp
 }
 
 object KeynearLineHeights {

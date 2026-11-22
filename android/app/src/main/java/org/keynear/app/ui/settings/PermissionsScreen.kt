@@ -11,8 +11,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -21,12 +19,20 @@ import org.keynear.designsystem.ActionButton
 import org.keynear.designsystem.TactileSurface
 import org.keynear.designsystem.TactileTone
 import org.keynear.app.ui.navigation.KeynearActions
+import org.keynear.designsystem.KeynearDimensions
 import org.keynear.designsystem.KeynearLayout
 import org.keynear.designsystem.KeynearRadii
 import org.keynear.designsystem.KeynearShapes
 import org.keynear.designsystem.KeynearSpacing
 import org.keynear.designsystem.KeynearTypeSizes
 import org.keynear.designsystem.LocalKeynearPalette
+
+private data class PermissionRow(
+    val title: String,
+    val description: String,
+    val granted: Boolean = false,
+    val action: (() -> Unit)? = null,
+)
 
 @Composable
 fun PermissionsScreen(
@@ -36,30 +42,34 @@ fun PermissionsScreen(
 ) {
     val palette = LocalKeynearPalette.current
     val rows = listOf(
-        Triple(
-            "Nearby devices",
-            "Bluetooth and Wi-Fi discovery for nearby Linux desktops.",
-            Pair(permissions.nearbyGranted, actions.onRequestNearbyOnboardingPermissions),
+        PermissionRow(
+            title = "Nearby devices",
+            description = "Bluetooth and Wi-Fi discovery for nearby Linux desktops.",
+            granted = permissions.nearbyGranted,
+            action = actions.onRequestNearbyOnboardingPermissions,
         ),
-        Triple(
-            "Local network access",
-            "Direct peer-to-peer transfers over your local Wi-Fi.",
-            Pair(permissions.localNetworkGranted, actions.onRequestLocalNetworkPermission),
+        PermissionRow(
+            title = "Local network access",
+            description = "Direct peer-to-peer transfers over your local Wi-Fi.",
+            granted = permissions.localNetworkGranted,
+            action = actions.onRequestLocalNetworkPermission,
         ),
-        Triple(
-            "Companion device presence",
-            "Wakes the background service automatically when a paired PC is near.",
-            Pair(permissions.companionAssociated, actions.onOpenAppSettings),
+        PermissionRow(
+            title = "Companion device association",
+            description = "Not an app permission. Android manages companion associations " +
+                "under Settings > Connected devices. Keynear does not request one automatically.",
         ),
-        Triple(
-            "Notifications",
-            "Shows transfer requests, 6-digit pairing codes, and live progress.",
-            Pair(permissions.notificationsGranted, actions.onRequestNotificationsPermission),
+        PermissionRow(
+            title = "Notifications",
+            description = "Shows transfer requests, 6-digit pairing codes, and live progress.",
+            granted = permissions.notificationsGranted,
+            action = actions.onRequestNotificationsPermission,
         ),
-        Triple(
-            "Unrestricted battery",
-            "Prevents Android from interrupting large transfers with the screen off.",
-            Pair(permissions.batteryOptimizationIgnored, actions.onRequestBatteryOptimization),
+        PermissionRow(
+            title = "Unrestricted battery",
+            description = "Prevents Android from interrupting large transfers with the screen off.",
+            granted = permissions.batteryOptimizationIgnored,
+            action = actions.onRequestBatteryOptimization,
         ),
     )
 
@@ -84,15 +94,14 @@ fun PermissionsScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(ContentGap),
+                    .padding(KeynearDimensions.Dp10),
                 verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
             ) {
-                rows.forEach { (title, sub, actionPair) ->
-                    val (granted, onClick) = actionPair
+                rows.forEach { row ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(RowIconSize),
+                            .padding(KeynearLayout.GridGap),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Md),
                     ) {
@@ -101,24 +110,32 @@ fun PermissionsScreen(
                             verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Xs),
                         ) {
                             Text(
-                                text = title,
+                                text = row.title,
                                 color = palette.textPrimary,
                                 fontSize = KeynearTypeSizes.Body,
                                 fontWeight = FontWeight.Bold,
                             )
                             Text(
-                                text = sub,
+                                text = row.description,
                                 color = palette.textMuted,
                                 fontSize = KeynearTypeSizes.Caption,
-                                lineHeight = ValueTextSize,
+                                lineHeight = KeynearTypeSizes.Sp19,
                             )
                         }
-                        ActionButton(
-                            label = if (granted) "Allowed" else "Allow",
-                            primary = !granted,
-                            minHeight = KeynearSpacing.MinTouchTarget,
-                            onClick = onClick,
-                        )
+                        if (row.action != null) {
+                            ActionButton(
+                                label = if (row.granted) "Allowed" else "Allow",
+                                primary = !row.granted,
+                                minHeight = KeynearSpacing.MinTouchTarget,
+                                onClick = row.action,
+                            )
+                        } else {
+                            Text(
+                                text = "Not a permission",
+                                color = palette.textMuted,
+                                fontSize = KeynearTypeSizes.Caption,
+                            )
+                        }
                     }
                 }
             }
