@@ -47,7 +47,9 @@ fn env_filter() -> EnvFilter {
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt().with_env_filter(env_filter()).init();
+    tracing_subscriber::fmt()
+        .with_env_filter(env_filter())
+        .init();
 
     let action = match parse_cli_args(std::env::args().skip(1)) {
         Ok(action) => action,

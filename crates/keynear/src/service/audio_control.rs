@@ -26,7 +26,9 @@ pub(crate) enum AudioHandoffEvent {
     },
 }
 
-pub(crate) fn spawn_audio_control(tasks: &mut Vec<JoinHandle<()>>) -> mpsc::Sender<AudioHandoffEvent> {
+pub(crate) fn spawn_audio_control(
+    tasks: &mut Vec<JoinHandle<()>>,
+) -> mpsc::Sender<AudioHandoffEvent> {
     let (tx, mut rx) = mpsc::channel(32);
     tasks.push(tokio::spawn(async move {
         let mut controller = VegaAudioController::new(DbusHandoffControl);

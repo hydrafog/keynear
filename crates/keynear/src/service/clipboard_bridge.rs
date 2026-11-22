@@ -34,8 +34,8 @@ impl ClipboardBridgeProxy {
         let reply = self.proxy.call_method("Status", &()).await.map_err(|err| {
             KeynearError::Transport(format!("clipboard bridge Status failed: {err}"))
         })?;
-        reply.body()
-            .deserialize::<String>()
-            .map_err(|err| KeynearError::Protocol(format!("clipboard bridge Status invalid: {err}")))
+        reply.body().deserialize::<String>().map_err(|err| {
+            KeynearError::Protocol(format!("clipboard bridge Status invalid: {err}"))
+        })
     }
 }

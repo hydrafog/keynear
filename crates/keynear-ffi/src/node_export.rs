@@ -220,7 +220,8 @@ impl OrionNodeHandle {
                     KeynearError::Transport(format!("open vfs read stream failed: {err}"))
                 })?;
                 write_stream_kind(&mut send, QuicStreamKind::VfsRead).await?;
-                crate::vfs_read::write_vfs_read_request(&mut send, &path, offset, max_bytes).await?;
+                crate::vfs_read::write_vfs_read_request(&mut send, &path, offset, max_bytes)
+                    .await?;
                 send.finish().map_err(|err| {
                     KeynearError::Transport(format!("finish vfs read stream failed: {err}"))
                 })?;

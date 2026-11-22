@@ -159,10 +159,7 @@ async fn read_bounded_chunk(
     Some(buf)
 }
 
-async fn resolve_vfs_read<R: AsyncRead + Unpin>(
-    engine: &TransferEngine,
-    recv: &mut R,
-) -> Vec<u8> {
+async fn resolve_vfs_read<R: AsyncRead + Unpin>(engine: &TransferEngine, recv: &mut R) -> Vec<u8> {
     let (path, offset, max_bytes) = match read_vfs_read_request(recv).await {
         Ok(request) => request,
         Err(err) => {

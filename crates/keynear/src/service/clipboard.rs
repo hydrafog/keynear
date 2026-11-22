@@ -16,7 +16,10 @@ use crate::service::clipboard_bridge::ClipboardBridgeProxy;
 fn probe_clipboard_bridge(tasks: &mut Vec<JoinHandle<()>>) {
     tasks.push(tokio::spawn(async {
         let Some(proxy) = ClipboardBridgeProxy::connect().await else {
-            warn!(event = "clipboard_bridge_unavailable", reason = "D-Bus name absent");
+            warn!(
+                event = "clipboard_bridge_unavailable",
+                reason = "D-Bus name absent"
+            );
             return;
         };
         if let Err(err) = proxy.sync().await {

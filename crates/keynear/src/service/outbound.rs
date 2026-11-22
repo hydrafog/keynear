@@ -51,11 +51,7 @@ fn decode_outbound(bytes: &[u8]) -> Result<v1::Envelope, KeynearError> {
     Ok(envelope)
 }
 
-async fn send_to_peers(
-    node: &OrionQuicNode,
-    store: &PairedDeviceStore,
-    envelope: &v1::Envelope,
-) {
+async fn send_to_peers(node: &OrionQuicNode, store: &PairedDeviceStore, envelope: &v1::Envelope) {
     let peers = match store.load() {
         Ok(peers) => peers,
         Err(err) => {
@@ -80,9 +76,10 @@ async fn send_one(
     envelope: &v1::Envelope,
 ) -> Result<(), KeynearError> {
     let conn = node.connect_peer(peer_device_id).await?;
-    let (mut send, _recv) = conn.open_bi().await.map_err(|err| {
-        KeynearError::Transport(format!("open control stream failed: {err}"))
-    })?;
+    let (mut send, _recv) = conn
+        .open_bi()
+        .await
+        .map_err(|err| KeynearError::Transport(format!("open control stream failed: {err}")))?;
     write_stream_kind(&mut send, QuicStreamKind::Control).await?;
     write_control_envelope(&mut send, envelope).await?;
     send.finish()
