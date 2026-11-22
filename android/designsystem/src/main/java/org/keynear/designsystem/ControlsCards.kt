@@ -34,6 +34,7 @@ fun TactileSurface(
     isCircle: Boolean = false,
     onClick: (() -> Unit)? = null,
     enabled: Boolean = true,
+    contentAlignment: Alignment = Alignment.TopStart,
     content: @Composable () -> Unit,
 ) {
     val palette = LocalKeynearPalette.current
@@ -48,6 +49,7 @@ fun TactileSurface(
             .let { m -> if (rimColor != null) m.border(KeynearDimensions.Dp1, rimColor, shape) else m }
             .tactileCushion(effectiveTone, isDark, cornerRadius, isCircle)
             .let { m -> if (onClick != null && enabled) m.clickable(onClick = onClick) else m },
+        contentAlignment = contentAlignment,
     ) { content() }
 }
 

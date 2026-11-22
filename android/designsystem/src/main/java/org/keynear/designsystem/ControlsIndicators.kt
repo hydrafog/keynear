@@ -21,6 +21,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,6 +37,8 @@ fun KeynearSwitch(
     modifier: Modifier = Modifier,
 ) {
     val palette = LocalKeynearPalette.current
+    val currentChecked by rememberUpdatedState(checked)
+    val latestOnCheckedChange by rememberUpdatedState(onCheckedChange)
     val trackColor by animateColorAsState(
         targetValue = if (checked) palette.loading else palette.switchTrackOff,
         animationSpec = tween(durationMillis = SWITCH_GLIDE_DURATION_MS, easing = KeynearSpringEasing),
@@ -51,21 +54,21 @@ fun KeynearSwitch(
     Box(
         modifier = modifier
             .defaultMinSize(minWidth = KeynearLayout.SwitchMinWidth, minHeight = KeynearLayout.ControlMinHeight)
-            .pointerInput(checked, onCheckedChange) {
+            .pointerInput(Unit) {
                 var dragOffset = 0f
+                val threshold = KeynearLayout.SwitchDragThreshold.toPx()
                 detectHorizontalDragGestures(
                     onDragStart = { dragOffset = 0f },
                     onHorizontalDrag = { change, dragAmount ->
                         change.consume()
                         dragOffset += dragAmount
-                        val threshold = KeynearLayout.SwitchDragThreshold.toPx()
                         when {
-                            dragOffset > threshold && !checked -> {
-                                onCheckedChange(true)
+                            dragOffset > threshold && !currentChecked -> {
+                                latestOnCheckedChange(true)
                                 dragOffset = 0f
                             }
-                            dragOffset < -threshold && checked -> {
-                                onCheckedChange(false)
+                            dragOffset < -threshold && currentChecked -> {
+                                latestOnCheckedChange(false)
                                 dragOffset = 0f
                             }
                         }

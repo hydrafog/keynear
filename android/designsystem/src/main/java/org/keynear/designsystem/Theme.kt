@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalTextApi::class)
+
 package org.keynear.designsystem
 
 import android.app.Activity
@@ -32,9 +34,11 @@ import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.node.DrawModifierNode
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.core.view.WindowCompat
 import kotlinx.coroutines.CoroutineScope
@@ -72,10 +76,26 @@ private val KeynearDarkColorScheme = darkColorScheme(
 )
 
 private val PlusJakartaSans = FontFamily(
-    Font(R.font.plus_jakarta_sans, FontWeight.Normal),
-    Font(R.font.plus_jakarta_sans, FontWeight.Medium),
-    Font(R.font.plus_jakarta_sans, FontWeight.SemiBold),
-    Font(R.font.plus_jakarta_sans, FontWeight.Bold),
+    Font(
+        R.font.plus_jakarta_sans,
+        FontWeight.Normal,
+        variationSettings = FontVariation.Settings(FontVariation.weight(400)),
+    ),
+    Font(
+        R.font.plus_jakarta_sans,
+        FontWeight.Medium,
+        variationSettings = FontVariation.Settings(FontVariation.weight(500)),
+    ),
+    Font(
+        R.font.plus_jakarta_sans,
+        FontWeight.SemiBold,
+        variationSettings = FontVariation.Settings(FontVariation.weight(600)),
+    ),
+    Font(
+        R.font.plus_jakarta_sans,
+        FontWeight.Bold,
+        variationSettings = FontVariation.Settings(FontVariation.weight(700)),
+    ),
 )
 
 val KeynearTypography = Typography(
@@ -164,10 +184,11 @@ private fun dynamicSchemeFor(
     context: Context,
     darkTheme: Boolean,
     dynamicAccent: Boolean,
-): ColorScheme? = if (dynamicAccent && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-    if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-} else {
-    null
+): ColorScheme? {
+    if (!dynamicAccent || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
+    return runCatching {
+        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    }.getOrNull()
 }
 
 private fun themedColorScheme(base: ColorScheme, dynamic: ColorScheme?): ColorScheme =
@@ -200,7 +221,9 @@ fun KeynearTheme(
 ) {
     val context = LocalContext.current
     val basePalette = if (darkTheme) DarkKeynearPalette else LightKeynearPalette
-    val dynamicScheme = dynamicSchemeFor(context, darkTheme, dynamicAccent)
+    val dynamicScheme = remember(context, darkTheme, dynamicAccent) {
+        dynamicSchemeFor(context, darkTheme, dynamicAccent)
+    }
     val palette = if (dynamicScheme != null) {
         basePalette.withMaterialAccent(dynamicScheme)
     } else {

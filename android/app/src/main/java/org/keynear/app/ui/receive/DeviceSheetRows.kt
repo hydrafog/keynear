@@ -83,16 +83,19 @@ internal fun EmptyDevicesSheetContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
         ) {
-            TactileSurface(
-                modifier = Modifier.size(RowIconSize),
-                shape = KeynearShapes.Xl,
-                containerColor = palette.loadingTonal,
-                tone = TactileTone.TONAL,
-                cornerRadius = KeynearRadii.Xl,
+            Box(
+                modifier = Modifier
+                    .size(RowIconSize)
+                    .clip(KeynearShapes.Xl)
+                    .background(palette.trackWell)
+                    .tactileCushion(
+                        tone = TactileTone.INSET,
+                        isDark = palette.isDark,
+                        cornerRadius = KeynearRadii.Xl,
+                    ),
+                contentAlignment = Alignment.Center,
             ) {
-                Box(modifier = Modifier.size(RowIconSize), contentAlignment = Alignment.Center) {
-                    IconRadio(modifier = Modifier.size(EmptyIconSize), tint = palette.onLoadingTonal)
-                }
+                IconRadio(modifier = Modifier.size(EmptyIconSize), tint = palette.textMuted)
             }
             Text(
                 text = "No computers nearby",

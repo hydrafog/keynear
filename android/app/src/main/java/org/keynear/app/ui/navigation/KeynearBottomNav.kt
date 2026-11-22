@@ -86,7 +86,7 @@ fun KeynearBottomNav(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .clickable(role = Role.Tab) { onSelectTab(tab) }
+                        .clickable(interactionSource = null, indication = null, role = Role.Tab) { onSelectTab(tab) }
                         .padding(vertical = NavItemVerticalPadding),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(BadgeInset),

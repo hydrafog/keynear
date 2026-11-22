@@ -74,19 +74,22 @@ TactileSurface(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
             ) {
-                TactileSurface(
-                    modifier = Modifier.size(ButtonHeight),
-                    shape = KeynearShapes.Xl,
-                    containerColor = palette.loadingTonal,
-                    tone = TactileTone.TONAL,
-                    cornerRadius = KeynearRadii.Xl,
+                Box(
+                    modifier = Modifier
+                        .size(ButtonHeight)
+                        .clip(KeynearShapes.Xl)
+                        .background(palette.trackWell)
+                        .tactileCushion(
+                            tone = TactileTone.INSET,
+                            isDark = palette.isDark,
+                            cornerRadius = KeynearRadii.Xl,
+                        ),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Box(modifier = Modifier.size(ButtonHeight), contentAlignment = Alignment.Center) {
-                        IconFile(
-                            modifier = Modifier.size(ActionIconSize),
-                            tint = palette.onLoadingTonal,
-                        )
-                    }
+                    IconFile(
+                        modifier = Modifier.size(ActionIconSize),
+                        tint = palette.textMuted,
+                    )
                 }
                 Text(
                     text = "Nothing queued yet",

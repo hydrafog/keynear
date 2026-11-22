@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,9 +65,12 @@ private val PinLabelVerticalPadding = 7.dp
 private val PinNodeSize = 64.dp
 private val RowHorizontalPadding = 14.dp
 private val RowIconSize = 44.dp
-private val SelfIconSize = 36.dp
-private val SelfNodeRadius = 41.dp
-private val SelfNodeSize = 82.dp
+private val SelfIconSize = 28.dp
+private val SelfNodeRadius = 32.dp
+private val SelfNodeSize = 64.dp
+private val SelfTagGap = 10.dp
+private val SelfTagHorizontalPadding = 14.dp
+private val SelfTagVerticalPadding = 6.dp
 private val SheetCollapsedHeight = 132.dp
 private val SheetExpandedHeight = 252.dp
 private val SpokeStrokeWidth = 1.dp
@@ -88,6 +92,8 @@ internal fun VisibilitySegmentedControl(
         Triple(VisibilityState.EVERYONE_NEARBY, "Everyone", 2),
     )
     val selectedIndex = items.indexOfFirst { it.first == current }.coerceAtLeast(0)
+    val currentIndex by rememberUpdatedState(selectedIndex)
+    val latestOnSelect by rememberUpdatedState(onSelect)
     val wellColor = palette.visibilityWell.copy(alpha = 0.93f)
     val density = LocalDensity.current
     val pillEasing = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
@@ -128,24 +134,26 @@ internal fun VisibilitySegmentedControl(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .pointerInput(current, onSelect) {
+                    .pointerInput(Unit) {
                         var dragAccum = 0f
-                        var lastIndex = selectedIndex
+                        var baseIndex = currentIndex
+                        var lastIndex = currentIndex
                         val slotPx = with(density) { slotWidth.toPx() }
                         detectHorizontalDragGestures(
                             onDragStart = {
                                 dragAccum = 0f
-                                lastIndex = selectedIndex
+                                baseIndex = currentIndex
+                                lastIndex = baseIndex
                             },
                             onHorizontalDrag = { change, dragAmount ->
                                 change.consume()
                                 dragAccum += dragAmount
-                                val next = (selectedIndex + dragAccum / slotPx)
+                                val next = (baseIndex + dragAccum / slotPx)
                                     .roundToInt()
                                     .coerceIn(items.indices)
                                 if (next != lastIndex) {
                                     lastIndex = next
-                                    onSelect(items[next].first)
+                                    latestOnSelect(items[next].first)
                                 }
                             },
                             onDragEnd = {},
@@ -202,7 +210,7 @@ internal fun CenterSelfNode(
     val active = visibility != VisibilityState.HIDDEN
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Md),
+        verticalArrangement = Arrangement.spacedBy(SelfTagGap),
     ) {
         TactileSurface(
             modifier = Modifier.size(SelfNodeSize),
@@ -227,14 +235,17 @@ internal fun CenterSelfNode(
             cornerRadius = KeynearRadii.Xl,
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = VisibilityIconSize, vertical = KeynearSpacing.Sm),
+                modifier = Modifier.padding(
+                    horizontal = SelfTagHorizontalPadding,
+                    vertical = SelfTagVerticalPadding,
+                ),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
             ) {
                 Text(
                     text = localDeviceName,
                     color = palette.textPrimary,
-                    fontSize = KeynearTypeSizes.Description,
+                    fontSize = KeynearTypeSizes.Caption,
                     fontWeight = FontWeight.Bold,
                 )
                 if (visibility == VisibilityState.EVERYONE_NEARBY) {
@@ -243,7 +254,7 @@ internal fun CenterSelfNode(
                     Text(
                         text = "$mins:${secs.toString().padStart(2, '0')}",
                         color = palette.loadingInk,
-                        fontSize = KeynearTypeSizes.Description,
+                        fontSize = KeynearTypeSizes.Caption,
                         fontWeight = FontWeight.Bold,
                     )
                 }

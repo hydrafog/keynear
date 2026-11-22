@@ -257,9 +257,10 @@ internal fun tactileSurfaceBrush(
 ): Brush = Brush.verticalGradient(colors = tactileSurfaceStops(tone, containerColor, palette))
 
 internal fun tactileSurfaceRimColor(tone: TactileTone, palette: KeynearPalette): Color? = when (tone) {
-    TactileTone.ACCENT -> palette.focusRing.copy(alpha = if (palette.isDark) 0.28f else 0.40f)
-    TactileTone.SURFACE, TactileTone.SHEET, TactileTone.TONAL ->
+    TactileTone.ACCENT -> palette.accentRim
+    TactileTone.SURFACE, TactileTone.SHEET ->
         if (palette.isDark) palette.onAccent.copy(alpha = 0.08f) else palette.sheetHandle.copy(alpha = 0.48f)
+    TactileTone.TONAL -> palette.tonalRim
     TactileTone.THUMB, TactileTone.INSET, TactileTone.NONE -> null
 }
 
@@ -267,6 +268,7 @@ internal fun KeynearPalette.withMaterialAccent(scheme: ColorScheme): KeynearPale
     accent = scheme.primary,
     onAccent = scheme.onPrimary,
     focusRing = scheme.primary,
+    accentRim = scheme.primary.copy(alpha = if (isDark) 0.28f else 0.40f),
     loading = scheme.primary,
     loadingHover = scheme.primary,
     loadingInk = scheme.primary,

@@ -126,11 +126,10 @@ fun ActionButton(
         cornerRadius = KeynearRadii.Xl,
         onClick = onClick,
         enabled = enabled,
+        contentAlignment = Alignment.Center,
     ) {
         Row(
-            modifier = Modifier
-                .heightIn(min = minHeight)
-                .padding(horizontal = KeynearLayout.ActionButtonHorizontalPadding, vertical = KeynearLayout.ContentGap),
+            modifier = Modifier.padding(horizontal = KeynearLayout.ActionButtonHorizontalPadding),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {

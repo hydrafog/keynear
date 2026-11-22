@@ -6,6 +6,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -146,7 +148,12 @@ internal fun DevicesBottomSheet(
                 .padding(start = KeynearSpacing.Lg, end = KeynearSpacing.Lg, top = ContentGap, bottom = KeynearSpacing.Md),
             verticalArrangement = Arrangement.spacedBy(CompactGap),
         ) {
-            SheetHeaderBar(count = pins.size, dragModifier = dragModifier)
+            SheetHeaderBar(
+                count = pins.size,
+                expanded = expanded,
+                onSetExpanded = onSetExpanded,
+                dragModifier = dragModifier,
+            )
             if (currentHeight > 0.dp) {
                 if (pins.isEmpty()) {
                     EmptyDevicesSheetContent(currentHeight = currentHeight, dragModifier = dragModifier)
@@ -171,6 +178,8 @@ internal fun DevicesBottomSheet(
 @Composable
 private fun SheetHeaderBar(
     count: Int,
+    expanded: Boolean,
+    onSetExpanded: (Boolean) -> Unit,
     dragModifier: Modifier,
 ) {
     val palette = LocalKeynearPalette.current
@@ -189,20 +198,25 @@ private fun SheetHeaderBar(
                 .clip(CircleShape)
                 .background(palette.sheetHandle),
         )
-        if (count > 0) {
-            Spacer(modifier = Modifier.height(ContentGap))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start,
-            ) {
-                Text(
-                    text = if (count == 1) "1 computer in range" else "$count computers in range",
-                    color = palette.textPrimary,
-                    fontSize = KeynearTypeSizes.Description,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
+        Spacer(modifier = Modifier.height(ContentGap))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = if (count == 1) "1 computer in range" else "$count computers in range",
+                color = palette.textPrimary,
+                fontSize = KeynearTypeSizes.Description,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = if (expanded) "Collapse" else "All devices",
+                color = palette.loadingInk,
+                fontSize = KeynearTypeSizes.Description,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable(role = Role.Button) { onSetExpanded(!expanded) },
+            )
         }
     }
 }
