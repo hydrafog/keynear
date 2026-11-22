@@ -94,8 +94,6 @@
             ];
 
             buildInputs = with pkgs; [
-              gtk4
-              libadwaita
               dbus
               pipewire
               bluez

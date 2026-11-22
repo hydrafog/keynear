@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if ! command -v keynear-settings >/dev/null 2>&1; then
+if ! command -v keynear >/dev/null 2>&1; then
   if command -v notify-send >/dev/null 2>&1; then
     notify-send --app-name="Keynear" --icon="org.keynear.Keynear" \
-      "Keynear unavailable" "Install keynear-settings on PATH to share files."
+      "Keynear unavailable" "Install keynear on PATH to share files."
   fi
-  echo "error: keynear-settings is not available on PATH" >&2
+  echo "error: keynear is not available on PATH" >&2
   exit 127
 fi
 
@@ -26,4 +26,4 @@ if [ "${#paths[@]}" -eq 0 ]; then
   exit 0
 fi
 
-exec keynear-settings --share -- "${paths[@]}"
+exec keynear send -- "${paths[@]}"

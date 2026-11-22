@@ -17,16 +17,13 @@ For Android native and Gradle builds, use the isolated Android devShell:
 nix develop .#android --command bash -c 'cd android && gradle testDebugUnitTest lintDebug detekt assembleDebug'
 ```
 
-On non-Nix Ubuntu hosts, install `protobuf-compiler`, `libgtk-4-dev`, and `pkg-config` before building the workspace.
+On non-Nix Ubuntu hosts, install `protobuf-compiler`, `libdbus-1-dev`, and `pkg-config` before building the workspace.
 
 ## Design System Tokens
 
-Shared visual tokens (`Plus Jakarta Sans`, light and dark palettes, typography scale, radii, spacing, and motion timings) live in `design/tokens.json`. Two derived sources consume them.
+Shared visual tokens (`Plus Jakarta Sans`, light and dark palettes, typography scale, radii, spacing, and motion timings) live in `design/tokens.json`. The Android module at `android/designsystem/src/main/java/org/keynear/designsystem/Tokens.kt` defines the equivalent Kotlin token objects.
 
-- The GTK stylesheet in `crates/keynear-settings/assets/style.css` declares them as custom properties on `window.keynear-window` and its `.dark` state, then references them with `var()`. GTK 4.16 or newer is required.
-- The Android module at `android/designsystem/src/main/java/org/keynear/designsystem/Tokens.kt` holds the equivalent Kotlin token objects.
-
-The script `python3 scripts/validation/token-check.py` checks that both derived sources match `design/tokens.json` and that no raw visual literals leak into component styles. It runs in the project quality script and CI.
+The script `python3 scripts/validation/token-check.py` checks that `Tokens.kt`, `Theme.kt`, and the bundled `plus_jakarta_sans.ttf` font asset match `design/tokens.json` and that no raw visual literals leak into `Controls*.kt` or `KeynearIcons.kt`. It runs in the project quality script and CI.
 
 ## Structure and Size Caps
 

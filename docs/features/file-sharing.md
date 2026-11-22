@@ -35,8 +35,8 @@ Resumable transfers and the virtual filesystem work as follows.
   - A `TransferCheckpoint` carries the bitmap, the rolling digest, a monotonic `sequence`, and a byte count that the receiver validates against the bitmap before skipping any bytes.
   - `resume_from_checkpoint` returns the first unverified chunk only when both peers advertise `CAP_RESUMABLE_TRANSFER` (`0x100`) and the checkpoint is newer than the last accepted one. A peer without the capability starts from chunk zero.
   - `TransferComplete.sha256_digest` still verifies the whole transfer in constant time.
-- The module `crates/keynear-core/src/vfs/` models paired remote roots and opaque document identifiers. It builds an on-demand `ReadPlan` that clamps offsets to the file size and caps each request at `STREAM_CHUNK_BYTES`. The module `crates/keynear-linux/src/fuse/` drives that model through an injectable `FuseMountBackend`. Two conditions apply.
-  - When kernel FUSE or `libfuse3` is absent, the backend logs `perseus_fuse_unavailable` and the daemon continues.
+- The module `crates/keynear-core/src/vfs/` models paired remote roots and opaque document identifiers. It builds an on-demand `ReadPlan` that clamps offsets to the file size and caps each request at `STREAM_CHUNK_BYTES`. The module `crates/keynear/src/fuse/` drives that model through an injectable `FuseMountBackend`. Two conditions apply.
+  - When kernel FUSE or `libfuse3` is absent, `crates/keynear/src/fuse/backend.rs` logs `fuse_backend_unavailable` and the daemon continues.
   - The real `fuser` adapter is optional behind the `fuse` Cargo feature.
 - On Android, `KeynearDocumentsProvider` is registered as a Storage Access Framework document provider. It exposes paired Linux shared directories in the system `Files` app and document pickers. `openDocument` returns a `ParcelFileDescriptor` whose write end is fed by `provide_vfs_read_fd`. A missing peer yields an empty root set rather than an error.
 
@@ -51,13 +51,13 @@ Incoming transfers are gated by consent.
 
 Keynear exposes transfers through desktop and mobile interfaces.
 
-- On Linux, `keynear-linux` runs over the `0o600` `daemon.sock` Unix socket. It handles `--send <device_id> <path>...`, `--accept <transfer_id>`, `--decline <transfer_id>`, `--cancel <transfer_id>`, and `--transfers`. When a graphical D-Bus session is available, it registers a `ksni` `StatusNotifierItem` tray menu. It also posts `org.freedesktop.Notifications` consent and status alerts with inline actions.
-- The Linux settings portal uses `ashpd` (`xdg-desktop-portal`) file and folder choosers. `keynear-settings` provides:
-  - Sending files.
-  - Toggles for global `auto_accept_from_paired` or per-device `Auto-accept files`.
-  - Inline rename of paired devices.
-  - `Active transfers` with `Accept`, `Decline`, and `Cancel`.
-  - `--send-picker [--device <id>]` and `--share [--device <id>] [--] <path>...` entrypoints for the Nautilus (`packaging/linux/integrations/nautilus/send-via-keynear`), Dolphin (`packaging/linux/integrations/dolphin/keynear-send.desktop`), and Yazi (`packaging/linux/integrations/yazi/keynear.yazi/main.lua`) context-menu integrations.
+- On Linux, `keynear` communicates with the daemon over the `0o600` `daemon.sock` Unix socket. Subcommands handle `keynear send [--device <id>] [--] <path>...`, `keynear accept <transfer_id>`, `keynear decline <transfer_id>`, `keynear cancel <transfer_id>`, `keynear transfers`, and `keynear settings`. When a graphical D-Bus session is available, `keynear daemon` registers a `ksni` `StatusNotifierItem` tray menu (`org.keynear.Keynear-symbolic`, `Keynear`, click-to-open menu) and posts `org.freedesktop.Notifications` consent and status alerts with inline actions.
+- The tray menu and `keynear send --picker` use `ashpd` (`xdg-desktop-portal`) file choosers (`crates/keynear/src/portal.rs`) and IPC controls. They provide:
+  - Sending files through the tray `Send files...` item (`keynear send --picker`) or `keynear send`.
+  - Toggles in the tray menu for global `Auto-accept from paired` and per-device `Auto-accept files`.
+  - Paired-device renaming through `keynear rename <device_id> <display_name>`.
+  - Active transfer controls in the tray `Transfers` submenu and CLI with `Accept`, `Decline`, and `Cancel`.
+  - Context-menu integrations for Nautilus (`packaging/linux/integrations/nautilus/send-via-keynear`), Dolphin (`packaging/linux/integrations/dolphin/keynear-send.desktop`), and Yazi (`packaging/linux/integrations/yazi/keynear.yazi/main.lua`) launching `keynear send -- <path>...`.
 - On Android, `PairingNotifier` posts incoming consent prompts with `Accept` and `Decline`, completion and error alerts, and ongoing progress notifications. Progress uses two formats.
   - Android 16 (API 36) uses `Notification.ProgressStyle` with three segments (`Prepare`, `Transfer`, `Complete`).
   - API 31–35 uses `NotificationCompat` progress bars backed by `KeynearTransferJobService` (`User-Initiated Data Transfer Jobs`).

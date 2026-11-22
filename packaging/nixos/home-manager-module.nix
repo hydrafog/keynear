@@ -51,7 +51,7 @@ in
       type = lib.types.package;
       default = defaultPackage;
       defaultText = lib.literalExpression "pkgs.keynear";
-      description = "The Keynear package providing keynear-linux and keynear-settings.";
+      description = "The Keynear package providing keynear.";
     };
 
     fuse = lib.mkOption {
@@ -63,13 +63,13 @@ in
     logLevel = lib.mkOption {
       type = lib.types.enum [ "error" "warn" "info" "debug" "trace" ];
       default = "info";
-      description = "KEYNEAR_LOG verbosity level for keynear-linux.";
+      description = "KEYNEAR_LOG verbosity level for keynear.";
     };
 
     configDir = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
-      description = "Optional custom KEYNEAR_CONFIG_DIR passed to keynear-linux.";
+      description = "Optional custom KEYNEAR_CONFIG_DIR passed to keynear.";
     };
 
     settings = lib.mkOption {
@@ -218,7 +218,7 @@ in
             if [ "''${#paths[@]}" -eq 0 ]; then
               exit 0
             fi
-            exec "${cfg.package}/bin/keynear-settings" --share -- "''${paths[@]}"
+            exec "${cfg.package}/bin/keynear" send -- "''${paths[@]}"
           '';
         };
       })
@@ -238,9 +238,9 @@ in
       Service = {
         ExecStart =
           if configFilePath != null && renderedSettings != { } then
-            "${cfg.package}/bin/keynear-linux --config ${tomlFormat.generate "keynear-config.toml" renderedSettings}"
+            "${cfg.package}/bin/keynear daemon --config ${tomlFormat.generate "keynear-config.toml" renderedSettings}"
           else
-            "${cfg.package}/bin/keynear-linux";
+            "${cfg.package}/bin/keynear daemon";
         Restart = "on-failure";
         RestartSec = 3;
         Environment = [

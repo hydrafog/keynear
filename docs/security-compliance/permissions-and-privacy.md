@@ -36,8 +36,8 @@ Android requests the following permissions.
 The lockscreen and desktop portals add the following boundaries.
 
 - `KeynearTileService` inspects `isLocked` before changing visibility from Quick Settings. While locked, taps switch only between `Hidden` and `Paired devices only`. Activating `Everyone nearby` requires unlocking through `unlockAndRun`.
-- `keynear-settings` accesses user-chosen files, folders, and incoming download locations through `ashpd` (`xdg-desktop-portal`) file-chooser requests rather than ambient filesystem indexing.
-- File-manager context-menu integrations (`packaging/linux/integrations/nautilus`, `packaging/linux/integrations/dolphin`, `packaging/linux/integrations/yazi`) invoke `keynear-settings --share --` with explicit option-end delimiters and verified path arguments.
+- `keynear send --picker` (invoked directly or from the `ksni` tray `Send files...` item) accesses user-chosen files through `ashpd` (`xdg-desktop-portal`) file-chooser requests rather than ambient filesystem indexing, while `incoming_directory` is configured in `config.toml`.
+- File-manager context-menu integrations (`packaging/linux/integrations/nautilus`, `packaging/linux/integrations/dolphin`, `packaging/linux/integrations/yazi`) invoke `keynear send --` with explicit option-end delimiters and verified path arguments.
 
 ## Privacy and Licensing
 

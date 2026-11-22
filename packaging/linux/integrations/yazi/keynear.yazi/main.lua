@@ -29,7 +29,7 @@ function M:entry(_)
     return
   end
 
-  local cmd = Command("keynear-settings"):arg("--share"):arg("--")
+  local cmd = Command("keynear"):arg("send"):arg("--")
   for _, path in ipairs(paths) do
     cmd = cmd:arg(path)
   end
@@ -38,7 +38,7 @@ function M:entry(_)
   if not child then
     ya.notify({
       title = "Keynear",
-      content = "Failed to launch keynear-settings: " .. tostring(err),
+      content = "Failed to launch keynear: " .. tostring(err),
       timeout = 4,
       level = "error",
     })

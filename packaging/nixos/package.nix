@@ -3,10 +3,7 @@
   rustPlatform,
   pkg-config,
   protobuf,
-  wrapGAppsHook4,
   aws-lc,
-  gtk4,
-  libadwaita,
   dbus,
   pipewire,
   bluez,
@@ -39,14 +36,11 @@ rustPlatform.buildRustPackage {
   nativeBuildInputs = [
     pkg-config
     protobuf
-    wrapGAppsHook4
     rustPlatform.bindgenHook
   ];
 
   buildInputs = [
     aws-lc
-    gtk4
-    libadwaita
     dbus
     pipewire
     bluez
@@ -55,22 +49,18 @@ rustPlatform.buildRustPackage {
 
   cargoBuildFlags = [
     "-p"
-    "keynear-linux"
-    "-p"
-    "keynear-settings"
+    "keynear"
   ] ++ lib.optionals enableFuse [
     "--features"
-    "keynear-linux/fuse"
+    "keynear/fuse"
   ];
 
   cargoTestFlags = [
     "-p"
-    "keynear-linux"
-    "-p"
-    "keynear-settings"
+    "keynear"
   ] ++ lib.optionals enableFuse [
     "--features"
-    "keynear-linux/fuse"
+    "keynear/fuse"
   ];
 
   postInstall = ''
@@ -83,6 +73,8 @@ rustPlatform.buildRustPackage {
       "$out/share/icons/hicolor/scalable/apps/org.keynear.Keynear.svg"
     install -Dm644 packaging/linux/icons/hicolor/symbolic/apps/org.keynear.Keynear-symbolic.svg \
       "$out/share/icons/hicolor/symbolic/apps/org.keynear.Keynear-symbolic.svg"
+    install -Dm644 packaging/linux/icons/hicolor/scalable/status/org.keynear.Keynear-symbolic.svg \
+      "$out/share/icons/hicolor/scalable/status/org.keynear.Keynear-symbolic.svg"
     for size in 48x48 128x128 256x256 512x512; do
       install -Dm644 "packaging/linux/icons/hicolor/$size/apps/org.keynear.Keynear.png" \
         "$out/share/icons/hicolor/$size/apps/org.keynear.Keynear.png"
@@ -96,12 +88,12 @@ rustPlatform.buildRustPackage {
     install -Dm644 packaging/linux/systemd/keynear.service \
       "$out/share/systemd/user/keynear.service"
     substituteInPlace "$out/share/systemd/user/keynear.service" \
-      --replace-fail '%h/.local/bin/keynear-linux' "$out/bin/keynear-linux"
+      --replace-fail '%h/.local/bin/keynear daemon' "$out/bin/keynear daemon"
 
     install -Dm644 packaging/linux/integrations/dolphin/keynear-send.desktop \
       "$out/share/kio/servicemenus/keynear-send.desktop"
     substituteInPlace "$out/share/kio/servicemenus/keynear-send.desktop" \
-      --replace-fail 'Exec=keynear-settings' "Exec=$out/bin/keynear-settings"
+      --replace-fail 'Exec=keynear' "Exec=$out/bin/keynear"
 
     install -Dm755 packaging/linux/integrations/nautilus/send-via-keynear \
       "$out/share/keynear/integrations/nautilus/send-via-keynear"
@@ -114,7 +106,6 @@ rustPlatform.buildRustPackage {
     homepage = "https://github.com/hydrafog/keynear";
     license = lib.licenses.gpl3Only;
     platforms = lib.platforms.linux;
-    mainProgram = "keynear-settings";
+    mainProgram = "keynear";
   };
 }
-

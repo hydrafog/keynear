@@ -1,17 +1,18 @@
 # Linux systemd Service
 
-`keynear-linux` runs as an unprivileged `systemd --user` service. It stores configuration and paired device metadata in `~/.config/keynear/` or `$KEYNEAR_CONFIG_DIR/`.
+`keynear` runs as an unprivileged `systemd --user` service (`keynear daemon`). It stores configuration and paired device metadata in `~/.config/keynear/` or `$KEYNEAR_CONFIG_DIR/`.
 
 ## Build and Runtime Prerequisites
 
-Building `keynear-linux` (`oo7`), `keynear-settings`, and the Rust workspace requires D-Bus development headers. On Debian and Ubuntu, install `libdbus-1-dev`. The repository Nix devShell provides the header automatically.
+Building `keynear` (`oo7`) and the Rust workspace requires D-Bus development headers. On Debian and Ubuntu, install `libdbus-1-dev`. The repository Nix devShell provides the header automatically.
 
-At runtime, Keynear needs GTK4 and these services:
+At runtime, Keynear uses these services:
 
 - `bluetoothd` for BlueZ.
 - An `org.freedesktop.secrets` Secret Service provider such as GNOME Keyring or KWallet.
+- An `xdg-desktop-portal` backend when opening file dialogs from `keynear send --picker` or the tray menu.
 
-When BlueZ or Secret Service is unavailable at startup, `keynear-linux` logs a warning and keeps local daemon control active without BLE or keyring operations.
+When BlueZ or Secret Service is unavailable at startup, `keynear` logs a warning and keeps local daemon control active without BLE or keyring operations.
 
 ## Unit Configuration
 
@@ -26,7 +27,7 @@ After=graphical-session.target bluetooth.target
 StartLimitIntervalSec=0
 
 [Service]
-ExecStart=%h/.local/bin/keynear-linux
+ExecStart=%h/.local/bin/keynear daemon
 Restart=on-failure
 RestartSec=3
 Environment=KEYNEAR_LOG=info
@@ -57,32 +58,32 @@ On NixOS, `nixosModules.default` (`packaging/nixos/nixos-module.nix`) provisions
 
 On Home Manager, `homeManagerModules.default` (`packaging/nixos/home-manager-module.nix`, re-exported by `packaging/nixos/default.nix`) adds declarative non-secret `services.keynear.settings` (`config.toml`) and secret-key assertions. It also exposes `services.keynear.fuse`, `services.keynear.logLevel`, and `services.keynear.integrations.{nautilus,dolphin,yazi,gnomeExtension}.enable`.
 
-## CLI Flags, Tray, Config, and Paired Device Store
+## CLI Subcommands, Tray, Config, and Paired Device Store
+
+Keynear uses the bare primary product noun `keynear` for the executable crate and binary with subcommands for user surfaces (`keynear settings`, `keynear daemon`, `keynear send`), while internal workspace libraries use `<product>-<layer>` (`keynear-protocol`, `keynear-core`, `keynear-ipc`, `keynear-ffi`).
 
 Keynear exposes the following command-line, tray, and storage behavior.
 
-- `keynear-linux` accepts these flags.
-  - `--config <path>`, `--status`, `--devices`.
-  - `--set-visibility <hidden|paired|everyone>`, `--rename-device <device_id> <display_name>`.
-  - `--send <device_id> <path>...`, `--accept <transfer_id>`, `--decline <transfer_id>`, `--cancel <transfer_id>`.
-  - `--transfers`, `--version`, `--help`.
+- `keynear` uses a subcommand-first CLI (also accepting double-dash flags for compatibility):
+  - `keynear [daemon] [--config <path>]` starts the daemon and tray (default when no subcommand is given).
+  - `keynear settings [show|validate] [--config <path>]` prints or validates `DaemonConfig`.
+  - `keynear status`, `keynear devices`, `keynear transfers`.
+  - `keynear visibility <hidden|paired|everyone>`, `keynear rename <device_id> <display_name>`.
+  - `keynear send [--device <device_id>] [--] <path>...`, `keynear send <device_id> [--] <path>...`, `keynear send --picker [--device <device_id>]`.
+  - `keynear accept <transfer_id>`, `keynear decline <transfer_id>`, `keynear cancel <transfer_id>`.
+  - `keynear version`, `keynear help`.
 
   A `--config <path>` file must exist and pass `DaemonConfig::validate()`.
-- `keynear-settings` uses GTK4 application ID `org.keynear.Keynear`. The ID matches `org.keynear.Keynear.desktop` and the `hicolor` Geometric K-Wave icon. The binary accepts:
-  - `--validate`, `--config <path>`, `--version`, `--help`.
-  - `--send-picker [--device <id>]`.
-  - `--share [--device <id>] [--] <path>...`.
-
-  File-manager integrations at `packaging/linux/integrations/nautilus/send-via-keynear`, `packaging/linux/integrations/dolphin/keynear-send.desktop`, and `packaging/linux/integrations/yazi/keynear.yazi/main.lua` launch `keynear-settings --share --` with selected paths.
-- Inside a graphical D-Bus session, `keynear-linux` registers a `ksni` `StatusNotifierItem` tray menu with an `Everyone (MM:SS)` live countdown and a `keynear-settings` launcher. It also publishes interactive `org.freedesktop.Notifications` alerts through `zbus` for `Accept`, `Decline`, `Cancel`, and pairing confirmation. Headless environments without a tray watcher or notification daemon keep serving IPC and P2P transfers.
+- `org.keynear.Keynear` matches `org.keynear.Keynear.desktop` and the `hicolor` Geometric K-Wave symbolic icon (`org.keynear.Keynear-symbolic`). File-manager integrations at `packaging/linux/integrations/nautilus/send-via-keynear`, `packaging/linux/integrations/dolphin/keynear-send.desktop`, and `packaging/linux/integrations/yazi/keynear.yazi/main.lua` launch `keynear send --` with selected paths.
+- Inside a graphical D-Bus session, `keynear daemon` registers a `ksni` `StatusNotifierItem` tray menu displaying `org.keynear.Keynear-symbolic` with `Keynear` as title and tooltip, opening the popup menu on click (`MENU_ON_ACTIVATE`). The menu shows `Keynear — <visibility>`, visibility mode radios with an `Everyone (MM:SS)` live countdown, active transfers, paired devices, `Now playing`, and `Send files...` (`keynear send --picker`). It also publishes interactive `org.freedesktop.Notifications` alerts through `zbus` for `Accept`, `Decline`, `Cancel`, and pairing confirmation. Headless environments without a tray watcher or notification daemon keep serving IPC and P2P transfers.
 - `config.toml` loads from `~/.config/keynear/config.toml`. It holds these settings.
   - `visibilityMode`, `incomingDirectory`, `autoAcceptFromPaired`.
   - `clipboardSyncEnabled`, `clipboardImagesEnabled`, `otpPassthroughEnabled`.
   - `audioHandoffEnabled`, `ignoredMimeTypes`, `notifyAutoAcceptComplete`.
 
   Keynear falls back to safe defaults when the file is absent and saves updates atomically through `DaemonConfig::save_to_path`.
-- The on-demand virtual filesystem is a typed backend in `crates/keynear-linux/src/fuse/`. The daemon logs a graded availability probe at startup. When kernel FUSE or `libfuse3` is absent, it emits `perseus_fuse_unavailable` and keeps serving IPC and transfers.
-- Notification mirroring is opt-in on the phone. Excluded packages are configuration and contain no message content. The desktop notification client logs `mirror_notifications_unavailable` when the session bus is absent and keeps the daemon running. MPRIS2 media observation logs `carina_media_unavailable` when no player or bus exists.
+- The on-demand virtual filesystem is a typed backend in `crates/keynear/src/fuse/`. The daemon logs a graded availability probe (`fuse_mount_probe`, `fuse_mount_state`) from `crates/keynear/src/fuse/probe.rs` at startup. When kernel FUSE or `libfuse3` is absent, `crates/keynear/src/fuse/backend.rs` emits `fuse_backend_unavailable` and keeps serving IPC and transfers.
+- Notification mirroring is opt-in on the phone. Excluded packages are configuration and contain no message content. The desktop notification client logs `notifications_unavailable` when the session bus is absent and keeps the daemon running. MPRIS2 media observation logs `media_bridge_unavailable` when no player or bus exists.
   - On NixOS, `services.keynear.fuse.enable = true` sets `KEYNEAR_FUSE=1` and enables the optional `fuse` Cargo feature on the default Nix package.
   - On Home Manager, use `services.keynear.fuse = true`.
 
@@ -92,4 +93,4 @@ Keynear exposes the following command-line, tray, and storage behavior.
   - `last_ble_address` and `paired_at`.
 
   Display-name updates are validated against `MAX_DISPLAY_NAME_LEN = 64` and written atomically through `PairedDeviceStore::rename`. Pairwise `irk` and `reconnect_secret` keys and the monotonic presence counter stay exclusively in `oo7` (`org.freedesktop.secrets`).
-- Setting `visibilityMode` to `EveryoneNearby` starts a 10-minute (`600`-second) countdown that reverts to `PairedOnly` when it elapses. `keynear-linux` handles `SIGINT` and `SIGTERM` through a unified shutdown loop.
+- Setting `visibilityMode` to `EveryoneNearby` starts a 10-minute (`600`-second) countdown that reverts to `PairedOnly` when it elapses. `keynear daemon` handles `SIGINT` and `SIGTERM` through a unified shutdown loop.

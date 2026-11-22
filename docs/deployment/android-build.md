@@ -32,11 +32,12 @@ Verify that every `LOAD` program header reports `0x4000` alignment.
 
 ## UniFFI Kotlin Bindings
 
-The `crates/keynear-ffi` crate exposes `uniffi-bindgen` (`src/bin/uniffi_bindgen.rs`) behind the `bindgen-cli` feature. The `:core-ffi:generateUniffiBindings` task generates `uniffi/keynear_core/keynear_core.kt` into `android/core-ffi/build/generated/source/uniffi/` during Gradle builds. Perseus adds these exports. Carina adds the `carina_*` exports and their Kotlin records.
+The `crates/keynear-ffi` crate exposes `uniffi-bindgen` (`src/bin/uniffi_bindgen.rs`) behind the `bindgen-cli` feature. The `:core-ffi:generateUniffiBindings` task generates `uniffi/keynear_core/keynear_core.kt` into `android/core-ffi/build/generated/source/uniffi/` during Gradle builds. The `vfs.rs` and `continuity.rs` modules export these records and functions:
 
 - `FfiChunkCheckpoint`, `FfiReadPlan`, `FfiVfsNode`, and `FfiResumeDecision`.
-- The `perseus_*` exports.
-- The `carina_*` exports and `FfiCapabilityPair`, `FfiNotificationDescriptor`, `FfiMirroredNotification`, and `FfiMediaState` records.
+- `resumable_transfer_capability_flags`, `transfer_resume_decision`, `vfs_read_plan`, `vfs_root_node`, and `provide_vfs_read_fd`.
+- `FfiCapabilityPair`, `FfiNotificationDescriptor`, `FfiMirroredNotification`, `FfiMediaState`, `FfiCallAction`, `FfiCallPhase`, `FfiNotificationAction`, `FfiPlayback`, and `FfiMediaCommand`.
+- `continuity_capability_flags`, `mirror_notification`, `validate_notification_reply`, `call_action_allowed`, and `media_command_allowed`.
 
 The `provide_vfs_read_fd` function consumes the write end of a `ParcelFileDescriptor` pipe created by `RemoteDocumentStream`:
 

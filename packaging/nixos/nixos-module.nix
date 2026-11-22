@@ -18,7 +18,7 @@ in
       type = lib.types.package;
       default = defaultPackage;
       defaultText = lib.literalExpression "pkgs.keynear";
-      description = "The Keynear package providing keynear-linux, keynear-settings, desktop entries, and icons.";
+      description = "The Keynear package providing keynear, desktop entries, and icons.";
     };
 
     fuse = {
@@ -113,7 +113,7 @@ in
       wants = [ "graphical-session.target" ];
       wantedBy = [ "graphical-session.target" ];
       serviceConfig = {
-        ExecStart = "${cfg.package}/bin/keynear-linux";
+        ExecStart = "${cfg.package}/bin/keynear daemon";
         Restart = "on-failure";
         RestartSec = 3;
         Environment = [

@@ -4,7 +4,7 @@ runtime-version: '49'
 sdk: org.gnome.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable
-command: keynear-settings
+command: keynear
 finish-args:
   - --share=network
   - --share=ipc
@@ -44,13 +44,13 @@ modules:
   - name: keynear
     buildsystem: simple
     build-commands:
-      - cargo --offline build --release -p keynear-linux -p keynear-settings
-      - install -Dm755 target/release/keynear-linux /app/bin/keynear-linux
-      - install -Dm755 target/release/keynear-settings /app/bin/keynear-settings
+      - cargo --offline build --release -p keynear
+      - install -Dm755 target/release/keynear /app/bin/keynear
       - install -Dm644 packaging/flathub/org.keynear.Keynear.desktop /app/share/applications/org.keynear.Keynear.desktop
       - install -Dm644 packaging/flathub/org.keynear.Keynear.metainfo.xml /app/share/metainfo/org.keynear.Keynear.metainfo.xml
       - install -Dm644 packaging/linux/icons/hicolor/scalable/apps/org.keynear.Keynear.svg /app/share/icons/hicolor/scalable/apps/org.keynear.Keynear.svg
       - install -Dm644 packaging/linux/icons/hicolor/symbolic/apps/org.keynear.Keynear-symbolic.svg /app/share/icons/hicolor/symbolic/apps/org.keynear.Keynear-symbolic.svg
+      - install -Dm644 packaging/linux/icons/hicolor/scalable/status/org.keynear.Keynear-symbolic.svg /app/share/icons/hicolor/scalable/status/org.keynear.Keynear-symbolic.svg
       - install -Dm644 packaging/linux/icons/hicolor/128x128/apps/org.keynear.Keynear.png /app/share/icons/hicolor/128x128/apps/org.keynear.Keynear.png
       - install -Dm644 packaging/linux/icons/hicolor/256x256/apps/org.keynear.Keynear.png /app/share/icons/hicolor/256x256/apps/org.keynear.Keynear.png
       - install -Dm644 packaging/linux/icons/hicolor/512x512/apps/org.keynear.Keynear.png /app/share/icons/hicolor/512x512/apps/org.keynear.Keynear.png

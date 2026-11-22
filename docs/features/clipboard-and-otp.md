@@ -6,12 +6,12 @@ Keynear (`1.2.0-carina`) synchronizes copied text and images in the background w
 
 The Linux daemon handles clipboard sync as follows.
 
-- The daemon (`crates/keynear-linux/src/clipboard.rs`) prefers `ext-data-control-v1` (KDE KWin, COSMIC, Sway, Hyprland). It falls back to `zwlr-data-control-v1` and X11 (`x11rb` XFixes), and degrades non-fatally when headless. Outgoing images advertise `ClipboardOffer` metadata first. When a paired peer requests `ClipboardFetch`, the daemon renders the payload bytes lazily over `QuicStreamKind::ClipboardBlob` (`0x04`).
-- Keynear inspects clipboard offers before reading any payload byte. It skips entries carrying `x-kde-passwordManagerHint`, `application/x-password`, or user-configured `ignoredMimeTypes`. The `keynear-settings` app propagates four settings live through `UpdateConfig` IPC.
-  - `Clipboard sync`.
-  - `Sync clipboard images`.
-  - `2FA code pass-through`.
-  - `Ignored clipboard formats` (`MAX_IPC_MIMES = 128`).
+- The daemon (`crates/keynear/src/clipboard.rs`) prefers `ext-data-control-v1` (KDE KWin, COSMIC, Sway, Hyprland). It falls back to `zwlr-data-control-v1` and X11 (`x11rb` XFixes), and degrades non-fatally when headless. Outgoing images advertise `ClipboardOffer` metadata first. When a paired peer requests `ClipboardFetch`, the daemon renders the payload bytes lazily over `QuicStreamKind::ClipboardBlob` (`0x04`).
+- Keynear inspects clipboard offers before reading any payload byte. It skips entries carrying `x-kde-passwordManagerHint`, `application/x-password`, or user-configured `ignoredMimeTypes`. Configure four clipboard settings in `~/.config/keynear/config.toml` (checked with `keynear settings validate`) or update them live over `daemon.sock` through `IpcRequest::UpdateConfig`:
+  - `clipboardSyncEnabled`.
+  - `clipboardImagesEnabled`.
+  - `otpPassthroughEnabled`.
+  - `ignoredMimeTypes` (`MAX_IPC_MIMES = 128`).
 
   The daemon does not need a restart for these changes.
 - A `5`-second SHA-256 digest window (`SelfWriteTracker`) suppresses self-authored selection writes. Peer updates never echo back.

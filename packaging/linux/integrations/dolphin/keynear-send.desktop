@@ -7,4 +7,4 @@ X-KDE-Priority=TopLevel
 [Desktop Action SendViaKeynear]
 Name=Send via Keynear
 Icon=org.keynear.Keynear
-Exec=keynear-settings --share -- %F
+Exec=keynear send -- %F

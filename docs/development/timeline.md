@@ -24,7 +24,7 @@ Lyra (0.1.0-lyra, `versionCode` 1) establishes the reproducible monorepo, shared
 
 - The `keynear-core` crate defines `PairedDevice`, `NearbyPeer`, `TransferSession`, `TransferItem`, `DaemonConfig`, typed `KeynearError` handling, and bounded 65,536-byte `proto3` control frames (`ControlFrame`).
 - The `proto/` schema publishes `keynear.v1.Envelope` with `HandshakePayload`, `TransferOffer`, `ClipboardPayload`, `AudioStatePayload`, and `ControlAck`.
-- Platform entrypoints set up `keynear-linux`, `keynear-settings`, and the Android `org.keynear.app` module (`MainActivity`, `KeynearForegroundService`, `KeynearTileService`, `ShareActivity`) with 16 KB ELF page alignment enabled.
+- Platform entrypoints set up `keynear` (Linux daemon, settings CLI, and desktop integrations) and the Android `org.keynear.app` module (`MainActivity`, `KeynearForegroundService`, `KeynearTileService`, `ShareActivity`) with 16 KB ELF page alignment enabled.
 - Reproducible tooling provides `flake.nix`, `.envrc`, quality validation scripts, Lefthook hooks, and CI workflows.
 
 ## Cygnus
@@ -49,8 +49,8 @@ Orion (0.3.0-orion, `versionCode` 3) adds the high-throughput, relay-free data p
 
 Aquila (0.4.0-aquila, `versionCode` 4) surfaces Orion's transport and Cygnus's discovery controls through native OS interfaces without adding dashboard bloat.
 
-- The Linux daemon runs `keynear-linux` as a `systemd --user` service with a `ksni` `StatusNotifierItem` tray menu (visibility modes, device list, active transfer progress, quick toggles) and `org.freedesktop.Notifications` action buttons.
-- `keynear-settings` (`GTK4`/`relm4`) launches on demand from the tray menu, integrates `ashpd` (`xdg-desktop-portal`) file selection, and adds Nautilus, Dolphin, and Yazi context-menu actions.
+- The Linux daemon runs `keynear daemon` as a `systemd --user` service with a `ksni` `StatusNotifierItem` tray menu (visibility modes, device list, active transfer progress, quick toggles) and `org.freedesktop.Notifications` action buttons.
+- `keynear` subcommands expose `keynear settings` configuration inspection, `keynear send --picker` with `ashpd` (`xdg-desktop-portal`) file selection, and Nautilus, Dolphin, and Yazi context-menu actions.
 - Android surfaces provide the silent `connectedDevice` foreground notification, a lock-aware `KeynearTileService` Quick Settings tile, a translucent `ShareActivity` with Direct Share targets, and `Notification.ProgressStyle` live updates backed by `User-Initiated Data Transfer Jobs`.
 - Onboarding completes the minimal Material 3 Compose screen in `MainActivity` for one-time permissions (`NEARBY_DEVICES`, `POST_NOTIFICATIONS`, battery-optimization exemption) and paired-device management.
 
@@ -85,7 +85,7 @@ Perseus (1.1.0-perseus, `versionCode` 7) extends Orion's streaming engine and Ve
 Carina (1.2.0-carina, `versionCode` 8) layers ephemeral notification mirroring, inline replies, and bidirectional media transport controls over Aquila's native desktop and mobile surfaces.
 
 - Android `NotificationListenerService` forwards opted-in messaging and system notifications over `keynear.v1.Envelope` with per-package exclusion filters and zero on-disk message persistence.
-- `keynear-linux` bridges incoming peer notifications to `org.freedesktop.Notifications` with native inline reply (`RemoteInput`), mark-as-read, and dismissal actions synchronized in real time.
+- `keynear daemon` bridges incoming peer notifications to `org.freedesktop.Notifications` with native inline reply (`RemoteInput`), mark-as-read, and dismissal actions synchronized in real time.
 - Telephony call alerts surface `Answer`, `Decline`, and `Mute` actions on the desktop that coordinate directly with Android `TelecomManager` and Vega's PipeWire `hfp_hf` and `bap_sink` headset handoff.
 - Bidirectional media session bridging links Linux `MPRIS2` players and Android `MediaSession` state so track metadata and playback controls appear in the Linux tray menu and Android Quick Settings media carousel.
 
@@ -103,7 +103,7 @@ Pegasus (1.3.0-pegasus, `versionCode` 9) introduces low-latency audio and video 
 Phoenix (1.4.0-phoenix, `versionCode` 10) combines Vega's `RangingManager` closeness gating with Cygnus's hardware-backed keyrings to provide proximity session locking, remote SSH signing, and FIDO2 passkey bridging.
 
 - Proximity session supervision integrates with `org.freedesktop.login1` (`logind`) on Linux. It locks the desktop when the paired phone leaves the calibrated BLE Channel Sounding or UWB distance bound, and prepares to unlock when the phone returns.
-- `keynear-linux` exposes an optional `SSH_AUTH_SOCK` agent forwarding signing requests over QUIC to hardware-backed Ed25519 and ECDSA keys in Android Keystore (`StrongBox` and TEE) gated by `BiometricPrompt`.
+- `keynear daemon` exposes an optional `SSH_AUTH_SOCK` agent forwarding signing requests over QUIC to hardware-backed Ed25519 and ECDSA keys in Android Keystore (`StrongBox` and TEE) gated by `BiometricPrompt`.
 - A Linux UHID CTAP2 virtual security key bridge routes WebAuthn and FIDO2 ceremony requests over the authenticated QUIC channel to Android `CredentialManager` passkeys.
 - Cryptographic challenge binding ties every unlock, SSH signature, and FIDO2 assertion to both the active `X25519MLKEM768` TLS session transcript and a live hardware ranging measurement.
 

@@ -69,10 +69,11 @@ Bounded framing and the FFI boundary keep untrusted input from reaching sensitiv
   - QUIC stream helpers define `QuicStreamKind` values `0x01` Control, `0x02` RawFileChunk, `0x03` StoredZipArchive, and `0x04` ClipboardBlob, along with `write_control_envelope` and `read_control_envelope`.
   - `ClipboardOffer` defers outgoing image reads until a peer requests `ClipboardFetch`.
   - `ClipboardBlob` streams rendered images up to `MAX_CLIPBOARD_IMAGE_BYTES` (`16 MiB`) with a SHA-256 trailer outside the `65_536`-byte control frame bound.
-- The FFI layer in `crates/keynear-ffi/src/` contains `lib.rs`, `pairing.rs`, `transfer.rs`, `clipboard.rs`, `vega.rs`, `perseus.rs`, `carina.rs`, and `callbacks.rs`. It exports the following over `libkeynear_core.so` (`cdylib`) to `:core-ffi` and `org.keynear.app` on Android.
+- The FFI layer in `crates/keynear-ffi/src/` contains `lib.rs`, `pairing/`, `transfer.rs`, `clipboard.rs`, `vega.rs`, `vfs.rs`, `continuity.rs`, and `callbacks/`. It exports the following over `libkeynear_core.so` (`cdylib`) to `:core-ffi` and `org.keynear.app` on Android.
   - `CoreHandle` and `OrionNodeHandle`.
   - `OrionNodeHandle` includes `set_clipboard_config`, `send_clipboard_text`, `send_clipboard_blob`, `poll_incoming_clipboard`, and `fetch_clipboard_offer`.
   - `FfiNoisePairingSession`, `FfiTransferSession`, `FfiClipboardItem`, `FfiLanEndpoint`, and `FfiPairedDevice`.
   - `CoreStatus` and `FfiVisibilityMode`.
   - Beacon and LAN codecs, store helpers, `OwnedFd` single-owner FD wrappers (`send_fd`, `provide_receive_fd`), and `FfiError`.
-  - Carina records `FfiNotificationDescriptor`, `FfiMirroredNotification`, `FfiMediaState`, and `FfiCapabilityPair`, plus the `carina_*` mirror, reply, call-phase, and media-command checks.
+  - Resumable-transfer and VFS exports: `FfiChunkCheckpoint`, `FfiReadPlan`, `FfiVfsNode`, `FfiResumeDecision`, `resumable_transfer_capability_flags`, `transfer_resume_decision`, `vfs_read_plan`, `vfs_root_node`, and `provide_vfs_read_fd`.
+  - Continuity exports: `FfiNotificationDescriptor`, `FfiMirroredNotification`, `FfiMediaState`, `FfiCapabilityPair`, `FfiCallAction`, `FfiCallPhase`, `FfiNotificationAction`, `FfiPlayback`, `FfiMediaCommand`, `continuity_capability_flags`, `mirror_notification`, `validate_notification_reply`, `call_action_allowed`, and `media_command_allowed`.

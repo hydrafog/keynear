@@ -6,7 +6,7 @@ After=graphical-session.target bluetooth.target
 StartLimitIntervalSec=0
 
 [Service]
-ExecStart=%h/.local/bin/keynear-linux
+ExecStart=%h/.local/bin/keynear daemon
 Restart=on-failure
 RestartSec=3
 Environment=KEYNEAR_LOG=info

@@ -1,13 +1,13 @@
 # Quickstart
 
-Pair a Linux desktop running `keynear-linux` and `keynear-settings` with an Android phone running `org.keynear.app` (`1.2.0-carina`). You can then share files, clipboard items, one-time codes, notifications, and media controls over direct Wi-Fi QUIC.
+Pair a Linux desktop running `keynear` with an Android phone running `org.keynear.app` (`1.2.0-carina`). You can then share files, clipboard items, one-time codes, notifications, and media controls over direct Wi-Fi QUIC.
 
 ## Pairing
 
 Follow these steps to pair the two devices.
 
-1. Enable Bluetooth on both devices and start `keynear-linux`.
-2. Switch visibility to Everyone nearby from the Linux system tray (`ksni`), `keynear-settings`, the Android Quick Settings tile (`KeynearTileService`), or the Cycle visibility mode action in `MainActivity`. Two details apply.
+1. Enable Bluetooth on both devices and start `keynear daemon`.
+2. Switch visibility to Everyone nearby from the Linux system tray (`ksni` popup menu), `keynear visibility everyone`, the Android Quick Settings tile (`KeynearTileService`), or the Cycle visibility mode action in `MainActivity`. Two details apply.
    - Unlock the screen first if you use the Android tile while the screen is locked.
    - Open discovery stays active for 10 minutes (`600` seconds) and counts down as `Everyone (MM:SS)` before visibility reverts to Paired devices only.
 3. On Android, grant `NEARBY_DEVICES`, `POST_NOTIFICATIONS`, and background running permission from the onboarding permissions card in `MainActivity`. Wait for the desktop to appear under Nearby peers, then tap Pair.
@@ -30,13 +30,13 @@ Use these steps to share files over direct Wi-Fi QUIC.
 1. Connect both paired devices to a shared local Wi-Fi or LAN network. Keynear then uses `mdns-sd` on Linux or `NsdManager` on Android (`_keynear._udp.`) or encrypted BLE GATT (`0xFE70`) to exchange ephemeral `LanEndpoint` addresses.
 2. On Android, share files or text with a paired peer through system Direct Share (`DirectShareManager`) or the `ShareActivity` bottom sheet (`ACTION_SEND` or `ACTION_SEND_MULTIPLE`), then tap Send.
 3. On Linux, send files or folders through any of these entrypoints.
-   - The `ksni` tray.
-   - The `ashpd` file and folder choosers in `keynear-settings` (`--send-picker`).
-   - Nautilus, Dolphin, and Yazi context menus (`keynear-settings --share -- <path>...`).
-   - `keynear-linux --send <device_id> <path>...`.
+   - The `ksni` tray popup menu (`Send files...`), which opens on tray icon click.
+   - The `ashpd` XDG portal file chooser (`keynear send --picker`).
+   - Nautilus, Dolphin, and Yazi context menus (`keynear send -- <path>...`).
+   - `keynear send [--device <device_id>] [--] <path>...`.
 
    Keynear streams files in 60 KiB chunks and directories as uncompressed `STORED` zip archives over direct `iroh` QUIC (`X25519MLKEM768`, `RelayMode::Disabled`).
-4. Incoming drops wait in `PendingConsent` for `Accept` or `Decline`. Respond through desktop (`zbus`) or Android notifications, `keynear-settings`, `MainActivity`, or the CLI (`keynear-linux --transfers`, `--accept <transfer_id>`, `--decline <transfer_id>`, `--cancel <transfer_id>`). The prompt is skipped when `auto_accept_from_paired` or per-device `Auto-accept files` is enabled.
+4. Incoming drops wait in `PendingConsent` for `Accept` or `Decline`. Respond through desktop (`zbus`) or Android notifications, the `ksni` tray `Transfers` submenu, `MainActivity`, or the CLI (`keynear transfers`, `keynear accept <transfer_id>`, `keynear decline <transfer_id>`, `keynear cancel <transfer_id>`). The prompt is skipped when `auto_accept_from_paired` or per-device `Auto-accept files` is enabled.
 
 ## Clipboard and OTP Continuity
 
