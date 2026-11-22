@@ -32,12 +32,8 @@ use crate::tray::{spawn_send_picker_process, TrayCommand};
 use super::config::apply_daemon_config;
 use super::IpcDispatchContext;
 
-fn log_outbound_action(label: &'static str, bytes: usize) {
-    info!(
-        event = "continuity_outbound_action",
-        kind = label,
-        bytes = bytes
-    );
+fn log_outbound_missing(label: &'static str) {
+    warn!(event = "continuity_outbound_queue_missing", kind = label);
 }
 
 fn log_outbound_failure(label: &'static str, err: keynear_protocol::KeynearError) {
@@ -48,7 +44,7 @@ fn log_outbound_failure(label: &'static str, err: keynear_protocol::KeynearError
     );
 }
 
-fn emit_envelope(payload: v1::envelope::Payload, label: &'static str) {
+fn emit_envelope(payload: v1::envelope::Payload, label: &'static str, ctx: &IpcDispatchContext) {
     let envelope = v1::Envelope {
         version: 1,
         sequence: 0,
@@ -56,12 +52,20 @@ fn emit_envelope(payload: v1::envelope::Payload, label: &'static str) {
         payload: Some(payload),
     };
     match encode_envelope(&envelope) {
-        Ok(bytes) => log_outbound_action(label, bytes.len()),
+        Ok(bytes) => match ctx.outbound_queue() {
+            Some(queue) => queue.enqueue(label, bytes),
+            None => log_outbound_missing(label),
+        },
         Err(err) => log_outbound_failure(label, err),
     }
 }
 
-fn emit_mirror_action(key: String, kind: v1::NotificationActionKind, reply_text: String) {
+fn emit_mirror_action(
+    key: String,
+    kind: v1::NotificationActionKind,
+    reply_text: String,
+    ctx: &IpcDispatchContext,
+) {
     let label = match kind {
         v1::NotificationActionKind::NotificationActionReply => "reply",
         v1::NotificationActionKind::NotificationActionMarkRead => "mark_read",
@@ -75,10 +79,11 @@ fn emit_mirror_action(key: String, kind: v1::NotificationActionKind, reply_text:
             sequence: 0,
         }),
         label,
+        ctx,
     );
 }
 
-fn emit_call_action(call_id: String, kind: v1::CallActionKind) {
+fn emit_call_action(call_id: String, kind: v1::CallActionKind, ctx: &IpcDispatchContext) {
     let label = match kind {
         v1::CallActionKind::CallActionAnswer => "answer",
         v1::CallActionKind::CallActionDecline => "decline",
@@ -91,6 +96,7 @@ fn emit_call_action(call_id: String, kind: v1::CallActionKind) {
             sequence: 0,
         }),
         label,
+        ctx,
     );
 }
 
@@ -228,28 +234,31 @@ pub(crate) async fn handle_notification_action(
             key,
             v1::NotificationActionKind::NotificationActionReply,
             String::new(),
+            ctx,
         ),
         NotificationAction::MirrorMarkRead(key) => emit_mirror_action(
             key,
             v1::NotificationActionKind::NotificationActionMarkRead,
             String::new(),
+            ctx,
         ),
         NotificationAction::MirrorDismiss(key) => emit_mirror_action(
             key,
             v1::NotificationActionKind::NotificationActionDismiss,
             String::new(),
+            ctx,
         ),
         NotificationAction::CallAnswer(id) => {
             crate::call::log_call_action(&id, CallActionKind::Answer);
-            emit_call_action(id, v1::CallActionKind::CallActionAnswer)
+            emit_call_action(id, v1::CallActionKind::CallActionAnswer, ctx)
         }
         NotificationAction::CallDecline(id) => {
             crate::call::log_call_action(&id, CallActionKind::Decline);
-            emit_call_action(id, v1::CallActionKind::CallActionDecline)
+            emit_call_action(id, v1::CallActionKind::CallActionDecline, ctx)
         }
         NotificationAction::CallMute(id) => {
             crate::call::log_call_action(&id, CallActionKind::Mute);
-            emit_call_action(id, v1::CallActionKind::CallActionMute)
+            emit_call_action(id, v1::CallActionKind::CallActionMute, ctx)
         }
         other => {
             log_pairing_notification(other);

@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::time::Duration;
 
 use keynear_ipc::{
     decode_request, encode_response, prepare_daemon_socket_dir, set_daemon_socket_permissions,
@@ -8,9 +9,27 @@ use keynear_protocol::KeynearError;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixListener, UnixStream};
 use tokio::task::JoinHandle;
+use tokio::time::timeout;
 use tracing::{info, warn};
 
 use super::handlers::{dispatch_ipc_request, IpcDispatchContext};
+
+const READ_TIMEOUT: Duration = Duration::from_secs(300);
+const WRITE_TIMEOUT: Duration = Duration::from_secs(10);
+
+async fn read_exact_timed(stream: &mut UnixStream, buf: &mut [u8]) -> Result<(), KeynearError> {
+    timeout(READ_TIMEOUT, stream.read_exact(buf))
+        .await
+        .map_err(|_| KeynearError::Transport("IPC read timed out".to_string()))?
+        .map_err(KeynearError::Io)
+}
+
+async fn write_all_timed(stream: &mut UnixStream, bytes: &[u8]) -> Result<(), KeynearError> {
+    timeout(WRITE_TIMEOUT, stream.write_all(bytes))
+        .await
+        .map_err(|_| KeynearError::Transport("IPC write timed out".to_string()))?
+        .map_err(KeynearError::Io)
+}
 
 pub(crate) async fn bind_and_serve_ipc(
     sock_path: PathBuf,
@@ -49,7 +68,7 @@ pub(crate) async fn handle_ipc_connection(
     ctx: IpcDispatchContext,
 ) -> Result<(), KeynearError> {
     let mut len_buf = [0u8; 4];
-    stream.read_exact(&mut len_buf).await?;
+    read_exact_timed(&mut stream, &mut len_buf).await?;
     let frame_len = u32::from_be_bytes(len_buf) as usize;
     if frame_len == 0 {
         return Err(KeynearError::Protocol(
@@ -63,7 +82,7 @@ pub(crate) async fn handle_ipc_connection(
         });
     }
     let mut payload = vec![0u8; frame_len];
-    stream.read_exact(&mut payload).await?;
+    read_exact_timed(&mut stream, &mut payload).await?;
 
     let response = match decode_request(&payload) {
         Ok(req) => dispatch_ipc_request(req, &ctx).await,
@@ -77,8 +96,10 @@ pub(crate) async fn handle_ipc_connection(
         size: encoded.len(),
         max: MAX_IPC_FRAME_BYTES,
     })?;
-    stream.write_all(&resp_len.to_be_bytes()).await?;
-    stream.write_all(&encoded).await?;
-    stream.flush().await?;
+    write_all_timed(&mut stream, &resp_len.to_be_bytes()).await?;
+    write_all_timed(&mut stream, &encoded).await?;
+    timeout(WRITE_TIMEOUT, stream.flush())
+        .await
+        .map_err(|_| KeynearError::Transport("IPC flush timed out".to_string()))??;
     Ok(())
 }

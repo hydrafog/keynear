@@ -1,8 +1,6 @@
 use keynear_core::{DaemonConfig, KeynearError, VegaCapabilities, CAP_AUDIO_HANDOFF};
 
-use crate::audio::{
-    observe_sink_profile, DbusHandoffControl, SinkProfileObservation, VegaAudioController,
-};
+use crate::audio::{observe_sink_profile, SinkProfileObservation};
 use crate::fallback::probe_no_lan;
 
 pub async fn initialize(config: &DaemonConfig) {
@@ -34,19 +32,7 @@ fn log_audio_disabled() {
 }
 
 async fn log_audio_environment() {
-    let controller = VegaAudioController::new(DbusHandoffControl);
-    log_controller_state(&controller);
     log_observation(observe_sink_profile().await);
-}
-
-fn log_controller_state(controller: &VegaAudioController<DbusHandoffControl>) {
-    if let Some(state) = controller.snapshot() {
-        log_handoff_state(&state.phase);
-    }
-}
-
-fn log_handoff_state(phase: &keynear_core::HandoffPhase) {
-    tracing::debug!(event = "vega_handoff_state", phase = ?phase);
 }
 
 fn log_observation(result: Result<SinkProfileObservation, KeynearError>) {

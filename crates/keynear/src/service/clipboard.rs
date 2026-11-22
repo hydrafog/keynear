@@ -11,6 +11,23 @@ use tracing::warn;
 use zeroize::Zeroizing;
 
 use crate::clipboard::{ClipboardChange, ClipboardMonitorHandle};
+use crate::service::clipboard_bridge::ClipboardBridgeProxy;
+
+fn probe_clipboard_bridge(tasks: &mut Vec<JoinHandle<()>>) {
+    tasks.push(tokio::spawn(async {
+        let Some(proxy) = ClipboardBridgeProxy::connect().await else {
+            warn!(event = "clipboard_bridge_unavailable", reason = "D-Bus name absent");
+            return;
+        };
+        if let Err(err) = proxy.sync().await {
+            warn!(event = "clipboard_bridge_sync_failed", error = %err);
+        }
+        match proxy.status().await {
+            Ok(status) => tracing::info!(event = "clipboard_bridge_status", status = %status),
+            Err(err) => warn!(event = "clipboard_bridge_status_failed", error = %err),
+        }
+    }));
+}
 
 pub(crate) struct ClipboardLoopParams<'a> {
     pub(crate) quic_node: Option<&'a Arc<OrionQuicNode>>,
@@ -115,6 +132,7 @@ pub(crate) fn spawn_clipboard_loops(
     params: ClipboardLoopParams<'_>,
     tasks: &mut Vec<JoinHandle<()>>,
 ) {
+    probe_clipboard_bridge(tasks);
     let ClipboardLoopParams {
         quic_node,
         clipboard_engine,

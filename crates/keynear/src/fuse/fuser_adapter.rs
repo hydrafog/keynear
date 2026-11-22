@@ -1,8 +1,6 @@
-#![allow(dead_code)]
-
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, UNIX_EPOCH};
 
 use fuser::{
@@ -140,4 +138,45 @@ impl Filesystem for KeynearFuseFs {
 
 pub fn mount_keynear_fuse(mountpoint: &Path, fs: KeynearFuseFs) -> std::io::Result<()> {
     fuser::Session::new(fs, mountpoint, &Config::default())?.run()
+}
+
+pub struct FuserAdapter {
+    mountpoint: PathBuf,
+}
+
+impl FuserAdapter {
+    pub fn new(mountpoint: PathBuf) -> Self {
+        Self { mountpoint }
+    }
+}
+
+impl crate::fuse::backend::FuseMountBackend for FuserAdapter {
+    fn available(&self) -> bool {
+        true
+    }
+
+    fn mount(&self, root: &RemoteVfsNode) -> bool {
+        let reader: RemoteReader = Box::new(|_, _, _| Vec::new());
+        let fs = KeynearFuseFs::new(root.clone(), Vec::new(), reader);
+        let mountpoint = self.mountpoint.clone();
+        let spawned = std::thread::Builder::new()
+            .name("keynear-fuse".to_string())
+            .spawn(move || {
+                if let Err(err) = mount_keynear_fuse(&mountpoint, fs) {
+                    tracing::warn!(event = "fuse_mount_failed", error = %err);
+                }
+            });
+        match spawned {
+            Ok(_) => true,
+            Err(err) => {
+                tracing::warn!(event = "fuse_mount_spawn_failed", error = %err);
+                false
+            }
+        }
+    }
+
+    fn unmount(&self) -> bool {
+        tracing::info!(event = "fuse_mount_unmount", path = %self.mountpoint.display());
+        true
+    }
 }

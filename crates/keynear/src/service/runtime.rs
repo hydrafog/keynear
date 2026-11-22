@@ -10,6 +10,7 @@ mod ui;
 pub use options::RuntimeOptions;
 
 use std::future::Future;
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -61,10 +62,13 @@ impl DaemonRuntime {
             }
         };
 
-        let options = RuntimeOptions {
+        let mut options = RuntimeOptions {
             config_path,
             ..RuntimeOptions::default()
         };
+        if let Some(port) = pinned_quic_port() {
+            options.quic_bind_addr = Some(SocketAddr::from(([0, 0, 0, 0], port)));
+        }
         Self::run_with_deps(
             config,
             options,
@@ -103,6 +107,23 @@ impl DaemonRuntime {
         })
         .await?;
         let mut tasks: Vec<JoinHandle<()>> = Vec::new();
+        let audio_tx = super::audio_control::spawn_audio_control(&mut tasks);
+        if let (Some(rx), Some(node)) = (
+            crate::ipc::handlers::install_outbound_queue(),
+            services.quic_node.clone(),
+        ) {
+            super::outbound::spawn_outbound_drain(
+                super::outbound::OutboundDrainParams {
+                    rx,
+                    node,
+                    device_store: services.device_store.clone(),
+                    audio_tx,
+                },
+                &mut tasks,
+            );
+        } else {
+            tracing::warn!(event = "continuity_outbound_transport_unavailable");
+        }
         let lan_watch_tx = spawn_all_loops(
             LoopParams {
                 options: &options,
@@ -172,6 +193,21 @@ async fn sync_initial_peers(params: SyncPeersParams<'_>) {
     .await
     {
         log_peer_sync_failed(err);
+    }
+}
+
+fn pinned_quic_port() -> Option<u16> {
+    let raw = std::env::var("KEYNEAR_QUIC_PORT").ok()?;
+    let trimmed = raw.trim();
+    if trimmed.is_empty() || trimmed.contains('\0') {
+        return None;
+    }
+    match trimmed.parse::<u16>() {
+        Ok(port) if port > 0 => Some(port),
+        _ => {
+            tracing::warn!(event = "quic_port_override_invalid", value = %trimmed);
+            None
+        }
     }
 }
 

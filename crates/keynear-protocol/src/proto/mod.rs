@@ -219,6 +219,14 @@ pub fn control_frame_to_envelope(frame: &ControlFrame) -> Result<v1::Envelope, K
     })
 }
 
+pub fn validate_control_envelope(envelope: &v1::Envelope) -> Result<(), KeynearError> {
+    let frame = envelope_to_control_frame(envelope)?;
+    let bytes = encode_control_frame(&frame)?;
+    let decoded = decode_control_frame(&bytes)?;
+    control_frame_to_envelope(&decoded)?;
+    Ok(())
+}
+
 pub async fn write_stream_kind<W: AsyncWrite + Unpin>(
     writer: &mut W,
     kind: QuicStreamKind,

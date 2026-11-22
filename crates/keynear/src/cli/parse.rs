@@ -1,7 +1,21 @@
 use std::path::PathBuf;
 
 use keynear_ipc::validate_transfer_id;
-use keynear_protocol::{sanitize_device_id, validate_display_name, KeynearError};
+use keynear_protocol::{
+    default_config_dir, sanitize_device_id, validate_display_name, KeynearError,
+};
+
+fn default_data_dir() -> PathBuf {
+    match std::env::var("KEYNEAR_DATA_DIR") {
+        Ok(raw) if !raw.trim().is_empty() && !raw.contains('\0') => PathBuf::from(raw.trim()),
+        _ => default_config_dir(),
+    }
+}
+
+fn data_scoped_config_path() -> Option<PathBuf> {
+    let dir = default_data_dir();
+    (dir != default_config_dir()).then(|| dir.join("config.toml"))
+}
 
 use super::send::{parse_legacy_send_flag, parse_send_subcommand};
 use super::{parse_config_path, parse_visibility_arg, CliAction};
@@ -109,7 +123,9 @@ fn parse_daemon_subcommand(
             other => return Err(validation("args", format!("unexpected argument '{other}'"))),
         }
     }
-    Ok(CliAction::Run { config_path })
+    Ok(CliAction::Run {
+        config_path: config_path.or_else(data_scoped_config_path),
+    })
 }
 
 fn parse_settings_subcommand(
@@ -130,7 +146,7 @@ fn parse_settings_subcommand(
         }
     }
     Ok(CliAction::Settings {
-        config_path,
+        config_path: config_path.or_else(data_scoped_config_path),
         validate_only: validate_only.unwrap_or(false),
     })
 }
@@ -256,7 +272,7 @@ fn parse_legacy_flag_args(
         });
     }
     Ok(state.pending_action.unwrap_or(CliAction::Run {
-        config_path: state.config_path,
+        config_path: state.config_path.or_else(data_scoped_config_path),
     }))
 }
 
@@ -267,7 +283,9 @@ where
 {
     let mut iter = args.into_iter().map(Into::into);
     let Some(first) = iter.next() else {
-        return Ok(CliAction::Run { config_path: None });
+        return Ok(CliAction::Run {
+            config_path: data_scoped_config_path(),
+        });
     };
     if first.starts_with('-') {
         parse_legacy_flag_args(first, iter)

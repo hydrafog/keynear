@@ -5,7 +5,6 @@
 )]
 
 // TODO: drive VegaAudioController from the peer audio-control stream once its QUIC demux lands.
-#[allow(dead_code)]
 mod audio;
 mod ble;
 mod call;
@@ -34,11 +33,21 @@ use crate::cli::{
     run_settings_command, CliAction, CLI_USAGE_TEXT,
 };
 
+fn env_filter() -> EnvFilter {
+    if let Ok(value) = std::env::var("KEYNEAR_LOG") {
+        let trimmed = value.trim();
+        if !trimmed.is_empty() {
+            if let Ok(filter) = EnvFilter::try_new(trimmed) {
+                return filter;
+            }
+        }
+    }
+    EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"))
+}
+
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
-        .init();
+    tracing_subscriber::fmt().with_env_filter(env_filter()).init();
 
     let action = match parse_cli_args(std::env::args().skip(1)) {
         Ok(action) => action,

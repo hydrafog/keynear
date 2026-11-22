@@ -22,11 +22,17 @@ impl HandoffControl for DbusHandoffControl {
 
     async fn release_sink(&self, profile: AudioSinkProfile) -> Result<(), KeynearError> {
         tracing::info!(event = "vega_sink_release", profile = profile.as_str());
+        if let Err(err) = dbus::switch_profile(profile, "Release").await {
+            tracing::warn!(event = "vega_sink_release_unavailable", error = %err);
+        }
         Ok(())
     }
 
     async fn claim_sink(&self, profile: AudioSinkProfile) -> Result<(), KeynearError> {
         tracing::info!(event = "vega_sink_claim", profile = profile.as_str());
+        if let Err(err) = dbus::switch_profile(profile, "Acquire").await {
+            tracing::warn!(event = "vega_sink_claim_unavailable", error = %err);
+        }
         Ok(())
     }
 }

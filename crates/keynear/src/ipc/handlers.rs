@@ -5,23 +5,56 @@ mod status;
 
 pub(crate) use actions::{handle_notification_action, handle_tray_command};
 pub(crate) use dispatch::dispatch_ipc_request;
-#[allow(unused_imports)]
 pub(crate) use status::{build_daemon_status, build_tray_state};
 
 use std::collections::HashSet;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use keynear_core::{
     ClipboardEngine, MdnsDiscovery, OrionQuicNode, PairedDeviceStore, SecretStore, TransferEngine,
 };
 use keynear_protocol::DaemonConfig;
-use tokio::sync::{watch, Mutex, Notify};
+use tokio::sync::{mpsc, watch, Mutex, Notify};
 use tokio::time::Instant;
+use tracing::{info, warn};
 use zeroize::Zeroizing;
 
 use crate::clipboard::ClipboardMonitorHandle;
+
+const OUTBOUND_QUEUE_CAPACITY: usize = 256;
+
+pub(crate) struct OutboundEnvelope {
+    pub label: &'static str,
+    pub bytes: Vec<u8>,
+}
+
+pub(crate) struct OutboundQueue {
+    tx: mpsc::Sender<OutboundEnvelope>,
+}
+
+impl OutboundQueue {
+    fn enqueue(&self, label: &'static str, bytes: Vec<u8>) {
+        match self.tx.try_send(OutboundEnvelope { label, bytes }) {
+            Ok(()) => info!(event = "continuity_outbound_enqueued", kind = label),
+            Err(mpsc::error::TrySendError::Full(_)) => {
+                warn!(event = "continuity_outbound_queue_full", kind = label);
+            }
+            Err(mpsc::error::TrySendError::Closed(_)) => {
+                warn!(event = "continuity_outbound_queue_closed", kind = label);
+            }
+        }
+    }
+}
+
+static OUTBOUND_QUEUE: OnceLock<OutboundQueue> = OnceLock::new();
+
+pub(crate) fn install_outbound_queue() -> Option<mpsc::Receiver<OutboundEnvelope>> {
+    let (tx, rx) = mpsc::channel(OUTBOUND_QUEUE_CAPACITY);
+    OUTBOUND_QUEUE.set(OutboundQueue { tx }).ok()?;
+    Some(rx)
+}
 
 #[derive(Clone)]
 pub(crate) struct IpcDispatchContext {
@@ -45,4 +78,10 @@ pub(crate) struct IpcDispatchContext {
     pub known_peers: Arc<Mutex<HashSet<String>>>,
     pub mdns_degraded: bool,
     pub mdns: Option<Arc<MdnsDiscovery>>,
+}
+
+impl IpcDispatchContext {
+    pub(crate) fn outbound_queue(&self) -> Option<&'static OutboundQueue> {
+        OUTBOUND_QUEUE.get()
+    }
 }
