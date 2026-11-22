@@ -11,6 +11,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -25,6 +27,7 @@ import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.node.DrawModifierNode
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -157,10 +160,28 @@ private class KeynearIndication(private val focusColor: Color) : IndicationNodeF
 @Composable
 fun KeynearTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    dynamicAccent: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    val palette = if (darkTheme) DarkKeynearPalette else LightKeynearPalette
-    val colorScheme = if (darkTheme) KeynearDarkColorScheme else KeynearLightColorScheme
+    val context = LocalContext.current
+    val basePalette = if (darkTheme) DarkKeynearPalette else LightKeynearPalette
+    val baseColorScheme = if (darkTheme) KeynearDarkColorScheme else KeynearLightColorScheme
+    val dynamicScheme = if (dynamicAccent && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    } else {
+        null
+    }
+    val palette = if (dynamicScheme != null) basePalette.withMaterialAccent(dynamicScheme) else basePalette
+    val colorScheme = if (dynamicScheme != null) {
+        baseColorScheme.copy(
+            primary = dynamicScheme.primary,
+            onPrimary = dynamicScheme.onPrimary,
+            primaryContainer = dynamicScheme.primaryContainer,
+            onPrimaryContainer = dynamicScheme.onPrimaryContainer,
+        )
+    } else {
+        baseColorScheme
+    }
     val indication = remember(palette) { KeynearIndication(palette.focusRing) }
     val view = LocalView.current
     if (!view.isInEditMode) {

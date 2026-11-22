@@ -58,7 +58,13 @@ class EventQueue(
     internal var cachedDarkTheme: Boolean = appContext?.let { readDarkThemePref(it) } ?: false
 
     @Volatile
-    internal var cachedDaemonConfig: DaemonConfigUi = DaemonConfigUi(darkTheme = cachedDarkTheme)
+    internal var cachedDynamicAccent: Boolean = appContext?.let { readDynamicAccentPref(it) } ?: true
+
+    @Volatile
+    internal var cachedDaemonConfig: DaemonConfigUi = DaemonConfigUi(
+        darkTheme = cachedDarkTheme,
+        dynamicAccent = cachedDynamicAccent,
+    )
 
     @Volatile
     internal var orionNode: OrionNodeHandle? = null
@@ -108,18 +114,8 @@ class EventQueue(
         }
         localDeviceId = DeviceRepo.resolveStableLocalDeviceId(app)
         cachedDarkTheme = readDarkThemePref(app)
+        cachedDynamicAccent = readDynamicAccentPref(app)
         refreshConfigFromDisk()
-    }
-
-    internal fun readDarkThemePref(context: Context): Boolean =
-        context.getSharedPreferences(UI_PREFS_NAME, Context.MODE_PRIVATE)
-            .getBoolean(PREF_DARK_THEME, false)
-
-    internal fun writeDarkThemePref(context: Context, enabled: Boolean) {
-        context.getSharedPreferences(UI_PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putBoolean(PREF_DARK_THEME, enabled)
-            .apply()
     }
 
     internal fun refreshConfigFromDisk() {
@@ -127,7 +123,7 @@ class EventQueue(
         runCatching {
             val loaded = handle.loadDaemonConfig(path)
             handle.setVisibilityMode(loaded.visibilityMode)
-            cachedDaemonConfig = DaemonConfigUi.fromFfi(loaded, cachedDarkTheme)
+            cachedDaemonConfig = DaemonConfigUi.fromFfi(loaded, cachedDarkTheme, cachedDynamicAccent)
         }
     }
 
@@ -231,7 +227,7 @@ class EventQueue(
         val path = configPath ?: return
         runCatching {
             val saved = handle.saveDaemonConfig(path, cachedDaemonConfig.toFfi(visibility))
-            cachedDaemonConfig = DaemonConfigUi.fromFfi(saved, cachedDarkTheme)
+            cachedDaemonConfig = DaemonConfigUi.fromFfi(saved, cachedDarkTheme, cachedDynamicAccent)
         }
     }
 
@@ -290,8 +286,6 @@ class EventQueue(
 
     companion object {
         private const val TAG = "EventQueue"
-        private const val UI_PREFS_NAME = "keynear_ui_prefs"
-        private const val PREF_DARK_THEME = "dark_theme"
         private const val DEFAULT_TIMEOUT_SECS = 600L
     }
 }

@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Paint as AndroidPaint
 import android.graphics.Path as AndroidPath
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
@@ -246,3 +247,19 @@ internal fun tactileSurfaceRimColor(tone: TactileTone, palette: KeynearPalette):
         if (palette.isDark) palette.onAccent.copy(alpha = 0.08f) else palette.sheetHandle.copy(alpha = 0.48f)
     TactileTone.THUMB, TactileTone.INSET, TactileTone.NONE -> null
 }
+
+internal fun KeynearPalette.withMaterialAccent(scheme: ColorScheme): KeynearPalette = copy(
+    accent = scheme.primary,
+    onAccent = scheme.onPrimary,
+    focusRing = scheme.primary,
+    loading = scheme.primary,
+    loadingHover = scheme.primary,
+    loadingInk = scheme.primary,
+    loadingTonal = scheme.primaryContainer,
+    onLoadingTonal = scheme.onPrimaryContainer,
+    mapContour = scheme.primary.copy(alpha = 0.20f),
+    mapContourFar = scheme.primary.copy(alpha = 0.15f),
+    waveSpoke = scheme.primary.copy(alpha = 0.15f),
+    waveRing = scheme.primary.copy(alpha = 0.28f),
+    waveEcho = scheme.primary.copy(alpha = 0.22f),
+)

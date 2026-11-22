@@ -41,6 +41,7 @@ data class DaemonConfigUi(
     val ignoredMimeTypes: List<String> = DEFAULT_IGNORED_MIMES,
     val notifyAutoAcceptComplete: Boolean = false,
     val darkTheme: Boolean = false,
+    val dynamicAccent: Boolean = true,
 ) {
     fun toFfi(visibility: VisibilityState): FfiDaemonConfig = FfiDaemonConfig(
         visibilityMode = visibility.toFfi(),
@@ -60,7 +61,11 @@ data class DaemonConfigUi(
             "application/x-password",
         )
 
-        fun fromFfi(ffi: FfiDaemonConfig, darkTheme: Boolean): DaemonConfigUi = DaemonConfigUi(
+        fun fromFfi(
+            ffi: FfiDaemonConfig,
+            darkTheme: Boolean,
+            dynamicAccent: Boolean = true,
+        ): DaemonConfigUi = DaemonConfigUi(
             incomingDirectory = ffi.incomingDirectory,
             autoAcceptFromPaired = ffi.autoAcceptFromPaired,
             clipboardSyncEnabled = ffi.clipboardSyncEnabled,
@@ -70,6 +75,7 @@ data class DaemonConfigUi(
             ignoredMimeTypes = ffi.ignoredMimeTypes,
             notifyAutoAcceptComplete = ffi.notifyAutoAcceptComplete,
             darkTheme = darkTheme,
+            dynamicAccent = dynamicAccent,
         )
     }
 }
