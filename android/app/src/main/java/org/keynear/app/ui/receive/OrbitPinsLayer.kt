@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -69,7 +70,14 @@ private val VisibilityControlHeight = 56.dp
 private val VisibilityIconSize = 18.dp
 private const val WAVE_CYCLE_MS = 120_000
 private const val WAVE_MOTE_ALPHA = 0.5f
-private val SkeletonOrbitRadii = listOf(72f, 108f, 138f)
+private const val SKELETON_DRIFT_HALF_MS = 4_000
+private const val SKELETON_SCALE_MIN = 0.97f
+private const val SKELETON_SCALE_MAX = 1.03f
+private val SkeletonOffsets = listOf(
+    (-96.dp to (-56.dp)),
+    (112.dp to 28.dp),
+    (-52.dp to 92.dp),
+)
 private val SkeletonLabelWidth = 56.dp
 private val SkeletonSubLabelWidth = 36.dp
 private val SkeletonBarHeight = 6.dp
@@ -93,7 +101,7 @@ internal fun OrbitPinsLayer(
     )
 
     if (pins.isEmpty()) {
-        SkeletonPins(orbitProgress = orbitProgress)
+        SkeletonPins()
     }
 
     pins.forEachIndexed { idx, pin ->
@@ -169,24 +177,28 @@ internal fun OrbitPinsLayer(
 }
 
 @Composable
-private fun SkeletonPins(orbitProgress: Float) {
+private fun SkeletonPins() {
     val palette = LocalKeynearPalette.current
-    val pulse by rememberInfiniteTransition(label = "skeletonPulse").animateFloat(
-        initialValue = 0.5f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "skeletonAlpha",
+    val transition = rememberInfiniteTransition(label = "skeletonDrift")
+    val driftSpec = infiniteRepeatable<Float>(
+        animation = tween(durationMillis = SKELETON_DRIFT_HALF_MS, easing = FastOutSlowInEasing),
+        repeatMode = RepeatMode.Reverse,
     )
+    val pulseFirst = transition.animateFloat(0.45f, 0.85f, driftSpec, label = "skeletonDrift0")
+    val pulseSecond = transition.animateFloat(0.85f, 0.45f, driftSpec, label = "skeletonDrift1")
+    val pulseThird = transition.animateFloat(0.45f, 0.85f, driftSpec, label = "skeletonDrift2")
+    val pulses = listOf(pulseFirst, pulseSecond, pulseThird)
 
-    SkeletonOrbitRadii.forEachIndexed { idx, radius ->
-        val angle = (idx * 2.1f + orbitProgress) * PI.toFloat()
-        val xOffset = (cos(angle) * radius).dp
-        val yOffset = (sin(angle) * radius * 0.62f).dp
+    SkeletonOffsets.forEachIndexed { idx, (xOffset, yOffset) ->
+        val pulse = pulses[idx].value
+        val scale = SKELETON_SCALE_MIN + (pulse - 0.45f) / 0.40f * (SKELETON_SCALE_MAX - SKELETON_SCALE_MIN)
         Column(
-            modifier = Modifier.offset(x = xOffset, y = yOffset),
+            modifier = Modifier
+                .offset(x = xOffset, y = yOffset)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
         ) {

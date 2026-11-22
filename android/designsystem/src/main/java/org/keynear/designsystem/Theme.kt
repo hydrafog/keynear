@@ -191,18 +191,6 @@ private fun dynamicSchemeFor(
     }.getOrNull()
 }
 
-private fun themedColorScheme(base: ColorScheme, dynamic: ColorScheme?): ColorScheme =
-    if (dynamic != null) {
-        base.copy(
-            primary = dynamic.primary,
-            onPrimary = dynamic.onPrimary,
-            primaryContainer = dynamic.primaryContainer,
-            onPrimaryContainer = dynamic.onPrimaryContainer,
-        )
-    } else {
-        base
-    }
-
 private fun applySystemBars(view: View, darkTheme: Boolean) {
     val window = (view.context as? Activity)?.window ?: return
     val controller = WindowCompat.getInsetsController(window, view)
@@ -230,7 +218,7 @@ fun KeynearTheme(
         basePalette
     }
     val baseColorScheme = if (darkTheme) KeynearDarkColorScheme else KeynearLightColorScheme
-    val colorScheme = themedColorScheme(baseColorScheme, dynamicScheme)
+    val colorScheme = dynamicScheme ?: baseColorScheme
     val indication = remember(palette) { KeynearIndication(palette.focusRing) }
     val view = LocalView.current
     if (!view.isInEditMode) {
