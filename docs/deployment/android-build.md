@@ -28,7 +28,7 @@ nix develop .#android --command bash -c 'llvm-readelf -l android/core-ffi/src/ma
 nix develop .#android --command bash -c 'llvm-readelf -l android/core-ffi/src/main/jniLibs/x86_64/libkeynear_core.so'
 ```
 
-Verify that every `LOAD` program header reports `0x4000` alignment.
+Verify that every `LOAD` program header reports `0x4000` alignment. The quality workflow runs the same check for both ABIs after `cargo ndk` builds the libraries. It reads each `LOAD` alignment with `llvm-readelf -l`, rejects any alignment below `16384` bytes, and fails on a missing library or a library with no `LOAD` headers. A native load smoke then confirms that each file is a shared object through `llvm-readelf -h` and exports UniFFI bridge symbols through `llvm-nm -D`. The workflow adds the NDK LLVM tool directory to `PATH` so both checks use the same tools as the local devShell.
 
 ## UniFFI Kotlin Bindings
 

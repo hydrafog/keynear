@@ -51,8 +51,18 @@ Keynear handles clipboard and one-time-code continuity in the background.
 The current release supports the following handoff and fallback behavior.
 
 - `1.2.0-carina` is the current production release. Three features stand out.
-  - Interrupted multi-gigabyte drops resume from the last verified 60 KiB chunk, and paired shared directories are browsable on demand through a Linux FUSE mount and an Android `DocumentsProvider`.
-  - Smart audio handoff pauses MPRIS2 playback and releases the matching `bap_sink`, `a2dp_sink`, or `hfp_hf` profile before the phone claims a shared headset, then reclaims it on release.
+  - Interrupted multi-gigabyte drops resume from the last verified 60 KiB chunk, and paired shared directories are browsable on demand through a Linux FUSE mount and an Android `DocumentsProvider`. The daemon selects the `FuserAdapter` mount when `KEYNEAR_FUSE` is set and the `fuse` feature is compiled, and otherwise keeps IPC and transfers active without a mount.
+  - Smart audio handoff pauses MPRIS2 playback and releases the matching `bap_sink`, `a2dp_sink`, or `hfp_hf` profile through BlueZ `org.bluez.MediaTransport1` before the phone claims a shared headset, then reclaims it on release. When the session or system bus is absent, the handoff logs a warning and keeps the daemon running.
   - Opted-in notifications mirror to the desktop with reply, mark-as-read, and dismiss actions, call alerts expose Answer, Decline, and Mute, and media state appears in the Linux tray menu and the Android Quick Settings media carousel.
 - When no shared Wi-Fi network exists, peers negotiate Wi-Fi Aware NAN ahead of Wi-Fi Direct R2. `RangingManager` closeness gating activates only when both peers advertise the capability, the hardware supports it, and the device runs API 36 or later.
 - Under GNOME Mutter, install the optional bridge in `packaging/gnome/keynear-clipboard@hydrafog.github.com/` for background clipboard sync. Every backend degrades to a typed unavailable state when its OS service is missing.
+
+## Daemon Environment
+
+The daemon reads these environment variables at startup.
+
+- `KEYNEAR_LOG` sets the tracing filter when it holds a non-empty value. An unset or invalid value falls back to `RUST_LOG`, then to `info`.
+- `KEYNEAR_DATA_DIR` selects the data directory when it holds a non-empty, NUL-free path. An unset or empty value falls back to the default config directory, and a `config.toml` in that directory applies when present.
+- `KEYNEAR_FUSE` enables the FUSE mount for `1`, `true`, `TRUE`, or `yes` when the daemon is built with the `fuse` feature. Other values leave the mount unavailable.
+
+Unavailable backends degrade to warnings rather than stopping the daemon. BlueZ, Secret Service, the FUSE mount, and the GNOME clipboard bridge each log a typed unavailable event and keep local control and transfers active.

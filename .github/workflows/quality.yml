@@ -79,6 +79,34 @@ jobs:
         run: |
           export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/30.0.16248370"
           cargo ndk -t arm64-v8a -t x86_64 -o android/core-ffi/src/main/jniLibs build --release -p keynear-ffi
+      - name: Expose NDK LLVM tools
+        run: echo "$ANDROID_HOME/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/bin" >> "$GITHUB_PATH"
+      - name: Verify 16 KB ELF page alignment
+        run: |
+          for abi in arm64-v8a x86_64; do
+            so="android/core-ffi/src/main/jniLibs/$abi/libkeynear_core.so"
+            test -f "$so" || { echo "missing $so" >&2; exit 1; }
+            aligns="$(llvm-readelf -l "$so" | awk '$1 == "LOAD" { print $NF }')"
+            test -n "$aligns" || { echo "no LOAD headers in $so" >&2; exit 1; }
+            for align in $aligns; do
+              case "$align" in
+                0x*|[0-9]*) ;;
+                *) echo "$so has unreadable LOAD alignment $align" >&2; exit 1 ;;
+              esac
+              decimal=$((align))
+              if [ "$decimal" -lt 16384 ]; then
+                echo "$so LOAD alignment $align is below 16 KB" >&2
+                exit 1
+              fi
+            done
+          done
+      - name: Native library load smoke
+        run: |
+          for abi in arm64-v8a x86_64; do
+            so="android/core-ffi/src/main/jniLibs/$abi/libkeynear_core.so"
+            llvm-readelf -h "$so" | grep -q 'Shared object file' || { echo "$so is not a shared object" >&2; exit 1; }
+            llvm-nm -D "$so" | grep -q 'uniffi_' || { echo "$so exports no UniFFI bridge symbols" >&2; exit 1; }
+          done
       - name: Android unit tests, lint, detekt, and debug APK
         working-directory: android
         run: ./gradlew testDebugUnitTest lintDebug detekt assembleDebug

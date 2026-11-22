@@ -31,5 +31,8 @@ if [[ "${KEYNEAR_SKIP_ANDROID:-0}" != "1" ]]; then
     (cd android && ./gradlew testDebugUnitTest lintDebug detekt)
   elif command -v nix >/dev/null 2>&1; then
     nix develop .#android --command bash -c 'cd android && gradle testDebugUnitTest lintDebug detekt'
+  else
+    echo "error: Android checks requested but neither Android SDK nor nix found in PATH" >&2
+    exit 1
   fi
 fi

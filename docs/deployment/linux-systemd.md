@@ -1,6 +1,6 @@
 # Linux systemd Service
 
-`keynear` runs as an unprivileged `systemd --user` service (`keynear daemon`). It stores configuration and paired device metadata in `~/.config/keynear/` or `$KEYNEAR_CONFIG_DIR/`.
+`keynear` runs as an unprivileged `systemd --user` service (`keynear daemon`). It stores configuration and paired device metadata in `~/.config/keynear/` or the directory named by `KEYNEAR_CONFIG_DIR`. A non-empty `KEYNEAR_DATA_DIR` points `config.toml` at a separate data directory, and an invalid or empty value falls back to the config directory.
 
 ## Build and Runtime Prerequisites
 
@@ -50,6 +50,17 @@ systemctl --user daemon-reload
 systemctl --user enable --now keynear.service
 ```
 
+## Environment Overrides
+
+The daemon and CLI honor these environment variables.
+
+- `KEYNEAR_LOG` sets the tracing filter when it holds a non-empty value. An unset or invalid value falls back to `RUST_LOG`, then to `info`.
+- `KEYNEAR_CONFIG_DIR` sets the base directory for `config.toml` and `devices.toml`. An unset or empty value falls back to `XDG_CONFIG_HOME/keynear` or `~/.config/keynear`.
+- `KEYNEAR_DATA_DIR` points `config.toml` at a separate data directory when it holds a non-empty, NUL-free path. An invalid or empty value falls back to the config directory.
+- `KEYNEAR_FUSE` selects the FUSE mount for `1`, `true`, `TRUE`, or `yes` when the daemon is built with the `fuse` feature. Other values keep the mount unavailable.
+
+Unavailable backends degrade to warnings rather than stopping the daemon. BlueZ, Secret Service, the FUSE mount, and the clipboard bridge each log a typed unavailable event and keep local control and transfers active. Audio handoff calls BlueZ `org.bluez.MediaTransport1.Release` and `Acquire` through `zbus`, and logs `vega_sink_release_unavailable` or `vega_sink_claim_unavailable` when the bus or transport is absent.
+
 On NixOS, `nixosModules.default` (`packaging/nixos/nixos-module.nix`) provisions the hardened user unit, the Bluetooth default, and the desktop entry and icons. It also adds these options.
 
 - FUSE3 support (`services.keynear.fuse.enable`).
@@ -82,7 +93,7 @@ Keynear exposes the following command-line, tray, and storage behavior.
   - `audioHandoffEnabled`, `ignoredMimeTypes`, `notifyAutoAcceptComplete`.
 
   Keynear falls back to safe defaults when the file is absent and saves updates atomically through `DaemonConfig::save_to_path`.
-- The on-demand virtual filesystem is a typed backend in `crates/keynear/src/fuse/`. The daemon logs a graded availability probe (`fuse_mount_probe`, `fuse_mount_state`) from `crates/keynear/src/fuse/probe.rs` at startup. When kernel FUSE or `libfuse3` is absent, `crates/keynear/src/fuse/backend.rs` emits `fuse_backend_unavailable` and keeps serving IPC and transfers.
+- The on-demand virtual filesystem is a typed backend in `crates/keynear/src/fuse/`. `crates/keynear/src/fuse/probe.rs` selects the `FuserAdapter` mount only when `KEYNEAR_FUSE` enables it and the `fuse` feature is compiled, and otherwise selects the unavailable backend. The guard logs a graded availability probe (`fuse_mount_probe`, `fuse_mount_state`), calls `mount` and `unmount` through its lifecycle, and logs `fuse_mount_shutdown` on drop. An unusable mountpoint logs `fuse_mountpoint_unavailable`, and a missing kernel FUSE or `libfuse3` keeps IPC and transfers active.
 - Notification mirroring is opt-in on the phone. Excluded packages are configuration and contain no message content. The desktop notification client logs `notifications_unavailable` when the session bus is absent and keeps the daemon running. MPRIS2 media observation logs `media_bridge_unavailable` when no player or bus exists.
   - On NixOS, `services.keynear.fuse.enable = true` sets `KEYNEAR_FUSE=1` and enables the optional `fuse` Cargo feature on the default Nix package.
   - On Home Manager, use `services.keynear.fuse = true`.
