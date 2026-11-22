@@ -1,7 +1,7 @@
 use keynear_core::{
     is_package_excluded, negotiate_capabilities, validate_descriptor, validate_metadata,
-    validate_reply_text, CallActionKind, CallPhase, MediaMetadata, NotificationDescriptor,
-    PlaybackState, CAP_CALL_ALERTS, CAP_MEDIA_BRIDGE, CAP_NOTIFICATION_MIRROR,
+    CallActionKind, CallPhase, MediaMetadata, NotificationDescriptor, PlaybackState,
+    CAP_CALL_ALERTS, CAP_MEDIA_BRIDGE, CAP_NOTIFICATION_MIRROR,
 };
 
 use crate::callbacks::FfiError;
@@ -36,13 +36,6 @@ pub struct FfiMirroredNotification {
 pub struct FfiCapabilityPair {
     pub local: u32,
     pub peer: u32,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
-pub enum FfiNotificationAction {
-    Reply,
-    MarkRead,
-    Dismiss,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
@@ -133,12 +126,6 @@ pub fn mirror_notification(
         supports_mark_read: descriptor.supports_mark_read,
         supports_dismiss: descriptor.supports_dismiss,
     }))
-}
-
-#[uniffi::export]
-pub fn validate_notification_reply(text: String) -> Result<(), FfiError> {
-    validate_reply_text(&text)?;
-    Ok(())
 }
 
 #[uniffi::export]

@@ -19,23 +19,8 @@ pub fn default_config_summary() -> String {
 }
 
 #[uniffi::export]
-pub fn ble_service_uuid_string() -> String {
-    KEYNEAR_BLE_SERVICE_UUID.to_string()
-}
-
-#[uniffi::export]
 pub fn ble_service_uuid16() -> u16 {
     KEYNEAR_BLE_SERVICE_UUID16
-}
-
-#[uniffi::export]
-pub fn lan_endpoint_char_uuid_string() -> String {
-    LAN_ENDPOINT_CHAR_UUID.to_string()
-}
-
-#[uniffi::export]
-pub fn lan_endpoint_char_uuid16() -> u16 {
-    LAN_ENDPOINT_CHAR_UUID16
 }
 
 #[uniffi::export]

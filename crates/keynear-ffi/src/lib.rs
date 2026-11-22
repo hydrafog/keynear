@@ -23,17 +23,15 @@ use keynear_core::{
 use keynear_protocol::{read_stream_kind, KeynearError, QuicStreamKind};
 
 pub use callbacks::{
-    ble_service_uuid16, ble_service_uuid_string, default_config_summary,
-    everyone_nearby_timeout_secs, get_core_status, lan_endpoint_char_uuid16,
-    lan_endpoint_char_uuid_string, pairing_timeout_secs, CoreStatus, FfiDaemonConfig,
-    FfiDeviceRole, FfiError, FfiLanEndpoint, FfiPairedDevice, FfiVisibilityMode,
+    ble_service_uuid16, default_config_summary, everyone_nearby_timeout_secs, get_core_status,
+    pairing_timeout_secs, CoreStatus, FfiDaemonConfig, FfiDeviceRole, FfiError, FfiLanEndpoint,
+    FfiPairedDevice, FfiVisibilityMode,
 };
 pub use clipboard::FfiClipboardItem;
 pub use continuity::{
     call_action_allowed, continuity_capability_flags, media_command_allowed, mirror_notification,
-    validate_notification_reply, FfiCallAction, FfiCallPhase, FfiCapabilityPair, FfiMediaCommand,
-    FfiMediaState, FfiMirroredNotification, FfiNotificationAction, FfiNotificationDescriptor,
-    FfiPlayback,
+    FfiCallAction, FfiCallPhase, FfiCapabilityPair, FfiMediaCommand, FfiMediaState,
+    FfiMirroredNotification, FfiNotificationDescriptor, FfiPlayback,
 };
 pub use pairing::{
     FfiEveryoneNearbyBeacon, FfiNoisePairingSession, FfiPairedBeaconState, FfiPairingCompleted,
@@ -46,8 +44,8 @@ pub use vega::{
     FfiRangingMethod, FfiVegaCapabilities,
 };
 pub use vfs::{
-    provide_vfs_read_fd, resumable_transfer_capability_flags, transfer_resume_decision,
-    vfs_read_plan, vfs_root_node, FfiChunkCheckpoint, FfiReadPlan, FfiResumeDecision, FfiVfsNode,
+    resumable_transfer_capability_flags, vfs_read_plan, vfs_root_node, FfiChunkCheckpoint,
+    FfiReadPlan, FfiResumeDecision, FfiVfsNode,
 };
 
 use callbacks::{
