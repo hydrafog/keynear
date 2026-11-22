@@ -6,6 +6,13 @@ pub const MAX_CALL_ID_LEN: usize = 64;
 pub const MAX_CALLER_LEN: usize = 128;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CallAlertDescriptor<'a> {
+    pub call_id: &'a str,
+    pub caller: &'a str,
+    pub sink_profile: AudioSinkProfile,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CallPhase {
     Incoming,
     Active,
@@ -54,20 +61,18 @@ impl CallAlertEngine {
     pub fn begin(
         &mut self,
         sequence: u64,
-        call_id: &str,
-        caller: &str,
-        sink_profile: AudioSinkProfile,
+        descriptor: CallAlertDescriptor<'_>,
     ) -> Result<CallPlan, KeynearError> {
-        validate_call_id(call_id)?;
-        validate_caller(caller)?;
+        validate_call_id(descriptor.call_id)?;
+        validate_caller(descriptor.caller)?;
         if !self.accept(sequence) {
             return Ok(CallPlan::default());
         }
         self.state = Some(CallAlertState {
-            call_id: call_id.to_string(),
-            caller: caller.to_string(),
+            call_id: descriptor.call_id.to_string(),
+            caller: descriptor.caller.to_string(),
             phase: CallPhase::Incoming,
-            sink_profile,
+            sink_profile: descriptor.sink_profile,
             sequence,
             muted: false,
         });

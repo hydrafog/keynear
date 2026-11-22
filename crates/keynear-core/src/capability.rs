@@ -76,6 +76,10 @@ mod tests {
         assert_eq!(CAP_RANGING_CS, 0x10);
         assert_eq!(CAP_RANGING_UWB, 0x20);
         assert_eq!(CAP_WIFI_AWARE, 0x40);
+    }
+
+    #[test]
+    fn perseus_and_carina_capability_bits_stay_stable() {
         assert_eq!(CAP_WIFI_DIRECT_R2, 0x80);
         assert_eq!(CAP_RESUMABLE_TRANSFER, 0x100);
         assert_eq!(CAP_NOTIFICATION_MIRROR, 0x200);

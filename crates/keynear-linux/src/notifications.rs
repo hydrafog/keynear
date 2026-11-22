@@ -1,3 +1,12 @@
+mod mirror;
+
+#[cfg(test)]
+mod tests;
+
+pub use mirror::{
+    call_alert_content, mirrored_notification_content, parse_carina_action, MirroredContentInput,
+};
+
 use std::collections::HashMap;
 
 use futures_util::StreamExt;
@@ -22,6 +31,12 @@ pub enum NotificationAction {
     CancelTransfer(String),
     ApprovePairing(String),
     RejectPairing(String),
+    MirrorReply(String),
+    MirrorMarkRead(String),
+    MirrorDismiss(String),
+    CallAnswer(String),
+    CallDecline(String),
+    CallMute(String),
 }
 
 pub fn format_transfer_action(transfer_id: &str, verb: &str) -> String {
@@ -29,6 +44,9 @@ pub fn format_transfer_action(transfer_id: &str, verb: &str) -> String {
 }
 
 pub fn parse_notification_action(action_key: &str) -> Option<NotificationAction> {
+    if let Some(action) = parse_carina_action(action_key) {
+        return Some(mirror::into_notification_action(action));
+    }
     let mut parts = action_key.splitn(3, ':');
     let kind = parts.next()?;
     let target_id = parts.next()?.trim();
@@ -223,77 +241,46 @@ impl NotificationsClient {
         self.notify(replaces_id, icon, &summary, &body, &actions, urgency)
             .await
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use keynear_core::TransferItem;
-
-    use super::*;
-
-    #[test]
-    fn parse_notification_action_handles_transfer_and_pairing_actions() {
-        assert_eq!(
-            parse_notification_action("transfer:tx-99:accept"),
-            Some(NotificationAction::AcceptTransfer("tx-99".to_string()))
-        );
-        assert_eq!(
-            parse_notification_action("transfer:tx-99:decline"),
-            Some(NotificationAction::DeclineTransfer("tx-99".to_string()))
-        );
-        assert_eq!(
-            parse_notification_action("transfer:tx-99:cancel"),
-            Some(NotificationAction::CancelTransfer("tx-99".to_string()))
-        );
-        assert_eq!(
-            parse_notification_action("pairing:peer-a:approve"),
-            Some(NotificationAction::ApprovePairing("peer-a".to_string()))
-        );
-        assert_eq!(
-            parse_notification_action("pairing:peer-a:reject"),
-            Some(NotificationAction::RejectPairing("peer-a".to_string()))
-        );
+    #[allow(dead_code, clippy::too_many_arguments)]
+    pub async fn notify_mirrored_notification(
+        &self,
+        peer_name: &str,
+        notification_key: &str,
+        title: &str,
+        body: &str,
+        supports: (bool, bool, bool),
+        replaces_id: u32,
+    ) -> Option<u32> {
+        let (summary, text, actions) = mirrored_notification_content(MirroredContentInput {
+            peer_name,
+            notification_key,
+            title,
+            body,
+            supports,
+        });
+        self.notify(
+            replaces_id,
+            "mail-unread-symbolic",
+            &summary,
+            &text,
+            &actions,
+            1,
+        )
+        .await
     }
 
-    #[test]
-    fn parse_notification_action_rejects_malformed_or_unknown() {
-        assert_eq!(parse_notification_action(""), None);
-        assert_eq!(parse_notification_action("transfer::accept"), None);
-        assert_eq!(parse_notification_action("transfer:tx-1:unknown"), None);
-        assert_eq!(parse_notification_action("other:tx-1:accept"), None);
-    }
-
-    #[test]
-    fn transfer_notification_content_formats_consent_and_active_progress() {
-        let session = TransferSession {
-            transfer_id: "tx-5".to_string(),
-            peer_device_id: "pixel-9".to_string(),
-            direction: TransferDirection::Receive,
-            items: vec![TransferItem {
-                name: "archive.zip".to_string(),
-                mime_type: "application/zip".to_string(),
-                size_bytes: 2048,
-                is_directory: false,
-                target_path: None,
-                checksum: None,
-            }],
-            total_bytes: 2048,
-            transferred_bytes: 1024,
-            state: TransferState::PendingConsent,
-            started_at: "2026-11-14T00:00:00Z".to_string(),
-        };
-
-        let (summary, body, actions) = transfer_notification_content(&session, "Pixel 9");
-        assert_eq!(summary, "Incoming transfer from Pixel 9");
-        assert!(body.contains("archive.zip"));
-        assert_eq!(
-            actions,
-            vec![
-                "transfer:tx-5:accept",
-                "Accept",
-                "transfer:tx-5:decline",
-                "Decline"
-            ]
-        );
+    #[allow(dead_code)]
+    pub async fn notify_call_alert(&self, caller: &str, replaces_id: u32) -> Option<u32> {
+        let (summary, body, actions) = call_alert_content(caller);
+        self.notify(
+            replaces_id,
+            "call-start-symbolic",
+            &summary,
+            &body,
+            &actions,
+            2,
+        )
+        .await
     }
 }

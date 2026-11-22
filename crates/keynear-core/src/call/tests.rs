@@ -5,7 +5,14 @@ use crate::audio::AudioSinkProfile;
 
 fn begin(engine: &mut CallAlertEngine, seq: u64) -> CallPlan {
     engine
-        .begin(seq, "call-1", "Pixel 9", AudioSinkProfile::HfpHf)
+        .begin(
+            seq,
+            CallAlertDescriptor {
+                call_id: "call-1",
+                caller: "Pixel 9",
+                sink_profile: AudioSinkProfile::HfpHf,
+            },
+        )
         .expect("begin")
 }
 
@@ -65,16 +72,26 @@ fn mute_before_answer_is_rejected() {
 fn invalid_caller_is_rejected_before_state_change() {
     let mut engine = CallAlertEngine::new();
     let err = engine
-        .begin(1, "call-1", "", AudioSinkProfile::HfpHf)
+        .begin(
+            1,
+            CallAlertDescriptor {
+                call_id: "call-1",
+                caller: "",
+                sink_profile: AudioSinkProfile::HfpHf,
+            },
+        )
         .expect_err("empty caller rejected");
     assert!(matches!(err, KeynearError::Validation { .. }));
     assert!(engine.snapshot().is_none());
+    let long_caller = "x".repeat(MAX_CALLER_LEN + 1);
     let err = engine
         .begin(
             2,
-            "call-1",
-            &"x".repeat(MAX_CALLER_LEN + 1),
-            AudioSinkProfile::BapSink,
+            CallAlertDescriptor {
+                call_id: "call-1",
+                caller: &long_caller,
+                sink_profile: AudioSinkProfile::BapSink,
+            },
         )
         .expect_err("long caller rejected");
     assert!(matches!(err, KeynearError::Validation { .. }));

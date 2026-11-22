@@ -68,6 +68,7 @@ fn spawn_sync_loop(
     let sync_ctx = ctx.clone();
     tasks.push(tokio::spawn(async move {
         let mut interval = tokio::time::interval(TRAY_REFRESH_INTERVAL);
+        let mut media_sequence = 0u64;
         let mut sent_notifs: std::collections::HashMap<
             String,
             (u32, keynear_core::TransferState, u64),
@@ -78,7 +79,16 @@ fn spawn_sync_loop(
                 _ = sync_ctx.refresh_notify.notified() => {}
             }
             if let Some(ref handle) = tray_handle {
-                let next_state = build_tray_state(&sync_ctx).await;
+                let mut next_state = build_tray_state(&sync_ctx).await;
+                media_sequence = media_sequence.saturating_add(1);
+                let players = crate::media::observe(media_sequence).await;
+                if let Some(first) = players.first() {
+                    next_state.now_playing = Some(crate::tray::NowPlayingState {
+                        title: first.title.clone(),
+                        artist: first.artist.clone(),
+                        playing: first.playback == keynear_core::PlaybackState::Playing,
+                    });
+                }
                 let _ = handle.update(move |tray| tray.state = next_state).await;
             }
             if let Some(ref client) = notif_client {

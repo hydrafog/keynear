@@ -8,12 +8,14 @@
 #[allow(dead_code)]
 mod audio;
 mod ble;
+mod call;
 mod cli;
 mod clipboard;
 mod fallback;
 mod fuse;
 mod ipc;
 mod keyring_oo7;
+mod media;
 mod notifications;
 mod perseus;
 mod service;

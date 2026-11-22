@@ -10,7 +10,7 @@ fn oneof_key_bytes(payload: v1::envelope::Payload) -> Vec<u8> {
     encode_envelope(&envelope).expect("encode envelope")
 }
 
-fn sample_carina_envelopes() -> Vec<v1::Envelope> {
+fn sample_notification_envelopes() -> Vec<v1::Envelope> {
     use v1::envelope::Payload as P;
     vec![
         sample_envelope(P::MirroredNotification(v1::MirroredNotification {
@@ -30,6 +30,12 @@ fn sample_carina_envelopes() -> Vec<v1::Envelope> {
             reply_text: "Okay".to_string(),
             sequence: 2,
         })),
+    ]
+}
+
+fn sample_call_and_media_envelopes() -> Vec<v1::Envelope> {
+    use v1::envelope::Payload as P;
+    vec![
         sample_envelope(P::CallAlert(v1::CallAlert {
             call_id: "call-1".to_string(),
             caller: "Pixel 9".to_string(),
@@ -64,6 +70,12 @@ fn sample_carina_envelopes() -> Vec<v1::Envelope> {
             sequence: 6,
         })),
     ]
+}
+
+fn sample_carina_envelopes() -> Vec<v1::Envelope> {
+    let mut envelopes = sample_notification_envelopes();
+    envelopes.extend(sample_call_and_media_envelopes());
+    envelopes
 }
 
 #[test]

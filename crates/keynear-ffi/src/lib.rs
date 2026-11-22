@@ -31,8 +31,8 @@ pub use callbacks::{
 pub use carina::{
     carina_call_action_allowed, carina_capability_flags, carina_media_command_allowed,
     carina_mirror_notification, carina_validate_reply, FfiCallAction, FfiCallPhase,
-    FfiMediaCommand, FfiMediaState, FfiMirroredNotification, FfiNotificationAction,
-    FfiNotificationDescriptor, FfiPlayback,
+    FfiCapabilityPair, FfiMediaCommand, FfiMediaState, FfiMirroredNotification,
+    FfiNotificationAction, FfiNotificationDescriptor, FfiPlayback,
 };
 pub use clipboard::FfiClipboardItem;
 pub use pairing::{

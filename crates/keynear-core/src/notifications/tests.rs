@@ -17,8 +17,11 @@ fn descriptor<'a>(key: &'a str, package: &'a str, sequence: u64) -> Notification
     }
 }
 
-fn flags() -> (u32, u32) {
-    (CAP_NOTIFICATION_MIRROR, CAP_NOTIFICATION_MIRROR)
+fn flags() -> MirrorCapabilities {
+    MirrorCapabilities {
+        local: CAP_NOTIFICATION_MIRROR,
+        peer: CAP_NOTIFICATION_MIRROR,
+    }
 }
 
 #[test]
@@ -29,8 +32,7 @@ fn excluded_package_never_reaches_envelope() {
         .accept(
             descriptor("key-1", "com.secret.chat", 1),
             &exclusions,
-            flags().0,
-            flags().1,
+            flags(),
         )
         .expect("accept");
     assert!(result.is_none());
@@ -38,8 +40,7 @@ fn excluded_package_never_reaches_envelope() {
         .accept(
             descriptor("key-2", "org.example.chat", 1),
             &exclusions,
-            flags().0,
-            flags().1,
+            flags(),
         )
         .expect("accept");
     assert_eq!(allowed.expect("allowed").package_name, "org.example.chat");
@@ -49,39 +50,19 @@ fn excluded_package_never_reaches_envelope() {
 fn duplicate_notification_key_is_ignored() {
     let mut engine = MirrorEngine::new();
     assert!(engine
-        .accept(
-            descriptor("key-1", "org.example.chat", 5),
-            &[],
-            flags().0,
-            flags().1
-        )
+        .accept(descriptor("key-1", "org.example.chat", 5), &[], flags())
         .expect("first")
         .is_some());
     assert!(engine
-        .accept(
-            descriptor("key-1", "org.example.chat", 5),
-            &[],
-            flags().0,
-            flags().1
-        )
+        .accept(descriptor("key-1", "org.example.chat", 5), &[], flags())
         .expect("duplicate")
         .is_none());
     assert!(engine
-        .accept(
-            descriptor("key-1", "org.example.chat", 4),
-            &[],
-            flags().0,
-            flags().1
-        )
+        .accept(descriptor("key-1", "org.example.chat", 4), &[], flags())
         .expect("stale")
         .is_none());
     assert!(engine
-        .accept(
-            descriptor("key-1", "org.example.chat", 6),
-            &[],
-            flags().0,
-            flags().1
-        )
+        .accept(descriptor("key-1", "org.example.chat", 6), &[], flags())
         .expect("fresh")
         .is_some());
 }
@@ -98,8 +79,9 @@ fn control_characters_in_notification_text_are_rejected() {
 
 #[test]
 fn oversized_carina_text_is_rejected() {
+    let body = "x".repeat(MAX_NOTIFICATION_BODY_LEN + 1);
     let bad = NotificationDescriptor {
-        body: &"x".repeat(MAX_NOTIFICATION_BODY_LEN + 1),
+        body: &body,
         ..descriptor("key-1", "org.example.chat", 1)
     };
     let err = validate_descriptor(&bad).expect_err("oversized body rejected");
@@ -113,8 +95,10 @@ fn peer_without_capability_yields_none() {
         .accept(
             descriptor("key-1", "org.example.chat", 1),
             &[],
-            CAP_NOTIFICATION_MIRROR,
-            0,
+            MirrorCapabilities {
+                local: CAP_NOTIFICATION_MIRROR,
+                peer: 0,
+            },
         )
         .expect("no capability");
     assert!(result.is_none());
@@ -137,38 +121,18 @@ fn empty_or_oversized_reply_is_rejected() {
 fn forget_clears_a_single_key_without_touching_others() {
     let mut engine = MirrorEngine::new();
     engine
-        .accept(
-            descriptor("key-1", "org.example.chat", 1),
-            &[],
-            flags().0,
-            flags().1,
-        )
+        .accept(descriptor("key-1", "org.example.chat", 1), &[], flags())
         .expect("first");
     engine
-        .accept(
-            descriptor("key-2", "org.example.chat", 1),
-            &[],
-            flags().0,
-            flags().1,
-        )
+        .accept(descriptor("key-2", "org.example.chat", 1), &[], flags())
         .expect("second");
     engine.forget("key-1");
     assert!(engine
-        .accept(
-            descriptor("key-1", "org.example.chat", 1),
-            &[],
-            flags().0,
-            flags().1
-        )
+        .accept(descriptor("key-1", "org.example.chat", 1), &[], flags())
         .expect("replayed")
         .is_some());
     assert!(engine
-        .accept(
-            descriptor("key-2", "org.example.chat", 1),
-            &[],
-            flags().0,
-            flags().1
-        )
+        .accept(descriptor("key-2", "org.example.chat", 1), &[], flags())
         .expect("still remembered")
         .is_none());
 }

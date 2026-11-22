@@ -3,8 +3,8 @@ use ksni::menu::{CheckmarkItem, MenuItem, RadioGroup, RadioItem, StandardItem, S
 use ksni::Tray;
 
 use super::{
-    build_tray_snapshot, format_transfer_menu_label, KeynearTray, TrayCommand, TrayMenuSnapshot,
-    COPY_LATEST_OTP_LABEL,
+    build_tray_snapshot, format_transfer_menu_label, media_menu::now_playing_menu, KeynearTray,
+    TrayCommand, TrayMenuSnapshot, COPY_LATEST_OTP_LABEL,
 };
 
 impl KeynearTray {
@@ -253,6 +253,9 @@ impl Tray for KeynearTray {
             items.push(transfer_menu);
         }
         items.push(self.paired_devices_menu());
+        if let Some(ref now_playing) = snapshot.now_playing {
+            items.push(now_playing_menu(now_playing));
+        }
         items.extend(self.action_items());
         items
     }

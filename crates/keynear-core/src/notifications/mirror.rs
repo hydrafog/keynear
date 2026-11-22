@@ -36,6 +36,12 @@ pub struct MirroredNotificationView {
     pub supports_dismiss: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MirrorCapabilities {
+    pub local: u32,
+    pub peer: u32,
+}
+
 #[derive(Debug, Default)]
 pub struct MirrorEngine {
     last_sequences: HashMap<String, u64>,
@@ -50,10 +56,11 @@ impl MirrorEngine {
         &mut self,
         descriptor: NotificationDescriptor<'_>,
         exclusions: &[String],
-        local_flags: u32,
-        peer_flags: u32,
+        capabilities: MirrorCapabilities,
     ) -> Result<Option<MirroredNotificationView>, KeynearError> {
-        if negotiate_capabilities(local_flags, peer_flags) & CAP_NOTIFICATION_MIRROR == 0 {
+        if negotiate_capabilities(capabilities.local, capabilities.peer) & CAP_NOTIFICATION_MIRROR
+            == 0
+        {
             return Ok(None);
         }
         validate_descriptor(&descriptor)?;

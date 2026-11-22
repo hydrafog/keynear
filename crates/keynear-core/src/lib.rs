@@ -23,8 +23,8 @@ pub use audio::{
     MAX_PERIPHERAL_ID_LEN,
 };
 pub use call::{
-    CallActionKind, CallAlertEngine, CallAlertState, CallPhase, CallPlan, MAX_CALLER_LEN,
-    MAX_CALL_ID_LEN,
+    CallActionKind, CallAlertDescriptor, CallAlertEngine, CallAlertState, CallPhase, CallPlan,
+    MAX_CALLER_LEN, MAX_CALL_ID_LEN,
 };
 pub use capability::{
     negotiate_capabilities, ranging_method, RangingMethod, VegaCapabilities, CAP_AUDIO_HANDOFF,
@@ -61,9 +61,10 @@ pub use media::{
     PlaybackState, MAX_METADATA_LEN, MAX_PLAYER_ID_LEN,
 };
 pub use notifications::{
-    is_package_excluded, validate_descriptor, validate_reply_text, MirrorEngine,
-    MirroredNotificationView, NotificationDescriptor, MAX_CATEGORY_LEN, MAX_NOTIFICATION_BODY_LEN,
-    MAX_NOTIFICATION_KEY_LEN, MAX_NOTIFICATION_TITLE_LEN, MAX_PACKAGE_NAME_LEN,
+    is_package_excluded, validate_descriptor, validate_reply_text, MirrorCapabilities,
+    MirrorEngine, MirroredNotificationView, NotificationDescriptor, MAX_CATEGORY_LEN,
+    MAX_NOTIFICATION_BODY_LEN, MAX_NOTIFICATION_KEY_LEN, MAX_NOTIFICATION_TITLE_LEN,
+    MAX_PACKAGE_NAME_LEN,
 };
 pub use pairing::{
     NoisePairingSession, PairingCompleted, PairingPeerMetadata, PairingRole, PairingState,

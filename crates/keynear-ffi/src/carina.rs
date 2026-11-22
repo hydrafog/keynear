@@ -32,6 +32,12 @@ pub struct FfiMirroredNotification {
     pub supports_dismiss: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
+pub struct FfiCapabilityPair {
+    pub local: u32,
+    pub peer: u32,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
 pub enum FfiNotificationAction {
     Reply,
@@ -92,11 +98,11 @@ pub fn carina_capability_flags() -> u32 {
 pub fn carina_mirror_notification(
     descriptor: FfiNotificationDescriptor,
     exclusions: Vec<String>,
-    local_flags: u32,
-    peer_flags: u32,
+    capabilities: FfiCapabilityPair,
     last_sequence: u64,
 ) -> Result<Option<FfiMirroredNotification>, FfiError> {
-    if negotiate_capabilities(local_flags, peer_flags) & CAP_NOTIFICATION_MIRROR == 0 {
+    if negotiate_capabilities(capabilities.local, capabilities.peer) & CAP_NOTIFICATION_MIRROR == 0
+    {
         return Ok(None);
     }
     let view = NotificationDescriptor {
@@ -161,10 +167,9 @@ pub fn carina_media_command_allowed(
     state: FfiMediaState,
     command: FfiMediaCommand,
     last_command_sequence: u64,
-    local_flags: u32,
-    peer_flags: u32,
+    capabilities: FfiCapabilityPair,
 ) -> Result<bool, FfiError> {
-    if negotiate_capabilities(local_flags, peer_flags) & CAP_MEDIA_BRIDGE == 0 {
+    if negotiate_capabilities(capabilities.local, capabilities.peer) & CAP_MEDIA_BRIDGE == 0 {
         return Ok(false);
     }
     let metadata = MediaMetadata {
@@ -211,8 +216,11 @@ mod tests {
         }
     }
 
-    fn flags() -> (u32, u32) {
-        (carina_capability_flags(), carina_capability_flags())
+    fn flags() -> FfiCapabilityPair {
+        FfiCapabilityPair {
+            local: carina_capability_flags(),
+            peer: carina_capability_flags(),
+        }
     }
 
     #[test]
@@ -228,17 +236,14 @@ mod tests {
         let excluded = carina_mirror_notification(
             descriptor(),
             vec!["org.example.chat".to_string()],
-            flags().0,
-            flags().1,
+            flags(),
             0,
         )
         .expect("excluded");
         assert!(excluded.is_none());
-        let stale = carina_mirror_notification(descriptor(), vec![], flags().0, flags().1, 2)
-            .expect("stale");
+        let stale = carina_mirror_notification(descriptor(), vec![], flags(), 2).expect("stale");
         assert!(stale.is_none());
-        let fresh = carina_mirror_notification(descriptor(), vec![], flags().0, flags().1, 1)
-            .expect("fresh");
+        let fresh = carina_mirror_notification(descriptor(), vec![], flags(), 1).expect("fresh");
         assert_eq!(fresh.expect("view").notification_key, "n-1");
     }
 
@@ -277,21 +282,13 @@ mod tests {
             can_next: true,
             can_previous: true,
         };
-        assert!(carina_media_command_allowed(
-            state.clone(),
-            FfiMediaCommand::Pause,
-            2,
-            flags().0,
-            flags().1
-        )
-        .expect("fresh"));
-        assert!(!carina_media_command_allowed(
-            state,
-            FfiMediaCommand::Pause,
-            3,
-            flags().0,
-            flags().1
-        )
-        .expect("stale"));
+        assert!(
+            carina_media_command_allowed(state.clone(), FfiMediaCommand::Pause, 2, flags())
+                .expect("fresh")
+        );
+        assert!(
+            !carina_media_command_allowed(state, FfiMediaCommand::Pause, 3, flags())
+                .expect("stale")
+        );
     }
 }

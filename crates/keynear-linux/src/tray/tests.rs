@@ -23,6 +23,7 @@ fn tray_snapshot_formats_countdown_and_devices() {
         }],
         transfers: Vec::new(),
         mdns_degraded: false,
+        now_playing: None,
     };
 
     let snapshot = build_tray_snapshot(&state);
@@ -60,6 +61,7 @@ fn tray_snapshot_marks_needs_attention_for_pending_consent() {
             started_at: "2026-11-14T00:00:00Z".to_string(),
         }],
         mdns_degraded: false,
+        now_playing: None,
     };
 
     let snapshot = build_tray_snapshot(&state);

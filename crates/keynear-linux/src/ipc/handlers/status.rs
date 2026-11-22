@@ -110,5 +110,6 @@ pub(crate) async fn build_tray_state(ctx: &IpcDispatchContext) -> TrayState {
         paired_devices,
         transfers,
         mdns_degraded,
+        now_playing: None,
     }
 }

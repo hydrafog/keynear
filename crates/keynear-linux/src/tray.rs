@@ -1,3 +1,4 @@
+mod media_menu;
 mod menu;
 
 #[cfg(test)]
@@ -26,6 +27,16 @@ pub enum TrayCommand {
     CopyLatestOtp,
     LaunchSettings,
     LaunchSendPicker { device_id: Option<String> },
+    MediaPlay,
+    MediaPause,
+    MediaNext,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct NowPlayingState {
+    pub title: String,
+    pub artist: String,
+    pub playing: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -37,6 +48,7 @@ pub struct TrayState {
     pub paired_devices: Vec<PairedDevice>,
     pub transfers: Vec<TransferSession>,
     pub mdns_degraded: bool,
+    pub now_playing: Option<NowPlayingState>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -50,6 +62,7 @@ pub struct TrayMenuSnapshot {
     pub transfer_labels: Vec<String>,
     pub auto_accept_from_paired: bool,
     pub has_latest_otp: bool,
+    pub now_playing: Option<NowPlayingState>,
 }
 
 pub fn format_everyone_label(mode: VisibilityMode, remaining_secs: Option<u64>) -> String {
@@ -142,6 +155,7 @@ pub fn build_tray_snapshot(state: &TrayState) -> TrayMenuSnapshot {
         transfer_labels,
         auto_accept_from_paired: state.auto_accept_from_paired,
         has_latest_otp: state.has_latest_otp,
+        now_playing: state.now_playing.clone(),
     }
 }
 
