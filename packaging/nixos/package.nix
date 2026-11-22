@@ -4,6 +4,7 @@
   pkg-config,
   protobuf,
   wrapGAppsHook4,
+  aws-lc,
   gtk4,
   libadwaita,
   dbus,
@@ -39,9 +40,11 @@ rustPlatform.buildRustPackage {
     pkg-config
     protobuf
     wrapGAppsHook4
+    rustPlatform.bindgenHook
   ];
 
   buildInputs = [
+    aws-lc
     gtk4
     libadwaita
     dbus
