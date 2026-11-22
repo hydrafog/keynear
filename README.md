@@ -13,7 +13,7 @@
   </p>
 </div>
 
-Keynear links a Linux desktop and an Android phone over Bluetooth Low Energy (BLE) and local Wi-Fi QUIC with zero cloud accounts and zero relay servers. On Linux it runs as a `systemd --user` daemon with a native `StatusNotifierItem` tray menu and an on-demand GTK4/`relm4` preferences window; on Android it runs as a `connectedDevice` foreground service surfaced through a Quick Settings tile, the system Share Sheet, and native notifications.
+Keynear links a Linux desktop and an Android phone over Bluetooth Low Energy (BLE) and local Wi-Fi QUIC, with no cloud account or relay server. On Linux it is a `systemd --user` daemon with a native `StatusNotifierItem` tray menu and an on-demand GTK4/`relm4` preferences window. On Android it is a `connectedDevice` foreground service with a Quick Settings tile, the system Share Sheet, and native notifications.
 
 <h3 id="documentation">
   <picture>
@@ -26,6 +26,8 @@ Keynear links a Linux desktop and an Android phone over Bluetooth Low Energy (BL
 <details>
 <summary><strong>Getting Started</strong></summary>
 
+These guides cover installation and first pairing.
+
 | Document | Description |
 |----------|-------------|
 | [Overview](docs/getting-started/index.md) | Documentation home and navigation |
@@ -37,6 +39,8 @@ Keynear links a Linux desktop and an Android phone over Bluetooth Low Energy (BL
 <details>
 <summary><strong>Architecture</strong></summary>
 
+These guides cover the system design and the cryptographic protocol.
+
 | Document | Description |
 |----------|-------------|
 | [Overview](docs/architecture/index.md) | System boundaries and design |
@@ -47,6 +51,8 @@ Keynear links a Linux desktop and an Android phone over Bluetooth Low Energy (BL
 
 <details>
 <summary><strong>Features</strong></summary>
+
+These guides cover the continuity features Keynear provides.
 
 | Document | Description |
 |----------|-------------|
@@ -60,6 +66,8 @@ Keynear links a Linux desktop and an Android phone over Bluetooth Low Energy (BL
 <details>
 <summary><strong>Development</strong></summary>
 
+These guides cover contributing and the release plan.
+
 | Document | Description |
 |----------|-------------|
 | [Overview](docs/development/index.md) | Contribution and engineering conventions |
@@ -70,6 +78,8 @@ Keynear links a Linux desktop and an Android phone over Bluetooth Low Energy (BL
 
 <details>
 <summary><strong>Deployment &amp; Operations</strong></summary>
+
+These guides cover deployment and runtime recovery.
 
 | Document | Description |
 |----------|-------------|
@@ -83,6 +93,8 @@ Keynear links a Linux desktop and an Android phone over Bluetooth Low Energy (BL
 
 <details>
 <summary><strong>Security &amp; Compliance</strong></summary>
+
+These guides cover the trust model, permissions, and licensing.
 
 | Document | Description |
 |----------|-------------|

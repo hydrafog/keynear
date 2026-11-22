@@ -1,8 +1,8 @@
 # Keynear Documentation
 
-Welcome to the documentation for [Keynear](https://github.com/hydrafog/keynear), a background-first, end-to-end encrypted continuity service connecting Linux desktops and Android phones over BLE and local Wi-Fi QUIC.
+[Keynear](https://github.com/hydrafog/keynear) is a background-first, end-to-end encrypted continuity service that connects Linux desktops and Android phones over BLE and local Wi-Fi QUIC.
 
-## Documentation Areas
+The documentation covers these areas:
 
 - [Getting Started](./getting-started/index.md): Installation and first-run pairing.
 - [Architecture](./architecture/index.md): Workspace crates, `proto3` schemas, and cryptographic transport.
@@ -11,4 +11,3 @@ Welcome to the documentation for [Keynear](https://github.com/hydrafog/keynear),
 - [Deployment](./deployment/index.md): Linux `systemd --user` services and Android `cargo-ndk` builds.
 - [Operations](./operations/index.md): Diagnostics and recovery procedures.
 - [Security & Compliance](./security-compliance/index.md): Threat model, OS permissions, and GPLv3 licensing.
-

@@ -1,10 +1,10 @@
 # Installation
 
-`Keynear` runs natively on Linux desktops and Android 12+ (`minSdk = 31`) devices.
+Keynear runs natively on Linux desktops and Android 12 or later devices with `minSdk = 31`.
 
 ## NixOS and Home Manager
 
-Add Keynear as a flake input and enable either the NixOS system module (`nixosModules.default`) or the Home Manager module (`homeManagerModules.default`). The flake also exports `packages.${system}.{default,keynear,keynear-fuse,keynear-gnome-extension}` and `overlays.default`:
+Add Keynear as a flake input. Enable either the NixOS system module (`nixosModules.default`) or the Home Manager module (`homeManagerModules.default`). The flake also exports `packages.${system}.{default,keynear,keynear-fuse,keynear-gnome-extension}` and `overlays.default`:
 
 ```nix
 {
@@ -29,9 +29,9 @@ Add Keynear as a flake input and enable either the NixOS system module (`nixosMo
 }
 ```
 
-For user-scoped declarative `config.toml` settings and file-manager integrations, import `keynear.homeManagerModules.default` (also exposed at `packaging/nixos/default.nix`) and configure non-secret `services.keynear.settings` plus `services.keynear.integrations.{nautilus,dolphin,yazi,gnomeExtension}.enable`.
+Import `keynear.homeManagerModules.default` for user-scoped declarative `config.toml` settings and file-manager integrations. The module is also exposed at `packaging/nixos/default.nix`. Configure non-secret `services.keynear.settings` and `services.keynear.integrations.{nautilus,dolphin,yazi,gnomeExtension}.enable`.
 
-Pre-built binaries are published to `https://hydrafog.cachix.org`. `flake.nix` declares `nixConfig` for interactive flake commands, and NixOS configurations can opt in permanently with:
+Pre-built binaries are published to `https://hydrafog.cachix.org`. The file `flake.nix` declares `nixConfig` for interactive flake commands, and NixOS configurations can opt in permanently with:
 
 ```nix
 nix.settings = {
@@ -42,11 +42,11 @@ nix.settings = {
 
 ## Flathub (Flatpak)
 
-`packaging/flathub/org.keynear.Keynear.yml` targets `org.gnome.Platform` `49` with `org.freedesktop.Sdk.Extension.rust-stable`, installs `org.keynear.Keynear.desktop`, `org.keynear.Keynear.metainfo.xml`, `hicolor` icons, and the bundled `Plus Jakarta Sans` font, and aligns the GTK4 application ID to `org.keynear.Keynear`.
+The Flatpak recipe at `packaging/flathub/org.keynear.Keynear.yml` targets `org.gnome.Platform` `49` with `org.freedesktop.Sdk.Extension.rust-stable`. It installs `org.keynear.Keynear.desktop`, `org.keynear.Keynear.metainfo.xml`, `hicolor` icons, and the bundled `Plus Jakarta Sans` font. The GTK4 application ID is `org.keynear.Keynear`.
 
 ## Linux From Source
 
-Build the workspace inside the Nix development shell or with a local Rust toolchain (`protobuf-compiler`, `libgtk-4-dev`, `libdbus-1-dev`, and `pkg-config` installed):
+Build the workspace inside the Nix development shell or with a local Rust toolchain. For a local toolchain, install `protobuf-compiler`, `libgtk-4-dev`, `libdbus-1-dev`, and `pkg-config`:
 
 ```bash
 git clone git@github.com:hydrafog/keynear.git
@@ -54,7 +54,7 @@ cd keynear
 nix develop -c cargo build --release -p keynear-linux -p keynear-settings
 ```
 
-Install the `keynear-linux` daemon, `keynear-settings`, desktop entry, `hicolor` icons, systemd user unit, and optional file-manager integrations under `packaging/linux/`:
+Install the `keynear-linux` daemon, `keynear-settings`, desktop entry, `hicolor` icons, systemd user unit, and optional file-manager integrations from `packaging/linux/`:
 
 ```bash
 install -Dm755 target/release/keynear-linux ~/.local/bin/keynear-linux
@@ -74,4 +74,9 @@ See [Linux systemd Deployment](../deployment/linux-systemd.md) for enabling and 
 
 ## Android and F-Droid
 
-The Android app (`1.1.0-perseus`, `versionCode = 7`) ships two Gradle product flavors: `gms` (default, includes Play Services SMS User Consent OTP forwarding) and `foss` (zero Google Play Services dependencies, built by `packaging/fdroid/org.keynear.app.yml`). Build inside `nix develop .#android` using `cargo-ndk` and `gradle assembleGmsDebug` or `gradle assembleFossRelease` as detailed in [Android Build](../deployment/android-build.md).
+The Android app (`1.1.0-perseus`, `versionCode = 7`) ships two Gradle product flavors.
+
+- The default `gms` flavor includes Play Services SMS User Consent OTP forwarding.
+- The `foss` flavor has no Google Play Services dependencies and uses the F-Droid recipe at `packaging/fdroid/org.keynear.app.yml`.
+
+Build inside `nix develop .#android` with `cargo-ndk`, then run `gradle assembleGmsDebug` or `gradle assembleFossRelease`. The [Android Build](../deployment/android-build.md) guide has the details.

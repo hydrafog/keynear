@@ -1,6 +1,8 @@
 # Release Timeline
 
-Keynear organizes development into dependency-ordered milestones without calendar dates. Each milestone pairs a monotonic `versionCode` integer with a constellation-named `versionName` release, depends on the milestone before it, and unlocks the next layer of the *continuity stack*.
+Keynear organizes development into dependency-ordered milestones without calendar dates. Each milestone pairs a monotonic `versionCode` integer with a constellation-named `versionName` release. Each one depends on the milestone before it and unlocks the next layer of the *continuity stack*.
+
+The milestones are listed in dependency order.
 
 | Version code | Version name | Focus |
 | ---: | :--- | :--- |
@@ -100,7 +102,7 @@ Pegasus (1.3.0-pegasus, `versionCode` 9) introduces low-latency audio and video 
 
 Phoenix (1.4.0-phoenix, `versionCode` 10) combines Vega's `RangingManager` closeness gating with Cygnus's hardware-backed keyrings to provide proximity session locking, remote SSH signing, and FIDO2 passkey bridging.
 
-- Proximity session supervision integrates with `org.freedesktop.login1` (`logind`) on Linux to lock the desktop when the paired phone leaves the calibrated BLE Channel Sounding or UWB distance bound and ready unlocking upon return.
+- Proximity session supervision integrates with `org.freedesktop.login1` (`logind`) on Linux. It locks the desktop when the paired phone leaves the calibrated BLE Channel Sounding or UWB distance bound, and prepares to unlock when the phone returns.
 - `keynear-linux` exposes an optional `SSH_AUTH_SOCK` agent forwarding signing requests over QUIC to hardware-backed Ed25519 and ECDSA keys in Android Keystore (`StrongBox` and TEE) gated by `BiometricPrompt`.
 - A Linux UHID CTAP2 virtual security key bridge routes WebAuthn and FIDO2 ceremony requests over the authenticated QUIC channel to Android `CredentialManager` passkeys.
 - Cryptographic challenge binding ties every unlock, SSH signature, and FIDO2 assertion to both the active `X25519MLKEM768` TLS session transcript and a live hardware ranging measurement.

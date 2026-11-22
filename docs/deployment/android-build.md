@@ -1,17 +1,26 @@
 # Android Build
 
-The Android companion app (`org.keynear.app`, `versionCode = 7`, `versionName = "1.1.0-perseus"`) compiles `keynear-ffi` (`libkeynear_core.so`) into `android/core-ffi/src/main/jniLibs` with `cargo-ndk` using 16 KB ELF page alignment before assembling the multi-module Gradle build (`:core-ffi`, `:designsystem`, `:app`). Launcher assets ship as an Adaptive Icon (`mipmap-anydpi-v26/ic_launcher.xml` with background, foreground, and Android 13+ monochrome layers) plus fallback `mipmap-*/ic_launcher*.png` rasters.
+The Android companion app (`org.keynear.app`, `versionCode = 7`, `versionName = "1.1.0-perseus"`) compiles `keynear-ffi` into `libkeynear_core.so`. The build uses `cargo-ndk` with 16 KB ELF page alignment and places the library in `android/core-ffi/src/main/jniLibs` before assembling the multi-module Gradle build (`:core-ffi`, `:designsystem`, `:app`). It ships these launcher assets.
+
+- An Adaptive Icon (`mipmap-anydpi-v26/ic_launcher.xml`) with background, foreground, and Android 13+ monochrome layers.
+- Fallback `mipmap-*/ic_launcher*.png` rasters.
 
 ## Product Flavors (`gms` and `foss`)
 
-`android/app/build.gradle.kts` defines the `distribution` flavor dimension with two flavors:
+The file `android/app/build.gradle.kts` defines the `distribution` flavor dimension with two flavors.
 
-- `gms` (default): Links `com.google.android.gms:play-services-auth-api-phone` via `gmsImplementation` and compiles `src/gms/java/org/keynear/app/otp/SmsUserConsentManager.kt` for Google Play Services SMS User Consent OTP forwarding.
-- `foss`: Excludes all Google Play Services dependencies, compiles `src/foss/java/org/keynear/app/otp/SmsUserConsentManager.kt` with a clean availability notification fallback, and matches the F-Droid recipe in `packaging/fdroid/org.keynear.app.yml` and metadata under `fastlane/metadata/android/en-US/`.
+- The default `gms` flavor links `com.google.android.gms:play-services-auth-api-phone` through `gmsImplementation`. It compiles `src/gms/java/org/keynear/app/otp/SmsUserConsentManager.kt` for Google Play Services SMS User Consent OTP forwarding.
+- The `foss` flavor excludes all Google Play Services dependencies. It compiles `src/foss/java/org/keynear/app/otp/SmsUserConsentManager.kt` with a clean availability notification fallback and matches the F-Droid recipe in `packaging/fdroid/org.keynear.app.yml` and the metadata in `fastlane/metadata/android/en-US/`.
 
 ## Native Library Compilation
 
-The Android devShell (`nix develop .#android`) provides the Rust Android targets (`aarch64-linux-android`, `x86_64-linux-android`), `cargo-ndk`, `cmake` (for `aws-lc-sys` / `rustls` `X25519MLKEM768` cross-compilation), Android SDK platform `36`, build-tools `36.0.0`, NDK `30.0.16248370`, and `llvm-readelf`. `.cargo/config.toml` passes `-C link-arg=-Wl,-z,max-page-size=16384` for both Android targets. Invoke commands inside the devShell using `--command bash -c` (avoid `-l`, which resets `PATH`):
+The Android devShell (`nix develop .#android`) provides these tools.
+
+- The Rust Android targets `aarch64-linux-android` and `x86_64-linux-android`, plus `cargo-ndk`.
+- `cmake` for `aws-lc-sys` / `rustls` `X25519MLKEM768` cross-compilation.
+- Android SDK platform `36`, build-tools `36.0.0`, NDK `30.0.16248370`, and `llvm-readelf`.
+
+The file `.cargo/config.toml` passes `-C link-arg=-Wl,-z,max-page-size=16384` for both Android targets. Run commands inside the devShell with `--command bash -c`, and avoid `-l` because it resets `PATH`:
 
 ```bash
 nix develop .#android --command bash -c 'cargo ndk -t arm64-v8a -t x86_64 -o android/core-ffi/src/main/jniLibs build --release -p keynear-ffi'
@@ -23,7 +32,12 @@ Verify that every `LOAD` program header reports `0x4000` alignment.
 
 ## UniFFI Kotlin Bindings
 
-`crates/keynear-ffi` exposes `uniffi-bindgen` (`src/bin/uniffi_bindgen.rs`) behind the `bindgen-cli` feature. `:core-ffi:generateUniffiBindings` generates `uniffi/keynear_core/keynear_core.kt` into `android/core-ffi/build/generated/source/uniffi/` during Gradle builds. Perseus adds `FfiChunkCheckpoint`, `FfiReadPlan`, `FfiVfsNode`, `FfiResumeDecision`, and the `perseus_*` exports; `provide_vfs_read_fd` consumes the write end of a `ParcelFileDescriptor` pipe created by `RemoteDocumentStream`:
+The `crates/keynear-ffi` crate exposes `uniffi-bindgen` (`src/bin/uniffi_bindgen.rs`) behind the `bindgen-cli` feature. The `:core-ffi:generateUniffiBindings` task generates `uniffi/keynear_core/keynear_core.kt` into `android/core-ffi/build/generated/source/uniffi/` during Gradle builds. Perseus adds these exports.
+
+- `FfiChunkCheckpoint`, `FfiReadPlan`, `FfiVfsNode`, and `FfiResumeDecision`.
+- The `perseus_*` exports.
+
+The `provide_vfs_read_fd` function consumes the write end of a `ParcelFileDescriptor` pipe created by `RemoteDocumentStream`:
 
 ```bash
 nix develop .#android --command bash -c 'cd android && gradle :core-ffi:generateUniffiBindings'
@@ -31,7 +45,13 @@ nix develop .#android --command bash -c 'cd android && gradle :core-ffi:generate
 
 ## Gradle Assembly, Lint, and Unit Tests
 
-`android/app/build.gradle.kts` and `android/core-ffi/build.gradle.kts` set `useLegacyPackaging = false` for 16 KB page alignment on Android 15+, target `compileSdk = 36`, `buildToolsVersion = "36.0.0"`, `minSdk = 31`, and `targetSdk = 36`, and apply `dev.detekt` (`android/detekt.yml`) across `:designsystem` and `:app`. Compatibility aggregate tasks `testDebugUnitTest` and `lintDebug` exercise both `gms` and `foss`:
+The Gradle files `android/app/build.gradle.kts` and `android/core-ffi/build.gradle.kts` share these settings.
+
+- `useLegacyPackaging = false` for 16 KB page alignment on Android 15 and later.
+- `compileSdk = 36`, `buildToolsVersion = "36.0.0"`, `minSdk = 31`, and `targetSdk = 36`.
+- `dev.detekt` (`android/detekt.yml`) across `:designsystem` and `:app`.
+
+The compatibility aggregate tasks `testDebugUnitTest` and `lintDebug` exercise both `gms` and `foss`:
 
 ```bash
 nix develop .#android --command bash -c 'cd android && gradle testDebugUnitTest lintDebug detekt assembleDebug'
