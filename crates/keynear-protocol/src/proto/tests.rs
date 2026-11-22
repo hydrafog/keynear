@@ -1,7 +1,7 @@
 use super::*;
 
-mod carina;
-mod perseus;
+mod continuity;
+mod resume;
 mod vega;
 
 fn sample_envelope(payload: v1::envelope::Payload) -> v1::Envelope {
@@ -131,7 +131,7 @@ fn sample_envelopes() -> Vec<v1::Envelope> {
     let mut envelopes = sample_session_envelopes();
     envelopes.extend(sample_transfer_envelopes());
     envelopes.extend(vega::sample_vega_envelopes());
-    envelopes.extend(perseus::sample_perseus_envelopes());
+    envelopes.extend(resume::sample_resume_envelopes());
     envelopes
 }
 

@@ -62,12 +62,12 @@ impl From<RemoteVfsNode> for FfiVfsNode {
 }
 
 #[uniffi::export]
-pub fn perseus_capability_flags() -> u32 {
+pub fn resumable_transfer_capability_flags() -> u32 {
     CAP_RESUMABLE_TRANSFER
 }
 
 #[uniffi::export]
-pub fn perseus_resume_decision(
+pub fn transfer_resume_decision(
     local_flags: u32,
     peer_flags: u32,
     checkpoint: FfiChunkCheckpoint,
@@ -92,7 +92,7 @@ pub fn perseus_resume_decision(
 }
 
 #[uniffi::export]
-pub fn perseus_read_plan(
+pub fn vfs_read_plan(
     file: FfiVfsNode,
     offset: u64,
     max_bytes: u64,
@@ -110,7 +110,7 @@ pub fn perseus_read_plan(
 }
 
 #[uniffi::export]
-pub fn perseus_root_node(root_id: String, label: String) -> Result<FfiVfsNode, FfiError> {
+pub fn vfs_root_node(root_id: String, label: String) -> Result<FfiVfsNode, FfiError> {
     Ok(RemoteVfsNode::root(&root_id, &label)?.into())
 }
 

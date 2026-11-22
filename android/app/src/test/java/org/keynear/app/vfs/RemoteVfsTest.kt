@@ -6,7 +6,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class PerseusVfsTest {
+class RemoteVfsTest {
     @Test
     fun providerAuthorityMatchesManifestRegistration() {
         assertEquals("org.keynear.app.vfs.provider", VfsDescriptors.AUTHORITY)

@@ -79,7 +79,7 @@ mod tests {
     }
 
     #[test]
-    fn perseus_and_carina_capability_bits_stay_stable() {
+    fn resume_and_continuity_capability_bits_stay_stable() {
         assert_eq!(CAP_WIFI_DIRECT_R2, 0x80);
         assert_eq!(CAP_RESUMABLE_TRANSFER, 0x100);
         assert_eq!(CAP_NOTIFICATION_MIRROR, 0x200);

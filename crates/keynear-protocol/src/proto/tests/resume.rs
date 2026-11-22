@@ -1,10 +1,10 @@
 use super::*;
 
-pub(super) fn sample_perseus_envelopes() -> Vec<v1::Envelope> {
+pub(super) fn sample_resume_envelopes() -> Vec<v1::Envelope> {
     vec![
         sample_envelope(v1::envelope::Payload::TransferCheckpoint(
             v1::TransferCheckpoint {
-                transfer_id: "tx-perseus".to_string(),
+                transfer_id: "tx-resume".to_string(),
                 sequence: 4,
                 chunk_count: 12,
                 chunk_bitmap: vec![0b0000_0111, 0b0000_0001],
@@ -14,7 +14,7 @@ pub(super) fn sample_perseus_envelopes() -> Vec<v1::Envelope> {
         )),
         sample_envelope(v1::envelope::Payload::TransferResumeRequest(
             v1::TransferResumeRequest {
-                transfer_id: "tx-perseus".to_string(),
+                transfer_id: "tx-resume".to_string(),
                 sequence: 5,
                 first_missing_chunk: 8,
                 verified_bytes: 7 * crate::STREAM_CHUNK_BYTES as u64,
@@ -22,7 +22,7 @@ pub(super) fn sample_perseus_envelopes() -> Vec<v1::Envelope> {
         )),
         sample_envelope(v1::envelope::Payload::TransferResumeAck(
             v1::TransferResumeAck {
-                transfer_id: "tx-perseus".to_string(),
+                transfer_id: "tx-resume".to_string(),
                 sequence: 5,
                 accepted: true,
                 resume_from_chunk: 8,
@@ -43,7 +43,7 @@ fn oneof_key_bytes(payload: v1::envelope::Payload) -> Vec<u8> {
 }
 
 #[test]
-fn perseus_tags_and_capability_bits_stay_stable() {
+fn resume_tags_and_capability_bits_stay_stable() {
     let checkpoint = oneof_key_bytes(v1::envelope::Payload::TransferCheckpoint(
         v1::TransferCheckpoint::default(),
     ));
@@ -66,27 +66,27 @@ fn perseus_tags_and_capability_bits_stay_stable() {
 }
 
 #[test]
-fn perseus_kinds_map_to_stable_control_frames() {
+fn resume_kinds_map_to_stable_control_frames() {
     use v1::envelope::Payload as P;
-    for envelope in sample_perseus_envelopes() {
+    for envelope in sample_resume_envelopes() {
         let expected = match &envelope.payload {
             Some(P::TransferCheckpoint(_)) => "transfer_checkpoint",
             Some(P::TransferResumeRequest(_)) => "transfer_resume_request",
             Some(P::TransferResumeAck(_)) => "transfer_resume_ack",
-            _ => panic!("unexpected perseus payload"),
+            _ => panic!("unexpected resume payload"),
         };
-        let frame = envelope_to_control_frame(&envelope).expect("perseus control frame");
+        let frame = envelope_to_control_frame(&envelope).expect("resume control frame");
         assert_eq!(frame.kind, expected);
-        let decoded = control_frame_to_envelope(&frame).expect("decode perseus frame");
+        let decoded = control_frame_to_envelope(&frame).expect("decode resume frame");
         assert_eq!(decoded, envelope);
     }
 }
 
 #[test]
-fn perseus_oversized_checkpoint_is_rejected_before_decode() {
+fn resume_oversized_checkpoint_is_rejected_before_decode() {
     let oversized = sample_envelope(v1::envelope::Payload::TransferCheckpoint(
         v1::TransferCheckpoint {
-            transfer_id: "tx-perseus".to_string(),
+            transfer_id: "tx-resume".to_string(),
             sequence: 1,
             chunk_count: 1,
             chunk_bitmap: vec![0u8; MAX_CONTROL_FRAME_BYTES],
@@ -94,6 +94,6 @@ fn perseus_oversized_checkpoint_is_rejected_before_decode() {
             verified_bytes: 0,
         },
     ));
-    let err = encode_envelope(&oversized).expect_err("oversized perseus envelope must fail");
+    let err = encode_envelope(&oversized).expect_err("oversized resume envelope must fail");
     assert!(matches!(err, KeynearError::FrameTooLarge { .. }));
 }

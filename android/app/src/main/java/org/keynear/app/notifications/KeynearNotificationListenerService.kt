@@ -6,12 +6,12 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import uniffi.keynear_core.FfiCapabilityPair
 import uniffi.keynear_core.FfiNotificationDescriptor
-import uniffi.keynear_core.carinaCapabilityFlags
-import uniffi.keynear_core.carinaMirrorNotification
+import uniffi.keynear_core.continuityCapabilityFlags
+import uniffi.keynear_core.mirrorNotification
 
 class KeynearNotificationListenerService : NotificationListenerService() {
 
-    private var lastSequence: Long = 0L
+    private var lastSequence: ULong = 0uL
 
     override fun onListenerConnected() {
         super.onListenerConnected()
@@ -27,15 +27,19 @@ class KeynearNotificationListenerService : NotificationListenerService() {
         val notification = sbn ?: return
         if (!isOptedIn()) return
         val descriptor = descriptorOf(notification) ?: return
-        val flags = FfiCapabilityPair(carinaCapabilityFlags(), carinaCapabilityFlags())
-        val mirrored = carinaMirrorNotification(
-            descriptor,
-            excludedPackages().toList(),
-            flags,
-            lastSequence,
-        ) ?: return
+        val flags = FfiCapabilityPair(continuityCapabilityFlags(), continuityCapabilityFlags())
+        val mirrored = runCatching {
+            mirrorNotification(
+                descriptor,
+                excludedPackages().toList(),
+                flags,
+                lastSequence,
+            )
+        }.onFailure { err ->
+            android.util.Log.w(TAG, "Skipping invalid notification for mirroring", err)
+        }.getOrNull() ?: return
         lastSequence = maxOf(lastSequence, mirrored.sequence)
-        android.util.Log.i(TAG, "mirrored notification key=${mirrored.notification_key.length}")
+        android.util.Log.i(TAG, "mirrored notification key=${mirrored.notificationKey.length}")
     }
 
     private fun descriptorOf(sbn: StatusBarNotification): FfiNotificationDescriptor? {
@@ -64,11 +68,11 @@ class KeynearNotificationListenerService : NotificationListenerService() {
         }
         return FfiNotificationDescriptor(
             key = descriptor.key,
-            package = descriptor.packageName,
+            `package` = descriptor.packageName,
             title = descriptor.title,
             body = descriptor.body,
             category = notification.category ?: "",
-            sequence = descriptor.sequence,
+            sequence = descriptor.sequence.coerceAtLeast(0L).toULong(),
             supportsReply = descriptor.supportsReply,
             supportsMarkRead = descriptor.supportsMarkRead,
             supportsDismiss = descriptor.supportsDismiss,
@@ -90,7 +94,7 @@ class KeynearNotificationListenerService : NotificationListenerService() {
 
     companion object {
         private const val TAG: String = "KeynearMirror"
-        private const val PREFERENCES_NAME: String = "org.keynear.app.carina"
+        private const val PREFERENCES_NAME: String = "org.keynear.app.notifications"
         private const val KEY_OPT_IN: String = "notification_mirror_enabled"
         private const val KEY_EXCLUSIONS: String = "notification_exclusions"
         private const val SEPARATOR: String = ","

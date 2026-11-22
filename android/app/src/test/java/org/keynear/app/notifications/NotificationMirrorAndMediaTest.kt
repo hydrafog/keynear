@@ -1,4 +1,4 @@
-package org.keynear.app.carina
+package org.keynear.app.notifications
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -7,9 +7,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.keynear.app.call.CallAlertController
 import org.keynear.app.media.MediaBridgeController
-import org.keynear.app.notifications.NotificationMirror
 
-class CarinaMirrorAndMediaTest {
+class NotificationMirrorAndMediaTest {
 
     private fun descriptor(
         key: String = "n-1",

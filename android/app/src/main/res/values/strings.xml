@@ -84,15 +84,15 @@
     <string name="otp_consent_prompt_body">Confirm the incoming SMS prompt to copy your one-time code to desktop.</string>
     <string name="otp_verified_copied_snackbar">Verified code copied to desktop</string>
     <string name="vfs_root_label">Keynear paired devices</string>
-    <string name="carina_mirror_channel_name">Mirrored notifications</string>
-    <string name="carina_mirror_channel_description">Notifications forwarded from your paired desktop</string>
-    <string name="carina_call_channel_name">Call alerts</string>
-    <string name="carina_call_channel_description">Answer, decline, and mute controls for paired calls</string>
-    <string name="carina_action_reply">Reply</string>
-    <string name="carina_action_mark_read">Mark as read</string>
-    <string name="carina_action_dismiss">Dismiss</string>
-    <string name="carina_action_answer">Answer</string>
-    <string name="carina_action_decline">Decline</string>
-    <string name="carina_action_mute">Mute</string>
-    <string name="carina_now_playing">Now playing</string>
+    <string name="notification_mirror_channel_name">Mirrored notifications</string>
+    <string name="notification_mirror_channel_description">Notifications forwarded from your paired desktop</string>
+    <string name="call_alert_channel_name">Call alerts</string>
+    <string name="call_alert_channel_description">Answer, decline, and mute controls for paired calls</string>
+    <string name="notification_action_reply">Reply</string>
+    <string name="notification_action_mark_read">Mark as read</string>
+    <string name="notification_action_dismiss">Dismiss</string>
+    <string name="call_action_answer">Answer</string>
+    <string name="call_action_decline">Decline</string>
+    <string name="call_action_mute">Mute</string>
+    <string name="media_now_playing">Now playing</string>
 </resources>

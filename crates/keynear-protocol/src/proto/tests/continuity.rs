@@ -72,14 +72,14 @@ fn sample_call_and_media_envelopes() -> Vec<v1::Envelope> {
     ]
 }
 
-fn sample_carina_envelopes() -> Vec<v1::Envelope> {
+fn sample_continuity_envelopes() -> Vec<v1::Envelope> {
     let mut envelopes = sample_notification_envelopes();
     envelopes.extend(sample_call_and_media_envelopes());
     envelopes
 }
 
 #[test]
-fn carina_tags_and_perseus_tags_stay_stable() {
+fn continuity_and_resume_tags_stay_stable() {
     use v1::envelope::Payload as P;
     assert!(
         oneof_key_bytes(P::MirroredNotification(v1::MirroredNotification::default()))
@@ -105,9 +105,9 @@ fn carina_tags_and_perseus_tags_stay_stable() {
 }
 
 #[test]
-fn carina_payloads_roundtrip_through_control_frames() {
+fn continuity_payloads_roundtrip_through_control_frames() {
     use v1::envelope::Payload as P;
-    for envelope in sample_carina_envelopes() {
+    for envelope in sample_continuity_envelopes() {
         let bytes = encode_envelope(&envelope).expect("encode envelope");
         let decoded = decode_envelope(&bytes).expect("decode envelope");
         assert_eq!(decoded, envelope);
@@ -129,7 +129,7 @@ fn carina_payloads_roundtrip_through_control_frames() {
 }
 
 #[test]
-fn oversized_carina_text_is_rejected_before_decode() {
+fn oversized_notification_text_is_rejected_before_decode() {
     use v1::envelope::Payload as P;
     let envelope = sample_envelope(P::MirroredNotification(v1::MirroredNotification {
         body: "x".repeat(MAX_CONTROL_FRAME_BYTES),

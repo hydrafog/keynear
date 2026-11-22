@@ -78,7 +78,7 @@ fn control_characters_in_notification_text_are_rejected() {
 }
 
 #[test]
-fn oversized_carina_text_is_rejected() {
+fn oversized_notification_text_is_rejected() {
     let body = "x".repeat(MAX_NOTIFICATION_BODY_LEN + 1);
     let bad = NotificationDescriptor {
         body: &body,

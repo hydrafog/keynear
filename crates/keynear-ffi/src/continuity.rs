@@ -90,12 +90,12 @@ pub struct FfiMediaState {
 }
 
 #[uniffi::export]
-pub fn carina_capability_flags() -> u32 {
+pub fn continuity_capability_flags() -> u32 {
     CAP_NOTIFICATION_MIRROR | CAP_MEDIA_BRIDGE | CAP_CALL_ALERTS
 }
 
 #[uniffi::export]
-pub fn carina_mirror_notification(
+pub fn mirror_notification(
     descriptor: FfiNotificationDescriptor,
     exclusions: Vec<String>,
     capabilities: FfiCapabilityPair,
@@ -136,13 +136,13 @@ pub fn carina_mirror_notification(
 }
 
 #[uniffi::export]
-pub fn carina_validate_reply(text: String) -> Result<(), FfiError> {
+pub fn validate_notification_reply(text: String) -> Result<(), FfiError> {
     validate_reply_text(&text)?;
     Ok(())
 }
 
 #[uniffi::export]
-pub fn carina_call_action_allowed(phase: FfiCallPhase, action: FfiCallAction) -> bool {
+pub fn call_action_allowed(phase: FfiCallPhase, action: FfiCallAction) -> bool {
     let phase = match phase {
         FfiCallPhase::Incoming => CallPhase::Incoming,
         FfiCallPhase::Active => CallPhase::Active,
@@ -163,7 +163,7 @@ pub fn carina_call_action_allowed(phase: FfiCallPhase, action: FfiCallAction) ->
 }
 
 #[uniffi::export]
-pub fn carina_media_command_allowed(
+pub fn media_command_allowed(
     state: FfiMediaState,
     command: FfiMediaCommand,
     last_command_sequence: u64,
@@ -218,22 +218,22 @@ mod tests {
 
     fn flags() -> FfiCapabilityPair {
         FfiCapabilityPair {
-            local: carina_capability_flags(),
-            peer: carina_capability_flags(),
+            local: continuity_capability_flags(),
+            peer: continuity_capability_flags(),
         }
     }
 
     #[test]
-    fn exported_flags_cover_all_three_carina_capabilities() {
+    fn exported_flags_cover_all_three_continuity_capabilities() {
         assert_eq!(
-            carina_capability_flags(),
+            continuity_capability_flags(),
             CAP_NOTIFICATION_MIRROR | CAP_MEDIA_BRIDGE | CAP_CALL_ALERTS
         );
     }
 
     #[test]
     fn excluded_package_and_stale_sequence_are_dropped() {
-        let excluded = carina_mirror_notification(
+        let excluded = mirror_notification(
             descriptor(),
             vec!["org.example.chat".to_string()],
             flags(),
@@ -241,27 +241,27 @@ mod tests {
         )
         .expect("excluded");
         assert!(excluded.is_none());
-        let stale = carina_mirror_notification(descriptor(), vec![], flags(), 2).expect("stale");
+        let stale = mirror_notification(descriptor(), vec![], flags(), 2).expect("stale");
         assert!(stale.is_none());
-        let fresh = carina_mirror_notification(descriptor(), vec![], flags(), 1).expect("fresh");
+        let fresh = mirror_notification(descriptor(), vec![], flags(), 1).expect("fresh");
         assert_eq!(fresh.expect("view").notification_key, "n-1");
     }
 
     #[test]
     fn call_actions_follow_the_alert_phase() {
-        assert!(carina_call_action_allowed(
+        assert!(call_action_allowed(
             FfiCallPhase::Incoming,
             FfiCallAction::Answer
         ));
-        assert!(carina_call_action_allowed(
+        assert!(call_action_allowed(
             FfiCallPhase::Incoming,
             FfiCallAction::Decline
         ));
-        assert!(!carina_call_action_allowed(
+        assert!(!call_action_allowed(
             FfiCallPhase::Incoming,
             FfiCallAction::Mute
         ));
-        assert!(carina_call_action_allowed(
+        assert!(call_action_allowed(
             FfiCallPhase::Active,
             FfiCallAction::Mute
         ));
@@ -283,12 +283,9 @@ mod tests {
             can_previous: true,
         };
         assert!(
-            carina_media_command_allowed(state.clone(), FfiMediaCommand::Pause, 2, flags())
+            media_command_allowed(state.clone(), FfiMediaCommand::Pause, 2, flags())
                 .expect("fresh")
         );
-        assert!(
-            !carina_media_command_allowed(state, FfiMediaCommand::Pause, 3, flags())
-                .expect("stale")
-        );
+        assert!(!media_command_allowed(state, FfiMediaCommand::Pause, 3, flags()).expect("stale"));
     }
 }
