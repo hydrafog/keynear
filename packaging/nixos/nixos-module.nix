@@ -125,13 +125,16 @@ in
         RestartSec = 3;
         Environment = [
           "KEYNEAR_LOG=${cfg.logLevel}"
-        ] ++ lib.optionals cfg.fuse.enable [ "KEYNEAR_FUSE=1" ]
+        ] ++ lib.optionals cfg.fuse.enable [
+            "KEYNEAR_FUSE=1"
+            "PATH=/run/wrappers/bin:/run/current-system/sw/bin"
+          ]
           ++ lib.optionals (cfg.quicPort != null) [ "KEYNEAR_QUIC_PORT=${toString cfg.quicPort}" ];
-        NoNewPrivileges = true;
-        PrivateTmp = true;
+        NoNewPrivileges = !cfg.fuse.enable;
+        PrivateTmp = !cfg.fuse.enable;
         LockPersonality = true;
         RestrictRealtime = true;
-        RestrictSUIDSGID = true;
+        RestrictSUIDSGID = !cfg.fuse.enable;
       };
     };
   };

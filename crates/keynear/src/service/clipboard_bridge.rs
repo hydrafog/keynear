@@ -11,6 +11,14 @@ pub struct ClipboardBridgeProxy {
 impl ClipboardBridgeProxy {
     pub async fn connect() -> Option<Self> {
         let conn = zbus::Connection::session().await.ok()?;
+        let dbus = zbus::fdo::DBusProxy::new(&conn).await.ok()?;
+        let has_owner = dbus
+            .name_has_owner(CLIPBOARD_BRIDGE_DEST.try_into().ok()?)
+            .await
+            .ok()?;
+        if !has_owner {
+            return None;
+        }
         let proxy = zbus::Proxy::new(
             &conn,
             CLIPBOARD_BRIDGE_DEST,

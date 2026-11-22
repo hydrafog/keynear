@@ -252,14 +252,17 @@ in
         Environment = [
           "KEYNEAR_LOG=${cfg.logLevel}"
         ]
-        ++ lib.optionals cfg.fuse [ "KEYNEAR_FUSE=1" ]
+        ++ lib.optionals cfg.fuse [
+          "KEYNEAR_FUSE=1"
+          "PATH=/run/wrappers/bin:/run/current-system/sw/bin"
+        ]
         ++ lib.optionals (cfg.configDir != null) [ "KEYNEAR_CONFIG_DIR=${cfg.configDir}" ]
         ++ lib.optionals (cfg.quicPort != null) [ "KEYNEAR_QUIC_PORT=${toString cfg.quicPort}" ];
-        NoNewPrivileges = true;
-        PrivateTmp = true;
+        NoNewPrivileges = !cfg.fuse;
+        PrivateTmp = !cfg.fuse;
         LockPersonality = true;
         RestrictRealtime = true;
-        RestrictSUIDSGID = true;
+        RestrictSUIDSGID = !cfg.fuse;
       };
       Install = {
         WantedBy = [ "graphical-session.target" ];

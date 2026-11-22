@@ -33,9 +33,17 @@ pub(crate) enum Backend {
 }
 
 pub struct Oo7SecretStore {
-    runtime: Runtime,
+    runtime: Option<Runtime>,
     backend: Backend,
     is_file_fallback: bool,
+}
+
+impl Drop for Oo7SecretStore {
+    fn drop(&mut self) {
+        if let Some(rt) = self.runtime.take() {
+            rt.shutdown_background();
+        }
+    }
 }
 
 impl std::fmt::Debug for Oo7SecretStore {
@@ -59,7 +67,7 @@ impl Oo7SecretStore {
         })?;
         let is_file_fallback = matches!(backend, Backend::File(_));
         Ok(Self {
-            runtime,
+            runtime: Some(runtime),
             backend,
             is_file_fallback,
         })
@@ -73,7 +81,7 @@ impl Oo7SecretStore {
             runtime::open_file_keyring(&config_dir).await
         })?;
         Ok(Self {
-            runtime,
+            runtime: Some(runtime),
             backend: Backend::File(Arc::new(file_keyring)),
             is_file_fallback: true,
         })
@@ -83,11 +91,15 @@ impl Oo7SecretStore {
         self.is_file_fallback
     }
 
+    fn runtime(&self) -> &Runtime {
+        self.runtime.as_ref().expect("keyring runtime active")
+    }
+
     fn exec<F, T>(&self, fut: F) -> Result<T, KeynearError>
     where
         F: Future<Output = Result<T, KeynearError>> + Send + 'static,
         T: Send + 'static,
     {
-        runtime::run_on_runtime(&self.runtime, fut)
+        runtime::run_on_runtime(self.runtime(), fut)
     }
 }

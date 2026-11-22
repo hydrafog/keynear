@@ -61,9 +61,29 @@ fn unavailable_controller(root: &RemoteVfsNode) -> ActiveFuseController {
 }
 
 #[cfg(feature = "fuse")]
+fn fuse_mountpoint() -> std::path::PathBuf {
+    std::env::var_os("XDG_RUNTIME_DIR")
+        .filter(|value| !value.is_empty())
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(std::env::temp_dir)
+        .join("keynear-vfs")
+}
+
+#[cfg(feature = "fuse")]
+fn ensure_mountpoint_dir(mountpoint: &std::path::Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(mountpoint)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(mountpoint, std::fs::Permissions::from_mode(0o700))?;
+    }
+    Ok(())
+}
+
+#[cfg(feature = "fuse")]
 fn fuser_controller(root: &RemoteVfsNode) -> ActiveFuseController {
-    let mountpoint = std::env::temp_dir().join("keynear-vfs");
-    if let Err(err) = std::fs::create_dir_all(&mountpoint) {
+    let mountpoint = fuse_mountpoint();
+    if let Err(err) = ensure_mountpoint_dir(&mountpoint) {
         tracing::warn!(event = "fuse_mountpoint_unavailable", error = %err);
         return unavailable_controller(root);
     }

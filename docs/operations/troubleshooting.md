@@ -51,7 +51,7 @@ Use these checks for resumable transfer and virtual filesystem issues.
   - `services.keynear.fuse.enable = true` with the NixOS module `nixosModules.default`.
   - `services.keynear.fuse = true` with the Home Manager module `homeManagerModules.default`.
 
-  Either option sets `KEYNEAR_FUSE=1` and selects the `fuse`-enabled Nix package.
+  Either option sets `KEYNEAR_FUSE=1`, selects the `fuse`-enabled Nix package, adds `/run/wrappers/bin` to `PATH` for setuid `/run/wrappers/bin/fusermount3`, and relaxes `NoNewPrivileges`, `PrivateTmp`, and `RestrictSUIDSGID` on `keynear.service` while keeping hardened defaults when FUSE is off. The daemon mounts under `$XDG_RUNTIME_DIR/keynear-vfs` (`0o700`), falling back to the system temporary directory when `XDG_RUNTIME_DIR` is unset.
 - If a paired Linux directory is missing from the Android `Files` app, confirm the provider is enabled for the `org.keynear.app.vfs.provider` authority and that at least one peer is paired. `queryRoots` returns an empty cursor when no peer is paired, and the provider adds no new Android permission.
 
 ## Notification Mirroring and Media Controls (`1.2.0-carina`)

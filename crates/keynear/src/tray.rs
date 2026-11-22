@@ -247,7 +247,7 @@ pub async fn spawn_tray(
     cmd_tx: UnboundedSender<TrayCommand>,
 ) -> Option<ksni::Handle<KeynearTray>> {
     let tray = KeynearTray { state, cmd_tx };
-    match tray.assume_sni_available(false).spawn().await {
+    match tray.assume_sni_available(true).spawn().await {
         Ok(handle) => {
             log_tray_registered();
             Some(handle)

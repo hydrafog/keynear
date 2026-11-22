@@ -12,7 +12,7 @@ Follow these steps to pair the two devices.
    - Open discovery stays active for 10 minutes (`600` seconds) and counts down as `Everyone (MM:SS)` before visibility reverts to Paired devices only.
 3. On Android, grant `NEARBY_DEVICES`, `POST_NOTIFICATIONS`, and background running permission from the onboarding permissions card in `MainActivity`. Wait for the desktop to appear under Nearby peers, then tap Pair.
 4. Both devices run `Noise_XX_25519_ChaChaPoly_BLAKE2s` over BLE GATT (`0xFE6D`, `0xFE6E`, `0xFE6F`) and display a 6-digit verification code.
-5. Check that the two codes match, then tap Confirm or Approve within 120 seconds on both devices.
+5. Check that the two codes match, then confirm within 120 seconds on both devices. On Linux, approve or reject from the desktop notification or run `keynear pair approve` or `keynear pair reject`.
 6. Keynear saves non-secret metadata to `devices.toml`. The `irk`, `reconnect_secret`, static X25519 keys, and `quic_ed25519` key stay in `oo7` (`org.freedesktop.secrets`) on Linux and in Android Keystore on mobile.
 
 ## Visibility Modes

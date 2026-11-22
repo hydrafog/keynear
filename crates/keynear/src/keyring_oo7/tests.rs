@@ -90,3 +90,12 @@ fn file_keyring_persists_counters_and_reopens() {
     assert!(reopened.get_peer_secrets("pixel-9").unwrap().is_none());
     let _ = fs::remove_dir_all(&dir);
 }
+
+#[tokio::test]
+async fn drop_inside_tokio_runtime_does_not_panic() {
+    let dir = temp_config_dir("async-drop");
+    let store = Oo7SecretStore::open_file_only(&dir).expect("open file keyring");
+    assert!(store.is_file_fallback());
+    drop(store);
+    let _ = fs::remove_dir_all(&dir);
+}
