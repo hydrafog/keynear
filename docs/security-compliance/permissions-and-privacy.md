@@ -1,6 +1,6 @@
 # Permissions and Privacy
 
-Keynear (`1.1.0-perseus`) requests only the OS permissions needed for local peer discovery, notifications, clipboard continuity, direct Wi-Fi QUIC transfers, and negotiated proximity features.
+Keynear (`1.2.0-carina`) requests only the OS permissions needed for local peer discovery, notifications, clipboard continuity, direct Wi-Fi QUIC transfers, and negotiated proximity features.
 
 ## Android Permissions
 
@@ -20,6 +20,8 @@ Android requests the following permissions.
   - Completion and error alerts.
   - Local-network-blocked alerts.
   - Silent `connectedDevice` continuity visibility.
+- Notification listener access is granted through Android settings, not a runtime permission. `KeynearNotificationListenerService` stays inactive until the user opts in, and excluded packages are filtered before any envelope is built. No notification body, call number, or media metadata is written to disk.
+- `ANSWER_PHONE_CALLS` supports Answer and Decline through `TelecomManager`. When it is unavailable, `KeynearCallScreeningService` rejects the call as a fallback, and Mute applies only during an active call.
 - `FOREGROUND_SERVICE` and `FOREGROUND_SERVICE_CONNECTED_DEVICE` keep `KeynearForegroundService` active for BLE and `OrionNodeHandle` transport after Bluetooth permissions are granted.
 - `RUN_USER_INITIATED_JOBS` allows `KeynearTransferJobService` to schedule `User-Initiated Data Transfer Jobs` (`setUserInitiated(true)` on API 34 and later) for active file transfers.
 - `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` lets the collapsible onboarding card in `MainActivity` invite users to exempt Keynear from OEM background restriction when needed.

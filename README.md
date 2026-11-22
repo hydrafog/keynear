@@ -4,7 +4,7 @@
   <p><strong>Background-first, end-to-end encrypted continuity between Linux and Android</strong></p>
 
   <p>
-    <a href="docs/development/timeline.md"><img src="https://img.shields.io/badge/Version-1.1.0--perseus-0656E8?style=flat-square" alt="Version 1.1.0-perseus"></a>
+    <a href="docs/development/timeline.md"><img src="https://img.shields.io/badge/Version-1.2.0--carina-0656E8?style=flat-square" alt="Version 1.2.0-carina"></a>
     <a href="https://github.com/hydrafog/keynear/actions/workflows/quality.yml"><img src="https://img.shields.io/github/actions/workflow/status/hydrafog/keynear/quality.yml?branch=main&style=flat-square&color=0656E8&logo=githubactions&logoColor=white&label=Quality%20Gate" alt="Quality Gate workflow status"></a>
     <a href="docs/deployment/linux-systemd.md"><img src="https://img.shields.io/badge/Linux-Wayland%20%26%20X11%20%C2%B7%20GTK4-0656E8?style=flat-square&logo=linux&logoColor=white" alt="Linux: Wayland, X11, and GTK4"></a>
     <a href="docs/deployment/android-build.md"><img src="https://img.shields.io/badge/Android-12--16%20(API%2031--36)-0656E8?style=flat-square&logo=android&logoColor=white" alt="Android 12 to 16 (API 31 to 36)"></a>

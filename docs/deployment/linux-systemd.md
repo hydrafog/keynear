@@ -82,6 +82,7 @@ Keynear exposes the following command-line, tray, and storage behavior.
 
   Keynear falls back to safe defaults when the file is absent and saves updates atomically through `DaemonConfig::save_to_path`.
 - The on-demand virtual filesystem is a typed backend in `crates/keynear-linux/src/fuse/`. The daemon logs a graded availability probe at startup. When kernel FUSE or `libfuse3` is absent, it emits `perseus_fuse_unavailable` and keeps serving IPC and transfers.
+- Notification mirroring is opt-in on the phone. Excluded packages are configuration and contain no message content. The desktop notification client logs `mirror_notifications_unavailable` when the session bus is absent and keeps the daemon running. MPRIS2 media observation logs `carina_media_unavailable` when no player or bus exists.
   - On NixOS, `services.keynear.fuse.enable = true` sets `KEYNEAR_FUSE=1` and enables the optional `fuse` Cargo feature on the default Nix package.
   - On Home Manager, use `services.keynear.fuse = true`.
 

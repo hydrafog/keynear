@@ -42,7 +42,7 @@ Check these items when desktop integration fails.
 - If GTK4 file or folder pickers fail to open in `keynear-settings`, verify that a desktop `xdg-desktop-portal` backend is running for your session (`ashpd`). Confirm that `daemon.sock` exists (`0o600` inside a `0o700` config directory), or retry through the inline offline banner.
 - Make sure Nautilus (`~/.local/share/nautilus/scripts/Send via Keynear`), Dolphin (`~/.local/share/kio/servicemenus/keynear-send.desktop`), or Yazi (`~/.config/yazi/plugins/keynear.yazi/main.lua`) can resolve `keynear-settings` on `PATH`, for example under `~/.local/bin`.
 
-## Resumable Transfers and Virtual Filesystem (`1.1.0-perseus`)
+## Resumable Transfers and Virtual Filesystem (`1.2.0-carina`)
 
 Use these checks for Perseus transfer and filesystem issues.
 
@@ -53,6 +53,15 @@ Use these checks for Perseus transfer and filesystem issues.
 
   Either option sets `KEYNEAR_FUSE=1` and selects the `fuse`-enabled Nix package.
 - If a paired Linux directory is missing from the Android `Files` app, confirm the provider is enabled for the `org.keynear.app.vfs.provider` authority and that at least one peer is paired. `queryRoots` returns an empty cursor when no peer is paired, and the provider adds no new Android permission.
+
+## Notification Mirroring and Media Controls (`1.2.0-carina`)
+
+Use these checks when mirrored notifications, call alerts, or media state do not appear.
+
+- If no notification mirrors to the desktop, confirm notification access is granted to `org.keynear.app` and that mirroring is opted in. Excluded packages are filtered before any envelope is built, and no message body is written to disk.
+- If reply, mark-as-read, or dismiss does nothing, confirm the desktop session bus is running and look for `mirror_notifications_unavailable` in the daemon log. The desktop keeps running when the bus is absent.
+- If call controls do nothing, confirm `ANSWER_PHONE_CALLS` is granted. Decline falls back to `CallScreeningService` on permission-restricted builds, and the daemon logs `carina_call_action` for each applied action.
+- If the `Now playing` group is empty, confirm a player publishes `org.mpris.MediaPlayer2` on the session bus. The daemon logs `carina_media_unavailable` when no player exists and keeps the tray available.
 
 ## Wayland Clipboard Permissions
 

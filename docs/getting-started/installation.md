@@ -74,7 +74,7 @@ See [Linux systemd Deployment](../deployment/linux-systemd.md) for enabling and 
 
 ## Android and F-Droid
 
-The Android app (`1.1.0-perseus`, `versionCode = 7`) ships two Gradle product flavors.
+The Android app (`1.2.0-carina`, `versionCode = 8`) ships two Gradle product flavors.
 
 - The default `gms` flavor includes Play Services SMS User Consent OTP forwarding.
 - The `foss` flavor has no Google Play Services dependencies and uses the F-Droid recipe at `packaging/fdroid/org.keynear.app.yml`.

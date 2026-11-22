@@ -1,6 +1,6 @@
 # Android Build
 
-The Android companion app (`org.keynear.app`, `versionCode = 7`, `versionName = "1.1.0-perseus"`) compiles `keynear-ffi` into `libkeynear_core.so`. The build uses `cargo-ndk` with 16 KB ELF page alignment and places the library in `android/core-ffi/src/main/jniLibs` before assembling the multi-module Gradle build (`:core-ffi`, `:designsystem`, `:app`). It ships these launcher assets.
+The Android companion app (`org.keynear.app`, `versionCode = 8`, `versionName = "1.2.0-carina"`) compiles `keynear-ffi` into `libkeynear_core.so`. The build uses `cargo-ndk` with 16 KB ELF page alignment and places the library in `android/core-ffi/src/main/jniLibs` before assembling the multi-module Gradle build (`:core-ffi`, `:designsystem`, `:app`). It ships these launcher assets.
 
 - An Adaptive Icon (`mipmap-anydpi-v26/ic_launcher.xml`) with background, foreground, and Android 13+ monochrome layers.
 - Fallback `mipmap-*/ic_launcher*.png` rasters.
@@ -32,10 +32,11 @@ Verify that every `LOAD` program header reports `0x4000` alignment.
 
 ## UniFFI Kotlin Bindings
 
-The `crates/keynear-ffi` crate exposes `uniffi-bindgen` (`src/bin/uniffi_bindgen.rs`) behind the `bindgen-cli` feature. The `:core-ffi:generateUniffiBindings` task generates `uniffi/keynear_core/keynear_core.kt` into `android/core-ffi/build/generated/source/uniffi/` during Gradle builds. Perseus adds these exports.
+The `crates/keynear-ffi` crate exposes `uniffi-bindgen` (`src/bin/uniffi_bindgen.rs`) behind the `bindgen-cli` feature. The `:core-ffi:generateUniffiBindings` task generates `uniffi/keynear_core/keynear_core.kt` into `android/core-ffi/build/generated/source/uniffi/` during Gradle builds. Perseus adds these exports. Carina adds the `carina_*` exports and their Kotlin records.
 
 - `FfiChunkCheckpoint`, `FfiReadPlan`, `FfiVfsNode`, and `FfiResumeDecision`.
 - The `perseus_*` exports.
+- The `carina_*` exports and `FfiCapabilityPair`, `FfiNotificationDescriptor`, `FfiMirroredNotification`, and `FfiMediaState` records.
 
 The `provide_vfs_read_fd` function consumes the write end of a `ParcelFileDescriptor` pipe created by `RemoteDocumentStream`:
 

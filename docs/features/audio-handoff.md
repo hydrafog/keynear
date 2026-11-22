@@ -1,6 +1,6 @@
 # Smart Audio Handoff
 
-Keynear (`1.1.0-perseus`) coordinates shared Bluetooth audio peripherals (earbuds, headphones, and speakers) between Linux and Android without a mid-stream disconnect. The Linux daemon observes BlueZ transports and MPRIS2 players over D-Bus. It models `bap_sink`, `a2dp_sink`, and `hfp_hf` as typed sink profiles and drives an ordered handoff state machine before the peer claims the headset.
+Keynear (`1.2.0-carina`) coordinates shared Bluetooth audio peripherals (earbuds, headphones, and speakers) between Linux and Android without a mid-stream disconnect. The Linux daemon observes BlueZ transports and MPRIS2 players over D-Bus. Carina call alerts reuse the same handoff engine: an incoming call releases the matching `hfp_hf` or `bap_sink` profile, and a decline or end reclaims it. It models `bap_sink`, `a2dp_sink`, and `hfp_hf` as typed sink profiles and drives an ordered handoff state machine before the peer claims the headset.
 
 ## Handoff Sequence
 
