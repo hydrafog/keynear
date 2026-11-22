@@ -44,6 +44,37 @@ fn everyone_nearby_deadline_auto_reverts_to_paired_only() {
 }
 
 #[test]
+fn load_daemon_config_does_not_reset_active_everyone_deadline() {
+    let dir = std::env::temp_dir().join(format!("keynear-ffi-deadline-{}", std::process::id()));
+    let _ = std::fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    let handle = CoreHandle::new();
+    handle.set_visibility_mode(FfiVisibilityMode::EveryoneNearby);
+    let cfg = handle
+        .load_daemon_config(path.display().to_string())
+        .expect("load default");
+    let saved = FfiDaemonConfig {
+        visibility_mode: FfiVisibilityMode::EveryoneNearby,
+        ..cfg
+    };
+    handle
+        .save_daemon_config(path.display().to_string(), saved)
+        .expect("save everyone");
+    std::thread::sleep(Duration::from_millis(1100));
+    let before = handle.everyone_nearby_remaining_secs();
+    handle
+        .load_daemon_config(path.display().to_string())
+        .expect("reload config");
+    let after = handle.everyone_nearby_remaining_secs();
+    assert!(
+        after <= before,
+        "reloading config must not reset timer: before={before} after={after}"
+    );
+    assert!(before < 600, "timer must count down: before={before}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn ffi_beacons_and_noise_pairing_roundtrip() {
     let handle = CoreHandle::new();
     let beacon_bytes = handle

@@ -157,7 +157,7 @@ pub async fn register_visibility_advertisement(
         advertisement_type: bluer::adv::Type::Peripheral,
         service_uuids,
         service_data,
-        discoverable: Some(false),
+        discoverable: Some(visibility == VisibilityMode::EveryoneNearby),
         ..Default::default()
     };
 

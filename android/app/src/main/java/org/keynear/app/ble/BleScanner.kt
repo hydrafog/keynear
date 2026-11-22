@@ -203,7 +203,10 @@ object BleScanner {
         if (!KeynearBleConstants.hasScanPermission(context)) return
         val leScanner = adapter.bluetoothLeScanner ?: return
         val filters = KeynearBleConstants.buildScanFilterList()
-        val settings = ScanSettings.Builder()
+        val foregroundSettings = ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
+            .build()
+        val backgroundSettings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
             .build()
 
@@ -215,10 +218,14 @@ object BleScanner {
                     val addr = result.device?.address ?: return
                     onScanPayload(context.applicationContext, addr, result.rssi, data)
                 }
+
+                override fun onScanFailed(errorCode: Int) {
+                    Log.w(TAG, "le_scan_failed:$errorCode")
+                }
             }
             activeScanCallback = cb
             scanner = leScanner
-            runCatching { leScanner.startScan(filters, settings, cb) }
+            runCatching { leScanner.startScan(filters, foregroundSettings, cb) }
         }
 
         if (pendingScanIntent == null) {
@@ -230,7 +237,7 @@ object BleScanner {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
             )
             pendingScanIntent = pi
-            runCatching { leScanner.startScan(filters, settings, pi) }
+            runCatching { leScanner.startScan(filters, backgroundSettings, pi) }
         }
     }
 

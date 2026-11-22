@@ -59,7 +59,7 @@ internal fun EventQueue.buildState(): CoreState = try {
     syncShortcutSnapshotIfNeeded(paired)
     val transfers = collectActiveTransfers(peerNames)
     decrementPendingPairing()
-    val activeConfig = loadActiveConfig()
+    val activeConfig = cachedDaemonConfig.copy(darkTheme = cachedDarkTheme, dynamicAccent = cachedDynamicAccent)
     val queue = sendQueueStore.snapshot()
     val snapshot = CoreSnapshot(
         version = status.version,
@@ -138,14 +138,6 @@ internal fun writeDynamicAccentPref(context: Context, enabled: Boolean) {
         .putBoolean(PREF_DYNAMIC_ACCENT, enabled)
         .apply()
 }
-
-private fun EventQueue.loadActiveConfig(): DaemonConfigUi =
-    configPath?.let { path ->
-        runCatching {
-            DaemonConfigUi.fromFfi(handle.loadDaemonConfig(path), cachedDarkTheme, cachedDynamicAccent)
-        }.getOrNull()
-    }?.also { cachedDaemonConfig = it }
-        ?: cachedDaemonConfig.copy(darkTheme = cachedDarkTheme, dynamicAccent = cachedDynamicAccent)
 
 private fun EventQueue.isSnapshotEmpty(
     paired: List<PairedDeviceUi>,

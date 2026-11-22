@@ -98,7 +98,13 @@ pub(crate) fn load_daemon_config_impl(
 ) -> Result<FfiDaemonConfig, FfiError> {
     let cfg = DaemonConfig::load_or_default(&PathBuf::from(config_toml_path))?;
     let ffi_cfg = FfiDaemonConfig::from(cfg);
-    set_visibility_mode_impl(lock, ffi_cfg.visibility_mode);
+    let next_mode = VisibilityMode::from(ffi_cfg.visibility_mode);
+    let mut guard = lock.lock().unwrap_or_else(|p| p.into_inner());
+    let now = Instant::now();
+    guard.refresh(now);
+    if guard.mode != next_mode {
+        guard.set_mode(next_mode, now);
+    }
     Ok(ffi_cfg)
 }
 
