@@ -4,12 +4,23 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
+import java.io.File
 
 class RemoteVfsTest {
     @Test
     fun providerAuthorityMatchesManifestRegistration() {
-        assertEquals("org.keynear.app.vfs.provider", VfsDescriptors.AUTHORITY)
+        val manifest = listOf(
+            File("src/main/AndroidManifest.xml"),
+            File("app/src/main/AndroidManifest.xml"),
+        ).firstOrNull(File::isFile) ?: fail("AndroidManifest.xml not found")
+        val providerBlock = manifest.readText()
+            .substringAfter("<provider", "")
+            .substringBefore("</provider>", "")
+        val authority = Regex("android:authorities=\"([^\"]+)\"")
+            .find(providerBlock)?.groupValues?.get(1)
+        assertEquals(VfsDescriptors.AUTHORITY, authority)
     }
 
     @Test

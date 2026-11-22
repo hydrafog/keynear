@@ -24,7 +24,11 @@ class EmptyVfsSource : VfsSource {
 }
 
 class KeynearDocumentsProvider : DocumentsProvider() {
-    override fun onCreate(): Boolean = true
+    override fun onCreate(): Boolean {
+        // TODO: Supply paired-peer descriptors when a VFS peer registry is available.
+        install(RemoteVfsSource())
+        return true
+    }
 
     override fun queryRoots(projection: Array<out String>?): Cursor {
         val cursor = MatrixCursor(resolveRootProjection(projection))

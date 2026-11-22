@@ -27,7 +27,12 @@ class KeynearNotificationListenerService : NotificationListenerService() {
         val notification = sbn ?: return
         if (!isOptedIn()) return
         val descriptor = descriptorOf(notification) ?: return
-        val flags = FfiCapabilityPair(continuityCapabilityFlags(), continuityCapabilityFlags())
+        val flags = try {
+            FfiCapabilityPair(continuityCapabilityFlags(), continuityCapabilityFlags())
+        } catch (err: UnsatisfiedLinkError) {
+            android.util.Log.w(TAG, "Continuity binding unavailable; skipping notification mirror", err)
+            return
+        }
         val mirrored = runCatching {
             mirrorNotification(
                 descriptor,
@@ -36,7 +41,11 @@ class KeynearNotificationListenerService : NotificationListenerService() {
                 lastSequence,
             )
         }.onFailure { err ->
-            android.util.Log.w(TAG, "Skipping invalid notification for mirroring", err)
+            if (err is UnsatisfiedLinkError) {
+                android.util.Log.w(TAG, "Continuity binding unavailable; skipping notification mirror", err)
+            } else {
+                android.util.Log.w(TAG, "Skipping invalid notification for mirroring", err)
+            }
         }.getOrNull() ?: return
         lastSequence = maxOf(lastSequence, mirrored.sequence)
         android.util.Log.i(TAG, "mirrored notification key=${mirrored.notificationKey.length}")
