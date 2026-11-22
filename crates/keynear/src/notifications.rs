@@ -272,8 +272,13 @@ impl NotificationsClient {
 
     pub async fn notify_pairing_verification(&self, code: &str) -> Option<u32> {
         let b = format!("Verify code {code} matches your phone, then approve within 120s.");
-        let a = ["pairing:active:approve", "Approve", "pairing:active:reject", "Reject"]
-            .map(String::from);
+        let a = [
+            "pairing:active:approve",
+            "Approve",
+            "pairing:active:reject",
+            "Reject",
+        ]
+        .map(String::from);
         let title = "Keynear pairing request";
         self.notify(0, "bluetooth-active-symbolic", title, &b, &a, 2)
             .await
