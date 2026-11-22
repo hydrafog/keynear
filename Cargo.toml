@@ -5,8 +5,7 @@ members = [
     "crates/keynear-core",
     "crates/keynear-ffi",
     "crates/keynear-ipc",
-    "crates/keynear-linux",
-    "crates/keynear-settings",
+    "crates/keynear",
 ]
 
 [workspace.package]
@@ -17,9 +16,8 @@ repository = "https://github.com/hydrafog/keynear"
 
 [workspace.dependencies]
 aes-gcm = "0.11"
-ashpd = { version = "0.14.0", default-features = false, features = ["file_chooser", "gtk4", "tokio"] }
+ashpd = { version = "0.14.0", default-features = false, features = ["file_chooser", "tokio"] }
 bluer = { version = "0.17", features = ["bluetoothd"] }
-gtk4 = "0.11"
 hex = "0.4"
 hkdf = "0.13"
 hmac = "0.13"
@@ -30,7 +28,6 @@ oo7 = "0.7"
 prost = "0.14"
 prost-build = "0.14"
 rand = "0.10"
-relm4 = "0.11"
 rustls = { version = "0.23.46", default-features = false, features = ["aws_lc_rs", "prefer-post-quantum", "std", "tls12"] }
 serde = { version = "1", features = ["derive"] }
 sha2 = "0.11"

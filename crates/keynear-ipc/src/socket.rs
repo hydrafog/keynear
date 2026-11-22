@@ -26,7 +26,7 @@ pub fn prepare_daemon_socket_dir(socket_path: &Path) -> Result<(), KeynearError>
             }
             if UnixStream::connect(socket_path).is_ok() {
                 return Err(KeynearError::Config(format!(
-                    "keynear-linux daemon is already running at {}",
+                    "keynear daemon is already running at {}",
                     socket_path.display()
                 )));
             }
@@ -56,7 +56,7 @@ pub fn send_request_to(
     let mut stream = UnixStream::connect(socket_path).map_err(|err| match err.kind() {
         std::io::ErrorKind::NotFound | std::io::ErrorKind::ConnectionRefused => {
             KeynearError::Transport(format!(
-                "keynear-linux daemon is not running (socket {} unavailable)",
+                "keynear daemon is not running (socket {} unavailable)",
                 socket_path.display()
             ))
         }
