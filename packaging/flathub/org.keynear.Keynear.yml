@@ -59,4 +59,5 @@ modules:
     sources:
       - type: dir
         path: ../..
-      # TODO: Generate cargo-sources.json via flatpak-cargo-generator Cargo.lock for Flathub offline submission.
+      - type: file
+        path: ../../cargo-sources.json

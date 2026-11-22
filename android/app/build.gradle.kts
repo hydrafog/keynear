@@ -17,6 +17,10 @@ android {
         targetSdk = 36
         versionCode = 8
         versionName = "1.2.0-carina"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        ndk {
+            abiFilters += listOf("arm64-v8a", "x86_64")
+        }
     }
 
     flavorDimensions += "distribution"
@@ -69,6 +73,8 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.12.0")
     "gmsImplementation"("com.google.android.gms:play-services-auth-api-phone:18.3.1")
     testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test:runner:1.7.0")
+    androidTestImplementation("junit:junit:4.13.2")
 }
 
 afterEvaluate {

@@ -47,6 +47,12 @@ in
       description = "Open mDNS discovery port (UDP 5353) and configured UDP ports in the host firewall.";
     };
 
+    quicPort = lib.mkOption {
+      type = lib.types.nullOr lib.types.port;
+      default = null;
+      description = "Fixed UDP port for the Keynear QUIC control channel; null keeps the daemon's dynamic-port default.";
+    };
+
     extraAllowedUDPPorts = lib.mkOption {
       type = lib.types.listOf lib.types.port;
       default = [ ];
@@ -102,7 +108,8 @@ in
     programs.fuse.userAllowOther = lib.mkIf (cfg.fuse.enable && cfg.fuse.userAllowOther) true;
 
     networking.firewall = lib.mkIf cfg.openFirewall {
-      allowedUDPPorts = [ 5353 ] ++ cfg.extraAllowedUDPPorts;
+      allowedUDPPorts = [ 5353 ] ++ cfg.extraAllowedUDPPorts
+        ++ lib.optionals (cfg.quicPort != null) [ cfg.quicPort ];
       allowedUDPPortRanges = cfg.allowedUDPPortRanges;
     };
 
@@ -118,7 +125,8 @@ in
         RestartSec = 3;
         Environment = [
           "KEYNEAR_LOG=${cfg.logLevel}"
-        ] ++ lib.optionals cfg.fuse.enable [ "KEYNEAR_FUSE=1" ];
+        ] ++ lib.optionals cfg.fuse.enable [ "KEYNEAR_FUSE=1" ]
+          ++ lib.optionals (cfg.quicPort != null) [ "KEYNEAR_QUIC_PORT=${toString cfg.quicPort}" ];
         NoNewPrivileges = true;
         PrivateTmp = true;
         LockPersonality = true;

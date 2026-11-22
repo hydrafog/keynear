@@ -66,6 +66,12 @@ in
       description = "KEYNEAR_LOG verbosity level for keynear.";
     };
 
+    quicPort = lib.mkOption {
+      type = lib.types.nullOr lib.types.port;
+      default = null;
+      description = "Fixed UDP port for the Keynear QUIC control channel; null keeps the daemon's dynamic-port default. The NixOS module opens this port in the firewall when openFirewall is true.";
+    };
+
     configDir = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
@@ -247,7 +253,8 @@ in
           "KEYNEAR_LOG=${cfg.logLevel}"
         ]
         ++ lib.optionals cfg.fuse [ "KEYNEAR_FUSE=1" ]
-        ++ lib.optionals (cfg.configDir != null) [ "KEYNEAR_CONFIG_DIR=${cfg.configDir}" ];
+        ++ lib.optionals (cfg.configDir != null) [ "KEYNEAR_CONFIG_DIR=${cfg.configDir}" ]
+        ++ lib.optionals (cfg.quicPort != null) [ "KEYNEAR_QUIC_PORT=${toString cfg.quicPort}" ];
         NoNewPrivileges = true;
         PrivateTmp = true;
         LockPersonality = true;

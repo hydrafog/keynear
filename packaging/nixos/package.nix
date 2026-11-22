@@ -14,7 +14,7 @@
 
 rustPlatform.buildRustPackage {
   pname = "keynear";
-  version = "1.1.0";
+  version = (builtins.fromTOML (builtins.readFile ../../Cargo.toml)).workspace.package.version;
 
   src = lib.fileset.toSource {
     root = ../..;

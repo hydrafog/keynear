@@ -5,7 +5,7 @@ let
 in
 stdenvNoCC.mkDerivation {
   pname = "gnome-shell-extension-keynear-clipboard";
-  version = "1.1.0";
+  version = (builtins.fromTOML (builtins.readFile ../../Cargo.toml)).workspace.package.version;
 
   src = builtins.path {
     name = "keynear-gnome-extension-src";

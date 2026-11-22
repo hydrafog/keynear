@@ -1,3 +1,4 @@
+import java.io.ByteArrayOutputStream
 import java.io.File
 import javax.inject.Inject
 import org.gradle.api.DefaultTask
@@ -9,6 +10,7 @@ import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -16,6 +18,88 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     id("com.android.library")
+}
+
+abstract class BuildFfiLibrariesTask @Inject constructor(
+    private val execOperations: ExecOperations,
+) : DefaultTask() {
+    @get:InputFiles
+    abstract val rustSources: ConfigurableFileCollection
+
+    @get:Internal
+    abstract val workspaceRootPath: Property<String>
+
+    @get:Internal
+    abstract val jniLibsDirPath: Property<String>
+
+    @get:OutputFiles
+    abstract val libraryFiles: ConfigurableFileCollection
+
+    @TaskAction
+    fun build() {
+        val workspaceRoot = File(workspaceRootPath.get())
+        val jniLibsDir = File(jniLibsDirPath.get())
+        jniLibsDir.mkdirs()
+        execOperations.exec {
+            workingDir(workspaceRoot)
+            commandLine(
+                "cargo",
+                "ndk",
+                "-t",
+                "arm64-v8a",
+                "-t",
+                "x86_64",
+                "-o",
+                jniLibsDir.absolutePath,
+                "build",
+                "--release",
+                "--manifest-path",
+                workspaceRoot.resolve("Cargo.toml").absolutePath,
+                "-p",
+                "keynear-ffi",
+            )
+        }
+        libraryFiles.forEach { library ->
+            if (!library.exists()) {
+                throw GradleException("Missing compiled library at ${library.absolutePath}")
+            }
+            verifyPageAlignment(library)
+        }
+    }
+
+    private fun verifyPageAlignment(library: File) {
+        val readelf = findOnPath("llvm-readelf")
+        if (readelf == null) {
+            logger.warn("llvm-readelf unavailable; skipping 16 KB alignment check for ${library.name}")
+            return
+        }
+        val output = ByteArrayOutputStream()
+        execOperations.exec {
+            commandLine(readelf.absolutePath, "-l", library.absolutePath)
+            standardOutput = output
+        }
+        val alignments = output.toString().lineSequence()
+            .filter { it.trimStart().startsWith("LOAD") }
+            .mapNotNull {
+                it.trim().split(Regex("\\s+")).lastOrNull()
+                    ?.removePrefix("0x")
+                    ?.toLongOrNull(16)
+            }
+            .toList()
+        when {
+            alignments.isEmpty() ->
+                logger.warn("No LOAD alignment found for ${library.name}; 16 KB check inconclusive")
+            alignments.any { it < 0x4000L } ->
+                throw GradleException("${library.name} is not 16 KB page-aligned: $alignments")
+        }
+    }
+
+    private fun findOnPath(executable: String): File? =
+        System.getenv("PATH")
+            ?.split(File.pathSeparator)
+            ?.asSequence()
+            ?.map { File(it, executable) }
+            ?.firstOrNull { it.isFile && it.canExecute() }
 }
 
 abstract class GenerateUniffiBindingsTask @Inject constructor(
@@ -49,33 +133,13 @@ abstract class GenerateUniffiBindingsTask @Inject constructor(
         val libFile = when {
             arm64Lib.exists() -> arm64Lib
             x86Lib.exists() -> x86Lib
-            else -> {
-                execOperations.exec {
-                    workingDir(workspaceRoot)
-                    commandLine(
-                        "cargo",
-                        "build",
-                        "--manifest-path",
-                        manifestPath,
-                        "-p",
-                        "keynear-ffi",
-                    )
-                }
-                val osName = System.getProperty("os.name").lowercase()
-                val ext = when {
-                    osName.contains("mac") -> "dylib"
-                    osName.contains("win") -> "dll"
-                    else -> "so"
-                }
-                val prefix = if (osName.contains("win")) "" else "lib"
-                val hostLib = workspaceRoot.resolve("target/debug/${prefix}keynear_core.$ext")
-                if (!hostLib.exists()) {
-                    throw GradleException("Missing compiled library at ${hostLib.absolutePath}")
-                }
-                hostLib
-            }
+            else -> throw GradleException(
+                "Missing compiled keynear-ffi library for arm64-v8a or x86_64 at " +
+                    "${arm64Lib.absolutePath} and ${x86Lib.absolutePath}",
+            )
         }
         val targetOutDir = outDir.get().asFile
+        targetOutDir.deleteRecursively()
         targetOutDir.mkdirs()
         execOperations.exec {
             workingDir(workspaceRoot)
@@ -107,10 +171,22 @@ abstract class GenerateUniffiBindingsTask @Inject constructor(
 val workspaceRoot = rootProject.projectDir.parentFile
 val generatedUniffiDir = layout.buildDirectory.dir("generated/source/uniffi")
 val jniLibsDir = layout.projectDirectory.dir("src/main/jniLibs")
+val arm64Lib = jniLibsDir.file("arm64-v8a/libkeynear_core.so").asFile
+val x86Lib = jniLibsDir.file("x86_64/libkeynear_core.so").asFile
+
+val buildFfiLibraries = tasks.register<BuildFfiLibrariesTask>("buildFfiLibraries") {
+    description = "Cross-compile keynear-ffi with cargo ndk for arm64-v8a and x86_64"
+    rustSources.from(
+        fileTree(workspaceRoot.resolve("crates/keynear-ffi/src")),
+        fileTree(workspaceRoot.resolve("crates/keynear-protocol/src")),
+    )
+    workspaceRootPath.set(workspaceRoot.absolutePath)
+    jniLibsDirPath.set(jniLibsDir.asFile.absolutePath)
+    libraryFiles.from(arm64Lib, x86Lib)
+}
 
 val generateUniffiBindings = tasks.register<GenerateUniffiBindingsTask>("generateUniffiBindings") {
-    val arm64Lib = jniLibsDir.file("arm64-v8a/libkeynear_core.so").asFile
-    val x86Lib = jniLibsDir.file("x86_64/libkeynear_core.so").asFile
+    dependsOn(buildFfiLibraries)
     jniLibFiles.from(arm64Lib, x86Lib)
     rustSources.from(
         fileTree(workspaceRoot.resolve("crates/keynear-ffi/src")),
@@ -129,6 +205,7 @@ android {
 
     defaultConfig {
         minSdk = 31
+        consumerProguardFiles("consumer-rules.pro")
     }
 
     compileOptions {
@@ -164,7 +241,7 @@ tasks.withType<KotlinCompile>().configureEach {
     dependsOn(generateUniffiBindings)
 }
 
-tasks.matching { it.name == "preBuild" }.configureEach {
+tasks.matching { it.name == "preBuild" || it.name.startsWith("assemble") }.configureEach {
     dependsOn(generateUniffiBindings)
 }
 

@@ -19,9 +19,9 @@ Description: |
 RepoType: git
 Repo: https://github.com/hydrafog/keynear
 Builds:
-  - versionName: 1.1.0-perseus
-    versionCode: 7
-    commit: 1.1.0-perseus
+  - versionName: 1.2.0
+    versionCode: 8
+    commit: 191822636824a2bd3a0ee505ce308a2ee236520a
     subdir: android
     ndk: 30.0.16248370
     sudo:
@@ -39,6 +39,6 @@ Builds:
     gradle:
       - foss
 AutoUpdateMode: Version
-UpdateCheckMode: Tags
-CurrentVersion: 1.1.0-perseus
-CurrentVersionCode: 7
+UpdateCheckMode: None
+CurrentVersion: 1.2.0
+CurrentVersionCode: 8
