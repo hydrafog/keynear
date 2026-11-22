@@ -3,11 +3,17 @@ all-features = true
 
 [advisories]
 ignore = [
+    # TODO(keynear-maintainers): RUSTSEC-2026-0374 reason "Transitive via uniffi_bindgen -> askama -> basic-toml; no upstream replacement yet". Follow-up: track a patched askama/basic-toml release, upgrade uniffi_bindgen, then remove this ignore.
     { id = "RUSTSEC-2026-0374", reason = "Transitive via uniffi_bindgen -> askama -> basic-toml; no upstream replacement yet" },
+    # TODO(keynear-maintainers): RUSTSEC-2026-0543 reason "Transitive via iroh -> netwatch -> wmi -> chrono; no upstream replacement yet". Follow-up: upgrade chrono through iroh/netwatch/wmi once patched, then remove this ignore.
     { id = "RUSTSEC-2026-0543", reason = "Transitive via iroh -> netwatch -> wmi -> chrono; no upstream replacement yet" },
+    # TODO(keynear-maintainers): RUSTSEC-2024-0436 reason "Transitive via iroh -> netwatch -> netlink-packet-core -> paste; no upstream replacement yet". Follow-up: track a paste release addressing the advisory and bump the transitive dependency.
     { id = "RUSTSEC-2024-0436", reason = "Transitive via iroh -> netwatch -> netlink-packet-core -> paste; no upstream replacement yet" },
+    # TODO(keynear-maintainers): RUSTSEC-2026-0371 reason "Transitive via ksni -> zbus 5 -> zbus_names; merged in zbus 6". Follow-up: migrate ksni to zbus 6 so zbus_names is gone, then remove this ignore.
     { id = "RUSTSEC-2026-0371", reason = "Transitive via ksni -> zbus 5 -> zbus_names; merged in zbus 6" },
+    # TODO(keynear-maintainers): RUSTSEC-2026-0370 reason "Transitive via ksni -> zbus 5 -> zvariant; merged in zbus 6". Follow-up: migrate ksni to zbus 6 so zvariant is gone, then remove this ignore.
     { id = "RUSTSEC-2026-0370", reason = "Transitive via ksni -> zbus 5 -> zvariant; merged in zbus 6" },
+    # TODO(keynear-maintainers): RUSTSEC-2026-0372 reason "Transitive via ksni -> zbus 5 -> zvariant_derive; merged in zbus 6". Follow-up: migrate ksni to zbus 6 so zvariant_derive is gone, then remove this ignore.
     { id = "RUSTSEC-2026-0372", reason = "Transitive via ksni -> zbus 5 -> zvariant_derive; merged in zbus 6" },
 ]
 

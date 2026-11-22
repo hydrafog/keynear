@@ -1,5 +1,6 @@
 use crate::pairing::*;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
 pub enum FfiPairingRole {
     Initiator,
     Responder,
