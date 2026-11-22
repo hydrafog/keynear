@@ -4,7 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
 import org.junit.Test
 import java.io.File
 
@@ -14,7 +13,7 @@ class RemoteVfsTest {
         val manifest = listOf(
             File("src/main/AndroidManifest.xml"),
             File("app/src/main/AndroidManifest.xml"),
-        ).firstOrNull(File::isFile) ?: fail("AndroidManifest.xml not found")
+        ).firstOrNull(File::isFile) ?: error("AndroidManifest.xml not found")
         val providerBlock = manifest.readText()
             .substringAfter("<provider", "")
             .substringBefore("</provider>", "")

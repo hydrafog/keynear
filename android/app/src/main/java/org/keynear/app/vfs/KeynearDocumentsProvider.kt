@@ -41,7 +41,7 @@ class KeynearDocumentsProvider : DocumentsProvider() {
             Log.w(TAG, "Paired-peer VFS roots unavailable", err)
             emptyList()
         }
-        install(RemoteVfsSource(peers))
+        install(RemoteVfsSource(peers, context))
         return true
     }
 
