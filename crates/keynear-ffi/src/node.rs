@@ -91,6 +91,9 @@ async fn accept_loop(
                                     .handle_incoming_stream_with_kind(&peer_id, kind, send, recv)
                                     .await;
                             }
+                            Ok(QuicStreamKind::VfsRead) => {
+                                crate::vfs_read::serve_vfs_read(&eng, send, recv).await;
+                            }
                             Err(_) => break,
                         }
                     }

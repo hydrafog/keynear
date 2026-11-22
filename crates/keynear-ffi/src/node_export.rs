@@ -1,5 +1,6 @@
 use crate::node::OrionNodeInit;
 use crate::*;
+use keynear_protocol::{write_stream_kind, STREAM_CHUNK_BYTES};
 
 #[uniffi::export]
 impl OrionNodeHandle {
@@ -196,6 +197,36 @@ impl OrionNodeHandle {
             offer_id,
             mime_type,
         )
+    }
+
+    pub fn read_remote_vfs_chunk(
+        &self,
+        peer_device_id: String,
+        relative_path: String,
+        offset: u64,
+        max_bytes: u32,
+    ) -> Result<Vec<u8>, FfiError> {
+        let path = crate::vfs_read::validate_relative_path(&relative_path)?;
+        if max_bytes == 0 || max_bytes > STREAM_CHUNK_BYTES as u32 {
+            return Err(FfiError::Validation {
+                field: "maxBytes".to_string(),
+                detail: "max_bytes must be 1..=STREAM_CHUNK_BYTES".to_string(),
+            });
+        }
+        self.runtime
+            .block_on(async {
+                let conn = self.node.connect_peer(&peer_device_id).await?;
+                let (mut send, mut recv) = conn.open_bi().await.map_err(|err| {
+                    KeynearError::Transport(format!("open vfs read stream failed: {err}"))
+                })?;
+                write_stream_kind(&mut send, QuicStreamKind::VfsRead).await?;
+                crate::vfs_read::write_vfs_read_request(&mut send, &path, offset, max_bytes).await?;
+                send.finish().map_err(|err| {
+                    KeynearError::Transport(format!("finish vfs read stream failed: {err}"))
+                })?;
+                crate::vfs_read::read_vfs_read_reply(&mut recv, max_bytes).await
+            })
+            .map_err(FfiError::from)
     }
 
     pub fn shutdown(&self) {

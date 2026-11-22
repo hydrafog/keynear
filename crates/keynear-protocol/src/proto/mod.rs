@@ -20,6 +20,7 @@ pub enum QuicStreamKind {
     RawFileChunk = 0x02,
     StoredZipArchive = 0x03,
     ClipboardBlob = 0x04,
+    VfsRead = 0x05,
 }
 
 impl TryFrom<u8> for QuicStreamKind {
@@ -31,6 +32,7 @@ impl TryFrom<u8> for QuicStreamKind {
             0x02 => Ok(Self::RawFileChunk),
             0x03 => Ok(Self::StoredZipArchive),
             0x04 => Ok(Self::ClipboardBlob),
+            0x05 => Ok(Self::VfsRead),
             other => Err(KeynearError::Protocol(format!(
                 "unknown QUIC stream kind 0x{other:02x}"
             ))),

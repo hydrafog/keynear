@@ -73,6 +73,7 @@ uniffi::setup_scaffolding!();
 mod core_handle;
 mod node;
 mod node_export;
+mod vfs_read;
 
 pub use core_handle::CoreHandle;
 pub use node::OrionNodeHandle;

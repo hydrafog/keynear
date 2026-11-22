@@ -206,6 +206,7 @@ fn quic_stream_kind_roundtrip_and_rejection() {
         (0x02, QuicStreamKind::RawFileChunk),
         (0x03, QuicStreamKind::StoredZipArchive),
         (0x04, QuicStreamKind::ClipboardBlob),
+        (0x05, QuicStreamKind::VfsRead),
     ] {
         assert_eq!(QuicStreamKind::try_from(byte).unwrap(), kind);
     }

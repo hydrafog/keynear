@@ -104,7 +104,9 @@ impl TransferEngine {
                 )
                 .await
             }
-            QuicStreamKind::Control | QuicStreamKind::ClipboardBlob => unreachable!(),
+            QuicStreamKind::Control | QuicStreamKind::ClipboardBlob | QuicStreamKind::VfsRead => {
+                unreachable!()
+            }
         };
 
         self.finish_incoming(&mut ctx, result).await
