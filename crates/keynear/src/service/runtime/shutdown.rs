@@ -61,6 +61,36 @@ pub(super) async fn shutdown_all(params: ShutdownParams) {
     log_daemon_stopped();
 }
 
+use super::{RuntimeServices, RuntimeState};
+
+pub(super) type ShutdownHandles = (
+    Option<ksni::Handle<crate::tray::KeynearTray>>,
+    IpcDispatchContext,
+    watch::Sender<Option<keynear_protocol::v1::LanEndpoint>>,
+    Option<PathBuf>,
+);
+
+pub(super) async fn finish_shutdown(
+    services: RuntimeServices,
+    state: RuntimeState,
+    (tray_handle, shared_ctx, lan_watch_tx, bound_socket_path): ShutdownHandles,
+    tasks: Vec<JoinHandle<()>>,
+) {
+    shutdown_all(ShutdownParams {
+        clipboard_handle: services.clipboard_handle,
+        tray_handle,
+        shared_ctx,
+        config_watch_tx: state.config_watch_tx,
+        lan_watch_tx,
+        visibility_tx: state.visibility_tx,
+        tasks,
+        mdns: services.mdns,
+        quic_node: services.quic_node,
+        bound_socket_path,
+    })
+    .await;
+}
+
 fn log_daemon_stopped() {
     tracing::info!(event = "daemon_stopped");
 }

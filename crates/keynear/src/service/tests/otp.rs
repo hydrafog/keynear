@@ -39,20 +39,13 @@ fn build_otp_rig() -> OtpRig {
         incoming_directory: incoming_dir.display().to_string(),
         ..Default::default()
     };
-    initial_config
-        .save_to_path(&config_path)
-        .expect("save config");
-
-    let device_store = PairedDeviceStore::new(dir.join("devices.toml"));
-    let (visibility_tx, visibility_rx) = watch::channel(initial_config.visibility_mode);
-    let (config_watch_tx, _config_watch_rx) = watch::channel(initial_config.clone());
+    initial_config.save_to_path(&config_path).expect("save");
     let clipboard_engine = Arc::new(ClipboardEngine::new(ClipboardPolicy::from(&initial_config)));
-    let (clipboard_handle, latest_otp, refresh_notify) = (
-        ClipboardMonitorHandle::headless(),
-        Arc::new(Mutex::new(None)),
-        Arc::new(Notify::new()),
-    );
-
+    let clipboard_handle = ClipboardMonitorHandle::headless();
+    let latest_otp = Arc::new(Mutex::new(None));
+    let refresh_notify = Arc::new(Notify::new());
+    let (visibility_tx, visibility_rx) = watch::channel(initial_config.visibility_mode);
+    let (config_watch_tx, _rx) = watch::channel(initial_config.clone());
     let ctx = IpcDispatchContext {
         local_device_id: "host-linux".to_string(),
         visibility_tx,
@@ -64,7 +57,7 @@ fn build_otp_rig() -> OtpRig {
         everyone_deadline: Arc::new(Mutex::new(None)),
         deadline_notify: Arc::new(Notify::new()),
         refresh_notify: Arc::clone(&refresh_notify),
-        device_store,
+        device_store: PairedDeviceStore::new(dir.join("devices.toml")),
         secret_store: None,
         quic_node: None,
         transfer_engine: Arc::new(TransferEngine::new(incoming_dir, false)),
@@ -76,7 +69,6 @@ fn build_otp_rig() -> OtpRig {
         mdns: None,
         pairing_decision_tx: None,
     };
-
     OtpRig {
         dir,
         config_path,

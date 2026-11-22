@@ -11,6 +11,22 @@ pub trait HandoffControl {
 
 pub struct DbusHandoffControl;
 
+fn log_sink_release(profile: AudioSinkProfile) {
+    tracing::info!(event = "vega_sink_release", profile = profile.as_str());
+}
+
+fn log_sink_release_err(err: &KeynearError) {
+    tracing::warn!(event = "vega_sink_release_unavailable", error = %err);
+}
+
+fn log_sink_claim(profile: AudioSinkProfile) {
+    tracing::info!(event = "vega_sink_claim", profile = profile.as_str());
+}
+
+fn log_sink_claim_err(err: &KeynearError) {
+    tracing::warn!(event = "vega_sink_claim_unavailable", error = %err);
+}
+
 impl HandoffControl for DbusHandoffControl {
     async fn pause_players(&self) -> Result<usize, KeynearError> {
         dbus::call_players("Pause").await
@@ -21,17 +37,17 @@ impl HandoffControl for DbusHandoffControl {
     }
 
     async fn release_sink(&self, profile: AudioSinkProfile) -> Result<(), KeynearError> {
-        tracing::info!(event = "vega_sink_release", profile = profile.as_str());
+        log_sink_release(profile);
         if let Err(err) = dbus::switch_profile(profile, "Release").await {
-            tracing::warn!(event = "vega_sink_release_unavailable", error = %err);
+            log_sink_release_err(&err);
         }
         Ok(())
     }
 
     async fn claim_sink(&self, profile: AudioSinkProfile) -> Result<(), KeynearError> {
-        tracing::info!(event = "vega_sink_claim", profile = profile.as_str());
+        log_sink_claim(profile);
         if let Err(err) = dbus::switch_profile(profile, "Acquire").await {
-            tracing::warn!(event = "vega_sink_claim_unavailable", error = %err);
+            log_sink_claim_err(&err);
         }
         Ok(())
     }
@@ -50,6 +66,8 @@ impl<C: HandoffControl> VegaAudioController<C> {
         }
     }
 
+    #[cfg(test)]
+    #[allow(dead_code)]
     pub fn snapshot(&self) -> Option<&keynear_core::AudioHandoffState> {
         self.engine.snapshot()
     }

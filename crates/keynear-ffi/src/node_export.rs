@@ -199,6 +199,7 @@ impl OrionNodeHandle {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn read_remote_vfs_chunk(
         &self,
         peer_device_id: String,

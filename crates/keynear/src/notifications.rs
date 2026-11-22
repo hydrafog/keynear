@@ -168,6 +168,10 @@ async fn run_action_listener(mut stream: ActionStream, tx: UnboundedSender<Notif
     }
 }
 
+fn log_notifications_connected() {
+    info!(event = "notifications_connected");
+}
+
 impl NotificationsClient {
     pub async fn connect_and_listen(
         action_tx: UnboundedSender<NotificationAction>,
@@ -175,10 +179,8 @@ impl NotificationsClient {
         let conn = connect_bus().await?;
         let proxy = create_proxy(&conn).await?;
         let actions_stream = receive_actions(&proxy).await?;
-
-        info!(event = "notifications_connected");
+        log_notifications_connected();
         let handle = tokio::spawn(run_action_listener(actions_stream, action_tx));
-
         Some((Self { proxy }, handle))
     }
 

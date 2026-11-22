@@ -242,44 +242,34 @@ pub(crate) fn spawn_bluez_loops(params: BluezLoopParams<'_>, tasks: &mut Vec<Joi
     }));
 }
 
+fn log_pairing_info(event: &'static str, value: &str) {
+    info!(event, value = %value);
+}
+
+fn log_pairing_sync_err(err: &KeynearError) {
+    warn!(event = "pairing_post_sync_failed", error = %err);
+}
+
 async fn on_pairing_completed(
     peer_device_id: &str,
     notif_client: Option<&NotificationsClient>,
     ctx: &IpcDispatchContext,
 ) {
-    info!(event = "pairing_completed", peer_device_id = %peer_device_id);
-    let sync = sync_paired_devices_and_policies(
+    log_pairing_info("pairing_completed", peer_device_id);
+    if let Err(err) = sync_paired_devices_and_policies(
         &ctx.device_store,
         ctx.secret_store.as_deref(),
         ctx.quic_node.as_deref(),
         &ctx.transfer_engine,
         &ctx.known_peers,
     )
-    .await;
-    if let Err(err) = sync {
-        warn!(event = "pairing_post_sync_failed", error = %err);
+    .await
+    {
+        log_pairing_sync_err(&err);
     }
     ctx.refresh_notify.notify_waiters();
     if let Some(client) = notif_client {
         client.notify_pairing_completed(peer_device_id).await;
-    }
-}
-
-async fn handle_pairing_event(
-    event: PairingUiEvent,
-    notif_client: Option<&NotificationsClient>,
-    ctx: &IpcDispatchContext,
-) {
-    match event {
-        PairingUiEvent::VerificationReady(code) => {
-            info!(event = "pairing_verification_ready", code = %code);
-            if let Some(client) = notif_client {
-                client.notify_pairing_verification(&code).await;
-            }
-        }
-        PairingUiEvent::Completed { peer_device_id } => {
-            on_pairing_completed(&peer_device_id, notif_client, ctx).await;
-        }
     }
 }
 
@@ -291,7 +281,17 @@ pub(crate) fn spawn_pairing_event_loop(
 ) {
     tasks.push(tokio::spawn(async move {
         while let Some(event) = pairing_event_rx.recv().await {
-            handle_pairing_event(event, notif_client.as_ref(), &ctx).await;
+            match event {
+                PairingUiEvent::VerificationReady(code) => {
+                    log_pairing_info("pairing_verification_ready", &code);
+                    if let Some(ref client) = notif_client {
+                        client.notify_pairing_verification(&code).await;
+                    }
+                }
+                PairingUiEvent::Completed { peer_device_id } => {
+                    on_pairing_completed(&peer_device_id, notif_client.as_ref(), &ctx).await;
+                }
+            }
         }
     }));
 }

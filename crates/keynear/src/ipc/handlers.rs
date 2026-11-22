@@ -36,16 +36,24 @@ pub(crate) struct OutboundQueue {
     tx: mpsc::Sender<OutboundEnvelope>,
 }
 
+fn log_outbound_enqueued(label: &'static str) {
+    info!(event = "continuity_outbound_enqueued", kind = label);
+}
+
+fn log_outbound_full(label: &'static str) {
+    warn!(event = "continuity_outbound_queue_full", kind = label);
+}
+
+fn log_outbound_closed(label: &'static str) {
+    warn!(event = "continuity_outbound_queue_closed", kind = label);
+}
+
 impl OutboundQueue {
     fn enqueue(&self, label: &'static str, bytes: Vec<u8>) {
         match self.tx.try_send(OutboundEnvelope { label, bytes }) {
-            Ok(()) => info!(event = "continuity_outbound_enqueued", kind = label),
-            Err(mpsc::error::TrySendError::Full(_)) => {
-                warn!(event = "continuity_outbound_queue_full", kind = label);
-            }
-            Err(mpsc::error::TrySendError::Closed(_)) => {
-                warn!(event = "continuity_outbound_queue_closed", kind = label);
-            }
+            Ok(()) => log_outbound_enqueued(label),
+            Err(mpsc::error::TrySendError::Full(_)) => log_outbound_full(label),
+            Err(mpsc::error::TrySendError::Closed(_)) => log_outbound_closed(label),
         }
     }
 }

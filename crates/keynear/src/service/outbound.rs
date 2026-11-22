@@ -23,6 +23,22 @@ pub(crate) fn spawn_outbound_drain(params: OutboundDrainParams, tasks: &mut Vec<
     tasks.push(tokio::spawn(run_drain(params)));
 }
 
+fn log_outbound_rejected(kind: &'static str, err: &KeynearError) {
+    warn!(event = "continuity_outbound_frame_rejected", kind, error = %err);
+}
+
+fn log_peer_load_failed(err: &KeynearError) {
+    warn!(event = "continuity_peer_load_failed", error = %err);
+}
+
+fn log_outbound_send_failed(peer_device_id: &str, err: &KeynearError) {
+    warn!(
+        event = "continuity_outbound_send_failed",
+        peer_device_id = %peer_device_id,
+        error = %err
+    );
+}
+
 async fn run_drain(params: OutboundDrainParams) {
     let OutboundDrainParams {
         mut rx,
@@ -36,11 +52,7 @@ async fn run_drain(params: OutboundDrainParams) {
                 let _ = enqueue_audio_handoff(&audio_tx, &envelope);
                 send_to_peers(&node, &device_store, &envelope).await;
             }
-            Err(err) => warn!(
-                event = "continuity_outbound_frame_rejected",
-                kind = outbound.label,
-                error = %err
-            ),
+            Err(err) => log_outbound_rejected(outbound.label, &err),
         }
     }
 }
@@ -55,17 +67,13 @@ async fn send_to_peers(node: &OrionQuicNode, store: &PairedDeviceStore, envelope
     let peers = match store.load() {
         Ok(peers) => peers,
         Err(err) => {
-            warn!(event = "continuity_peer_load_failed", error = %err);
+            log_peer_load_failed(&err);
             return;
         }
     };
     for peer in peers {
         if let Err(err) = send_one(node, &peer.device_id, envelope).await {
-            warn!(
-                event = "continuity_outbound_send_failed",
-                peer_device_id = %peer.device_id,
-                error = %err
-            );
+            log_outbound_send_failed(&peer.device_id, &err);
         }
     }
 }

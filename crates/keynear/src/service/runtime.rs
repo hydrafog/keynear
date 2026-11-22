@@ -30,7 +30,7 @@ pub(crate) use context::build_shared_ctx;
 use init::{init_services, InitParams};
 use loops::{spawn_all_loops, visibility_revert_loop, LoopParams};
 pub(crate) use services::RuntimeServices;
-use shutdown::{shutdown_all, ShutdownParams};
+use shutdown::finish_shutdown;
 use state::init_state;
 pub(crate) use state::RuntimeState;
 use ui::{spawn_ipc_and_ui, IpcUiParams};
@@ -122,31 +122,23 @@ impl DaemonRuntime {
             },
             &mut tasks,
         );
-        let (shared_ctx, bound_socket_path, tray_handle) = spawn_ipc_and_ui(
-            IpcUiParams {
-                options: &options,
-                state: &state,
-                services: &services,
-                bound_ipc,
-                pairing_decision_tx: pairing.decision_tx,
-                pairing_event_rx: pairing.event_rx,
-            },
-            &mut tasks,
-        )
-        .await;
+        let ui_params = IpcUiParams {
+            options: &options,
+            state: &state,
+            services: &services,
+            bound_ipc,
+            pairing_decision_tx: pairing.decision_tx,
+            pairing_event_rx: pairing.event_rx,
+        };
+        let (shared_ctx, bound_socket_path, tray_handle) =
+            spawn_ipc_and_ui(ui_params, &mut tasks).await;
         wait_for_shutdown(shutdown, &state).await;
-        shutdown_all(ShutdownParams {
-            clipboard_handle: services.clipboard_handle,
-            tray_handle,
-            shared_ctx,
-            config_watch_tx: state.config_watch_tx,
-            lan_watch_tx,
-            visibility_tx: state.visibility_tx,
+        finish_shutdown(
+            services,
+            state,
+            (tray_handle, shared_ctx, lan_watch_tx, bound_socket_path),
             tasks,
-            mdns: services.mdns,
-            quic_node: services.quic_node,
-            bound_socket_path,
-        })
+        )
         .await;
         Ok(())
     }
