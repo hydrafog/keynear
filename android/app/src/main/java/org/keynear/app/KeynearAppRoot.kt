@@ -96,39 +96,11 @@ internal fun KeynearAppRoot(
 
     val pickFolderLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
-    ) { treeUri ->
-        if (treeUri != null) {
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(
-                    treeUri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
-                )
-            }
-            scope.launch {
-                val (folderName, childUris) = withContext(Dispatchers.IO) {
-                    enumerateTreeChildUris(context, treeUri)
-                }
-                uiState = withContext(Dispatchers.IO) {
-                    bridge.stageFolderUri(treeUri.toString(), folderName, childUris)
-                }
-                showSnackbar(folderStagedMessage(folderName, childUris.size))
-            }
-        }
-    }
+    ) { treeUri -> picker.stagePickedFolder(treeUri) }
 
     val pickSaveFolderLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
-    ) { treeUri ->
-        if (treeUri != null) {
-            val displayPath = displayPathForTree(treeUri)
-            scope.launch {
-                uiState = withContext(Dispatchers.IO) {
-                    bridge.updateDaemonConfig { it.copy(incomingDirectory = displayPath) }
-                }
-                showSnackbar("Save folder updated to $displayPath")
-            }
-        }
-    }
+    ) { treeUri -> picker.setSaveFolder(treeUri) }
 
     val otpVerifiedMessage = stringResource(R.string.otp_verified_copied_snackbar)
     val consentLauncher = rememberLauncherForActivityResult(
@@ -248,6 +220,36 @@ private fun PickerContext.stagePickedFiles(uris: List<Uri>) {
     scope.launch {
         onUiState(withContext(Dispatchers.IO) { bridge.stageFileUris(uris.map { it.toString() }) })
         onSnackbar(filesStagedMessage(uris.size))
+    }
+}
+
+private fun PickerContext.stagePickedFolder(treeUri: Uri?) {
+    if (treeUri == null) return
+    runCatching {
+        context.contentResolver.takePersistableUriPermission(
+            treeUri,
+            Intent.FLAG_GRANT_READ_URI_PERMISSION,
+        )
+    }
+    scope.launch {
+        val (folderName, childUris) = withContext(Dispatchers.IO) {
+            enumerateTreeChildUris(context, treeUri)
+        }
+        onUiState(withContext(Dispatchers.IO) {
+            bridge.stageFolderUri(treeUri.toString(), folderName, childUris)
+        })
+        onSnackbar(folderStagedMessage(folderName, childUris.size))
+    }
+}
+
+private fun PickerContext.setSaveFolder(treeUri: Uri?) {
+    if (treeUri == null) return
+    val displayPath = displayPathForTree(treeUri)
+    scope.launch {
+        onUiState(withContext(Dispatchers.IO) {
+            bridge.updateDaemonConfig { it.copy(incomingDirectory = displayPath) }
+        })
+        onSnackbar("Save folder updated to $displayPath")
     }
 }
 

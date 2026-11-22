@@ -1,6 +1,7 @@
 package org.keynear.app.call
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.media.AudioManager
 import android.content.pm.PackageManager
@@ -39,18 +40,21 @@ object CallAlertController {
             PackageManager.PERMISSION_GRANTED
     }
 
+    @SuppressLint("MissingPermission")
     private fun answer(manager: TelecomManager, context: Context): Boolean {
         if (!canControlCalls(context) || !manager.isInCall) return false
         manager.acceptRingingCall()
         return true
     }
 
+    @SuppressLint("MissingPermission")
     private fun decline(manager: TelecomManager, context: Context): Boolean {
         if (!canControlCalls(context) || !manager.isInCall) return false
         manager.endCall()
         return true
     }
 
+    @SuppressLint("MissingPermission")
     private fun mute(context: Context, manager: TelecomManager): Boolean {
         if (!manager.isInCall) return false
         val audio = context.getSystemService(AudioManager::class.java) ?: return false
@@ -61,7 +65,7 @@ object CallAlertController {
 
 class KeynearCallScreeningService : CallScreeningService() {
     override fun onScreenCall(callDetails: Call.Details) {
-        respondCall(
+        respondToCall(
             callDetails,
             CallResponse.Builder().setDisallowCall(true).setRejectCall(true).build(),
         )

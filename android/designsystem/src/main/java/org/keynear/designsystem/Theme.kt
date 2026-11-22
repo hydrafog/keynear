@@ -1,13 +1,16 @@
 package org.keynear.designsystem
 
 import android.app.Activity
+import android.content.Context
 import android.os.Build
+import android.view.View
 import androidx.compose.foundation.IndicationNodeFactory
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.FocusInteraction
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -157,6 +160,38 @@ private class KeynearIndication(private val focusColor: Color) : IndicationNodeF
     override fun equals(other: Any?): Boolean = other is KeynearIndication && other.focusColor == focusColor
 }
 
+private fun dynamicSchemeFor(
+    context: Context,
+    darkTheme: Boolean,
+    dynamicAccent: Boolean,
+): ColorScheme? = if (dynamicAccent && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+} else {
+    null
+}
+
+private fun themedColorScheme(base: ColorScheme, dynamic: ColorScheme?): ColorScheme =
+    if (dynamic != null) {
+        base.copy(
+            primary = dynamic.primary,
+            onPrimary = dynamic.onPrimary,
+            primaryContainer = dynamic.primaryContainer,
+            onPrimaryContainer = dynamic.onPrimaryContainer,
+        )
+    } else {
+        base
+    }
+
+private fun applySystemBars(view: View, darkTheme: Boolean) {
+    val window = (view.context as? Activity)?.window ?: return
+    val controller = WindowCompat.getInsetsController(window, view)
+    controller.isAppearanceLightStatusBars = !darkTheme
+    controller.isAppearanceLightNavigationBars = !darkTheme
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        window.isNavigationBarContrastEnforced = false
+    }
+}
+
 @Composable
 fun KeynearTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -165,35 +200,18 @@ fun KeynearTheme(
 ) {
     val context = LocalContext.current
     val basePalette = if (darkTheme) DarkKeynearPalette else LightKeynearPalette
+    val dynamicScheme = dynamicSchemeFor(context, darkTheme, dynamicAccent)
+    val palette = if (dynamicScheme != null) {
+        basePalette.withMaterialAccent(dynamicScheme)
+    } else {
+        basePalette
+    }
     val baseColorScheme = if (darkTheme) KeynearDarkColorScheme else KeynearLightColorScheme
-    val dynamicScheme = if (dynamicAccent && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-    } else {
-        null
-    }
-    val palette = if (dynamicScheme != null) basePalette.withMaterialAccent(dynamicScheme) else basePalette
-    val colorScheme = if (dynamicScheme != null) {
-        baseColorScheme.copy(
-            primary = dynamicScheme.primary,
-            onPrimary = dynamicScheme.onPrimary,
-            primaryContainer = dynamicScheme.primaryContainer,
-            onPrimaryContainer = dynamicScheme.onPrimaryContainer,
-        )
-    } else {
-        baseColorScheme
-    }
+    val colorScheme = themedColorScheme(baseColorScheme, dynamicScheme)
     val indication = remember(palette) { KeynearIndication(palette.focusRing) }
     val view = LocalView.current
     if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as? Activity)?.window ?: return@SideEffect
-            val controller = WindowCompat.getInsetsController(window, view)
-            controller.isAppearanceLightStatusBars = !darkTheme
-            controller.isAppearanceLightNavigationBars = !darkTheme
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                window.isNavigationBarContrastEnforced = false
-            }
-        }
+        SideEffect { applySystemBars(view, darkTheme) }
     }
 
     CompositionLocalProvider(LocalKeynearPalette provides palette) {

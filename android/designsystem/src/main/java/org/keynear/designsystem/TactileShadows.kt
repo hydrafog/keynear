@@ -205,41 +205,56 @@ internal const val SYMBOLIC_STEM_ALPHA = 0.55f
 internal const val SYMBOLIC_ARM_ALPHA = 0.75f
 internal const val SYMBOLIC_OUTER_ARC_ALPHA = 0.58f
 
-internal fun tactileSurfaceBrush(
+private fun tactileShade(
+    base: Color,
+    target: Color,
+    darkFraction: Float,
+    lightFraction: Float,
+    isDark: Boolean,
+): Color = lerp(base, target, if (isDark) darkFraction else lightFraction)
+
+private fun tactileSurfaceStops(
     tone: TactileTone,
     containerColor: Color,
     palette: KeynearPalette,
-): Brush {
+): List<Color> {
     val alpha = containerColor.alpha
     val base = containerColor.copy(alpha = 1f)
-    val stops = when (tone) {
+    fun shaded(target: Color, dark: Float, light: Float): Color =
+        tactileShade(base, target, dark, light, palette.isDark).copy(alpha = alpha)
+    return when (tone) {
         TactileTone.ACCENT -> listOf(
-            lerp(base, palette.focusRing, 0.36f).copy(alpha = alpha),
+            shaded(palette.focusRing, 0.36f, 0.36f),
             containerColor,
-            lerp(base, palette.onCanvas, if (palette.isDark) 0.24f else 0.28f).copy(alpha = alpha),
+            shaded(palette.onCanvas, 0.24f, 0.28f),
         )
         TactileTone.SURFACE -> listOf(
-            lerp(base, palette.onAccent, if (palette.isDark) 0.05f else 0.65f).copy(alpha = alpha),
+            shaded(palette.onAccent, 0.05f, 0.65f),
             containerColor,
-            lerp(base, palette.canvas, if (palette.isDark) 0.32f else 0.42f).copy(alpha = alpha),
+            shaded(palette.canvas, 0.32f, 0.42f),
         )
         TactileTone.SHEET -> listOf(
-            lerp(base, palette.onAccent, if (palette.isDark) 0.05f else 0.72f).copy(alpha = alpha),
+            shaded(palette.onAccent, 0.05f, 0.72f),
             containerColor,
-            lerp(base, palette.canvas, if (palette.isDark) 0.28f else 0.36f).copy(alpha = alpha),
+            shaded(palette.canvas, 0.28f, 0.36f),
         )
         TactileTone.TONAL -> listOf(
-            lerp(base, palette.onAccent, if (palette.isDark) 0.04f else 0.38f).copy(alpha = alpha),
+            shaded(palette.onAccent, 0.04f, 0.38f),
             containerColor,
         )
         TactileTone.THUMB -> listOf(
             palette.onAccent.copy(alpha = alpha),
-            lerp(base, palette.canvas, 0.22f).copy(alpha = alpha),
+            shaded(palette.canvas, 0.22f, 0.22f),
         )
         TactileTone.INSET, TactileTone.NONE -> listOf(containerColor, containerColor)
     }
-    return Brush.verticalGradient(colors = stops)
 }
+
+internal fun tactileSurfaceBrush(
+    tone: TactileTone,
+    containerColor: Color,
+    palette: KeynearPalette,
+): Brush = Brush.verticalGradient(colors = tactileSurfaceStops(tone, containerColor, palette))
 
 internal fun tactileSurfaceRimColor(tone: TactileTone, palette: KeynearPalette): Color? = when (tone) {
     TactileTone.ACCENT -> palette.focusRing.copy(alpha = if (palette.isDark) 0.28f else 0.40f)

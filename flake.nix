@@ -120,7 +120,7 @@
               protobuf
               pkg-config
               jdk21
-              gradle
+              gradle_9
               androidSdk
               llvmPackages.bintools
             ];
