@@ -5,7 +5,6 @@ import android.graphics.Canvas
 import android.graphics.Paint as AndroidPaint
 import android.graphics.Path as AndroidPath
 import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
@@ -264,54 +263,3 @@ internal fun tactileSurfaceRimColor(tone: TactileTone, palette: KeynearPalette):
     TactileTone.THUMB, TactileTone.INSET, TactileTone.NONE -> null
 }
 
-internal fun KeynearPalette.withMaterialAccent(scheme: ColorScheme): KeynearPalette = copy(
-    canvas = scheme.background,
-    onCanvas = scheme.onBackground,
-    surface = scheme.surface,
-    surfaceTonal = scheme.surfaceVariant,
-    surfaceHover = scheme.surfaceContainerLow,
-    textPrimary = scheme.onSurface,
-    textSecondary = scheme.onSurfaceVariant,
-    textMuted = scheme.outline,
-    accent = scheme.primary,
-    onAccent = scheme.onPrimary,
-    focusRing = scheme.primary,
-    tonalRim = scheme.outlineVariant,
-    accentRim = scheme.primary.copy(alpha = if (isDark) 0.28f else 0.40f),
-    errorTonal = scheme.errorContainer,
-    onDangerTonal = scheme.onErrorContainer,
-    backdrop = scheme.surfaceDim,
-    mapGround = scheme.surfaceContainerLow,
-    mapBlue = scheme.secondaryContainer,
-    mapRing = scheme.primary.copy(alpha = 0.06f),
-    loading = scheme.primary,
-    loadingHover = lerp(scheme.primary, scheme.onPrimary, 0.12f),
-    loadingInk = scheme.primary,
-    loadingTonal = scheme.primaryContainer,
-    onLoadingTonal = scheme.onPrimaryContainer,
-    warningTonal = scheme.tertiaryContainer,
-    onWarningTonal = scheme.onTertiaryContainer,
-    error = scheme.error,
-    errorAction = scheme.errorContainer,
-    onDangerAction = scheme.onErrorContainer,
-    input = scheme.surfaceContainerHighest,
-    switchTrackOff = scheme.surfaceVariant,
-    switchThumb = scheme.surfaceBright,
-    snackbar = scheme.inverseSurface,
-    onSnackbar = scheme.inverseOnSurface,
-    sheetHandle = scheme.outlineVariant,
-    gesturePill = scheme.outline,
-    trackWell = scheme.surfaceContainerHigh,
-    visibilityWell = scheme.surfaceContainerHighest,
-    scrim = scheme.scrim,
-    errorInk = scheme.error,
-    errorActionHover = lerp(scheme.errorContainer, scheme.error, 0.18f),
-    notifSubCard = scheme.surfaceContainerLow,
-    qsOn = scheme.onSurface,
-    qsHover = scheme.surfaceContainerLow,
-    mapContour = scheme.primary.copy(alpha = 0.20f),
-    mapContourFar = scheme.primary.copy(alpha = 0.15f),
-    waveSpoke = scheme.primary.copy(alpha = 0.15f),
-    waveRing = scheme.primary.copy(alpha = 0.28f),
-    waveEcho = scheme.primary.copy(alpha = 0.22f),
-)

@@ -22,6 +22,7 @@ async fn read_exact_timed(stream: &mut UnixStream, buf: &mut [u8]) -> Result<(),
         .await
         .map_err(|_| KeynearError::Transport("IPC read timed out".to_string()))?
         .map_err(KeynearError::Io)
+        .map(|_| ())
 }
 
 async fn write_all_timed(stream: &mut UnixStream, bytes: &[u8]) -> Result<(), KeynearError> {
