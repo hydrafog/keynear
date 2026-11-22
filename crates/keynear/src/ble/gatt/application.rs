@@ -58,6 +58,7 @@ fn pairing_tx_write(
                         }
                         Ok(())
                     }
+                    Ok(GattInboundResult::PeerExportBuffered) => Ok(()),
                     Ok(GattInboundResult::Completed(completed)) => {
                         if let Some(tx) = event_tx {
                             let _ = tx.try_send(PairingUiEvent::Completed {

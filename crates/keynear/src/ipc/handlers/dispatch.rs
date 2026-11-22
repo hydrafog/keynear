@@ -123,6 +123,20 @@ async fn send_files_response(
     }
 }
 
+fn respond_pairing_response(approve: bool, ctx: &IpcDispatchContext) -> IpcResponse {
+    let Some(ref tx) = ctx.pairing_decision_tx else {
+        return error_response(&KeynearError::Bluetooth(
+            "BLE pairing is unavailable".to_string(),
+        ));
+    };
+    match tx.try_send(approve) {
+        Ok(()) => IpcResponse::PairingDecision { approved: approve },
+        Err(err) => error_response(&KeynearError::Bluetooth(format!(
+            "failed to deliver pairing decision: {err}"
+        ))),
+    }
+}
+
 pub(crate) async fn dispatch_ipc_request(req: IpcRequest, ctx: &IpcDispatchContext) -> IpcResponse {
     match req {
         IpcRequest::Status => status_response(ctx).await,
@@ -151,5 +165,6 @@ pub(crate) async fn dispatch_ipc_request(req: IpcRequest, ctx: &IpcDispatchConte
         IpcRequest::SendFiles { device_id, paths } => {
             send_files_response(device_id, paths, ctx).await
         }
+        IpcRequest::RespondPairing { approve } => respond_pairing_response(approve, ctx),
     }
 }

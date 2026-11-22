@@ -28,6 +28,9 @@ pub fn encode_response(response: &IpcResponse) -> Result<Vec<u8>, KeynearError> 
             out.push(RESP_UNPAIRED);
             write_str(&mut out, &clean_id)?;
         }
+        IpcResponse::PairingDecision { approved } => {
+            out.extend_from_slice(&[RESP_PAIRING_DECISION, u8::from(*approved)]);
+        }
         IpcResponse::Error { message } => {
             out.push(RESP_ERROR);
             write_str(&mut out, message)?;
@@ -128,6 +131,9 @@ pub fn decode_response(bytes: &[u8]) -> Result<IpcResponse, KeynearError> {
         RESP_DEVICE => IpcResponse::Device(read_paired_device(&mut cur)?),
         RESP_CONFIG => IpcResponse::Config(read_daemon_config(&mut cur)?),
         RESP_UNPAIRED => read_unpaired(&mut cur)?,
+        RESP_PAIRING_DECISION => IpcResponse::PairingDecision {
+            approved: cur.read_bool()?,
+        },
         RESP_ERROR => {
             let message = cur.read_string()?;
             IpcResponse::Error { message }

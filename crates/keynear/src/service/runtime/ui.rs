@@ -1,18 +1,29 @@
 use std::path::PathBuf;
 
-use keynear_ipc::daemon_socket_path;
+use tokio::net::UnixListener;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
-use crate::ipc::bind_and_serve_ipc;
+use crate::ble::gatt::PairingUiEvent;
+use crate::ipc::server::serve_ipc_listener;
 use crate::ipc::{
     build_tray_state, handle_notification_action, handle_tray_command, IpcDispatchContext,
 };
 use crate::notifications::NotificationsClient;
+use crate::service::pairing::spawn_pairing_event_loop;
 use crate::service::transfer::sync_transfer_notifications;
 use crate::tray::spawn_tray;
 
 use super::{build_shared_ctx, RuntimeOptions, RuntimeServices, RuntimeState};
+
+pub(super) struct IpcUiParams<'a> {
+    pub options: &'a RuntimeOptions,
+    pub state: &'a RuntimeState,
+    pub services: &'a RuntimeServices,
+    pub bound_ipc: Option<(PathBuf, UnixListener)>,
+    pub pairing_decision_tx: Option<mpsc::Sender<bool>>,
+    pub pairing_event_rx: Option<mpsc::Receiver<PairingUiEvent>>,
+}
 
 const TRAY_REFRESH_INTERVAL: std::time::Duration = std::time::Duration::from_secs(1);
 
@@ -101,37 +112,39 @@ fn spawn_sync_loop(
 pub(super) async fn setup_ui_loops(
     options: &RuntimeOptions,
     ctx: &IpcDispatchContext,
+    pairing_event_rx: Option<mpsc::Receiver<PairingUiEvent>>,
     tasks: &mut Vec<JoinHandle<()>>,
 ) -> Option<ksni::Handle<crate::tray::KeynearTray>> {
     let tray_handle = spawn_tray_loop(options, ctx, tasks).await;
     let notif_client = spawn_notification_loop(options, ctx, tasks).await;
+    if let Some(rx) = pairing_event_rx {
+        spawn_pairing_event_loop(rx, notif_client.clone(), ctx.clone(), tasks);
+    }
     spawn_sync_loop(tray_handle.clone(), notif_client, ctx, tasks);
     tray_handle
 }
 
 pub(super) async fn spawn_ipc_and_ui(
-    options: &RuntimeOptions,
-    state: &RuntimeState,
-    services: &RuntimeServices,
+    params: IpcUiParams<'_>,
     tasks: &mut Vec<JoinHandle<()>>,
-) -> Result<
-    (
-        IpcDispatchContext,
-        Option<PathBuf>,
-        Option<ksni::Handle<crate::tray::KeynearTray>>,
-    ),
-    keynear_protocol::KeynearError,
-> {
-    let shared_ctx = build_shared_ctx(options, state, services, services.mdns_degraded());
-    let bound_socket_path = if options.enable_ipc {
-        let sock_path = options
-            .ipc_socket_path
-            .clone()
-            .unwrap_or_else(daemon_socket_path);
-        Some(bind_and_serve_ipc(sock_path, shared_ctx.clone(), tasks).await?)
-    } else {
-        None
-    };
-    let tray_handle = setup_ui_loops(options, &shared_ctx, tasks).await;
-    Ok((shared_ctx, bound_socket_path, tray_handle))
+) -> (
+    IpcDispatchContext,
+    Option<PathBuf>,
+    Option<ksni::Handle<crate::tray::KeynearTray>>,
+) {
+    let IpcUiParams {
+        options,
+        state,
+        services,
+        bound_ipc,
+        pairing_decision_tx,
+        pairing_event_rx,
+    } = params;
+    let shared_ctx = build_shared_ctx(options, state, services, pairing_decision_tx);
+    let bound_socket_path = bound_ipc.map(|(sock_path, listener)| {
+        serve_ipc_listener(listener, shared_ctx.clone(), tasks);
+        sock_path
+    });
+    let tray_handle = setup_ui_loops(options, &shared_ctx, pairing_event_rx, tasks).await;
+    (shared_ctx, bound_socket_path, tray_handle)
 }

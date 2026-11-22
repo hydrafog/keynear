@@ -5,7 +5,9 @@ mod status;
 
 pub(crate) use actions::{handle_notification_action, handle_tray_command};
 pub(crate) use dispatch::dispatch_ipc_request;
-pub(crate) use status::{build_daemon_status, build_tray_state};
+#[cfg(test)]
+pub(crate) use status::build_daemon_status;
+pub(crate) use status::build_tray_state;
 
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -78,6 +80,7 @@ pub(crate) struct IpcDispatchContext {
     pub known_peers: Arc<Mutex<HashSet<String>>>,
     pub mdns_degraded: bool,
     pub mdns: Option<Arc<MdnsDiscovery>>,
+    pub pairing_decision_tx: Option<mpsc::Sender<bool>>,
 }
 
 impl IpcDispatchContext {

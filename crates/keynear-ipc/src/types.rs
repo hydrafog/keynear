@@ -36,6 +36,9 @@ pub enum IpcRequest {
     UnpairDevice {
         device_id: String,
     },
+    RespondPairing {
+        approve: bool,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -61,5 +64,6 @@ pub enum IpcResponse {
     Device(PairedDevice),
     Config(DaemonConfig),
     Unpaired { device_id: String },
+    PairingDecision { approved: bool },
     Error { message: String },
 }

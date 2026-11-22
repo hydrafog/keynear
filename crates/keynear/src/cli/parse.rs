@@ -1,28 +1,13 @@
 use std::path::PathBuf;
 
 use keynear_ipc::validate_transfer_id;
-use keynear_protocol::{
-    default_config_dir, sanitize_device_id, validate_display_name, KeynearError,
-};
-
-fn default_data_dir() -> PathBuf {
-    match std::env::var("KEYNEAR_DATA_DIR") {
-        Ok(raw) if !raw.trim().is_empty() && !raw.contains('\0') => PathBuf::from(raw.trim()),
-        _ => default_config_dir(),
-    }
-}
-
-fn data_scoped_config_path() -> Option<PathBuf> {
-    let dir = default_data_dir();
-    (dir != default_config_dir()).then(|| dir.join("config.toml"))
-}
+use keynear_protocol::{sanitize_device_id, validate_display_name, KeynearError};
 
 use super::send::{parse_legacy_send_flag, parse_send_subcommand};
-use super::{parse_config_path, parse_visibility_arg, CliAction};
-
-fn validation(field: &'static str, message: String) -> KeynearError {
-    KeynearError::Validation { field, message }
-}
+use super::{
+    data_scoped_config_path, parse_config_path, parse_pair_arg, parse_visibility_arg,
+    validation_err as validation, CliAction,
+};
 
 fn next_arg_or_help(
     iter: &mut impl Iterator<Item = String>,
@@ -87,6 +72,19 @@ fn parse_transfer_id_action(
         _ => CliAction::Cancel { transfer_id },
     };
     expect_no_more_args(iter, action)
+}
+
+fn parse_pair_args(iter: &mut impl Iterator<Item = String>) -> Result<CliAction, KeynearError> {
+    let Some(val) = next_arg_or_help(iter, "pairingDecision", "pair requires approve or reject")?
+    else {
+        return Ok(CliAction::Help);
+    };
+    expect_no_more_args(
+        iter,
+        CliAction::RespondPairing {
+            approve: parse_pair_arg(&val)?,
+        },
+    )
 }
 
 fn parse_visibility_value(
@@ -166,6 +164,7 @@ fn parse_subcommand(
         "decline" => parse_transfer_id_action(iter, "decline", "decline"),
         "cancel" => parse_transfer_id_action(iter, "cancel", "cancel"),
         "visibility" => parse_visibility_value(iter, "visibility"),
+        "pair" => parse_pair_args(iter),
         "rename" => parse_rename_args(iter, "rename"),
         "version" => expect_no_more_args(iter, CliAction::Version),
         "help" => Ok(CliAction::Help),

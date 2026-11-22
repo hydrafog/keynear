@@ -22,6 +22,7 @@ pub(crate) const REQ_UPDATE_CONFIG: u8 = 10;
 pub(crate) const REQ_RENAME_DEVICE: u8 = 11;
 pub(crate) const REQ_SET_DEVICE_AUTO_ACCEPT: u8 = 12;
 pub(crate) const REQ_UNPAIR_DEVICE: u8 = 13;
+pub(crate) const REQ_RESPOND_PAIRING: u8 = 14;
 
 pub(crate) const RESP_TRANSFER: u8 = 1;
 pub(crate) const RESP_TRANSFERS: u8 = 2;
@@ -31,3 +32,4 @@ pub(crate) const RESP_DEVICES: u8 = 5;
 pub(crate) const RESP_DEVICE: u8 = 6;
 pub(crate) const RESP_CONFIG: u8 = 7;
 pub(crate) const RESP_UNPAIRED: u8 = 8;
+pub(crate) const RESP_PAIRING_DECISION: u8 = 9;

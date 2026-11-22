@@ -10,9 +10,12 @@ use keynear_core::{
 use keynear_protocol::{v1, KeynearError, VisibilityMode};
 use tokio::sync::{mpsc, watch, Mutex};
 use tokio::task::JoinHandle;
-use tracing::warn;
+use tracing::{info, warn};
 
+use crate::ble::gatt::PairingUiEvent;
 use crate::ble::{BleDriverParams, BlePeerDriver, DEFAULT_CAPABILITY_FLAGS};
+use crate::ipc::IpcDispatchContext;
+use crate::notifications::NotificationsClient;
 
 const DEVICES_POLL_INTERVAL: Duration = Duration::from_millis(200);
 const LAN_ENDPOINT_CHANNEL_SLOTS: usize = 32;
@@ -177,21 +180,16 @@ pub(crate) struct BluezLoopParams<'a> {
     pub(crate) device_store: &'a PairedDeviceStore,
     pub(crate) secret_store: Option<&'a Arc<dyn SecretStore>>,
     pub(crate) quic_node: Option<&'a Arc<OrionQuicNode>>,
+    pub(crate) pairing_decision_rx: Option<mpsc::Receiver<bool>>,
+    pub(crate) pairing_event_tx: Option<mpsc::Sender<PairingUiEvent>>,
 }
 
-fn apply_ble_lan_endpoint(
-    endpoint: &v1::LanEndpoint,
-    store: &PairedDeviceStore,
-    secrets: &dyn SecretStore,
-    node: &OrionQuicNode,
-) {
-    if let Err(err) = apply_discovered_lan_endpoint(endpoint, store, secrets, node) {
-        warn!(
-            event = "ble_lan_endpoint_ignored",
-            peer_device_id = %endpoint.device_id,
-            error = %err
-        );
-    }
+fn log_ble_lan_ignored(peer_device_id: &str, err: &KeynearError) {
+    warn!(
+        event = "ble_lan_endpoint_ignored",
+        peer_device_id = %peer_device_id,
+        error = %err
+    );
 }
 
 async fn forward_ble_lan_endpoints(
@@ -201,54 +199,99 @@ async fn forward_ble_lan_endpoints(
     node: Arc<OrionQuicNode>,
 ) {
     while let Some(endpoint) = ble_lan_rx.recv().await {
-        apply_ble_lan_endpoint(&endpoint, &store, secrets.as_ref(), &node);
-    }
-}
-
-async fn run_bluez_driver(params: BleDriverParams) {
-    if let Err(err) = BlePeerDriver::run_bluez(params).await {
-        warn!(event = "ble_unavailable_degraded", error = %err);
+        if let Err(err) = apply_discovered_lan_endpoint(&endpoint, &store, secrets.as_ref(), &node)
+        {
+            log_ble_lan_ignored(&endpoint.device_id, &err);
+        }
     }
 }
 
 pub(crate) fn spawn_bluez_loops(params: BluezLoopParams<'_>, tasks: &mut Vec<JoinHandle<()>>) {
-    let BluezLoopParams {
-        enable_bluez,
-        local_device_id,
-        display_name,
-        visibility_rx,
-        lan_watch_rx,
-        device_store,
-        secret_store,
-        quic_node,
-    } = params;
-    if !enable_bluez {
+    if !params.enable_bluez {
         return;
     }
-    let Some(secrets) = secret_store else {
+    let Some(secrets) = params.secret_store else {
         return;
     };
     let (ble_lan_tx, ble_lan_rx) = mpsc::channel::<v1::LanEndpoint>(LAN_ENDPOINT_CHANNEL_SLOTS);
-    if let Some(node) = quic_node {
-        let store = device_store.clone();
+    if let Some(node) = params.quic_node {
+        let store = params.device_store.clone();
         let secrets = Arc::clone(secrets);
         let node = Arc::clone(node);
         tasks.push(tokio::spawn(forward_ble_lan_endpoints(
             ble_lan_rx, store, secrets, node,
         )));
     }
-
-    tasks.push(tokio::spawn(run_bluez_driver(BleDriverParams {
-        local_device_id: local_device_id.to_string(),
-        display_name: display_name.to_string(),
+    let driver = BleDriverParams {
+        local_device_id: params.local_device_id.to_string(),
+        display_name: params.display_name.to_string(),
         capability_flags: DEFAULT_CAPABILITY_FLAGS,
-        visibility_rx: visibility_rx.clone(),
+        visibility_rx: params.visibility_rx.clone(),
         secret_store: Arc::clone(secrets),
-        device_store: device_store.clone(),
+        device_store: params.device_store.clone(),
         discovered_tx: None,
-        pairing_decision_rx: None,
-        pairing_event_tx: None,
-        local_lan_endpoint_rx: Some(lan_watch_rx),
+        pairing_decision_rx: params.pairing_decision_rx,
+        pairing_event_tx: params.pairing_event_tx,
+        local_lan_endpoint_rx: Some(params.lan_watch_rx),
         lan_endpoint_tx: Some(ble_lan_tx),
-    })));
+    };
+    tasks.push(tokio::spawn(async move {
+        if let Err(err) = BlePeerDriver::run_bluez(driver).await {
+            warn!(event = "ble_unavailable_degraded", error = %err);
+        }
+    }));
+}
+
+async fn on_pairing_completed(
+    peer_device_id: &str,
+    notif_client: Option<&NotificationsClient>,
+    ctx: &IpcDispatchContext,
+) {
+    info!(event = "pairing_completed", peer_device_id = %peer_device_id);
+    let sync = sync_paired_devices_and_policies(
+        &ctx.device_store,
+        ctx.secret_store.as_deref(),
+        ctx.quic_node.as_deref(),
+        &ctx.transfer_engine,
+        &ctx.known_peers,
+    )
+    .await;
+    if let Err(err) = sync {
+        warn!(event = "pairing_post_sync_failed", error = %err);
+    }
+    ctx.refresh_notify.notify_waiters();
+    if let Some(client) = notif_client {
+        client.notify_pairing_completed(peer_device_id).await;
+    }
+}
+
+async fn handle_pairing_event(
+    event: PairingUiEvent,
+    notif_client: Option<&NotificationsClient>,
+    ctx: &IpcDispatchContext,
+) {
+    match event {
+        PairingUiEvent::VerificationReady(code) => {
+            info!(event = "pairing_verification_ready", code = %code);
+            if let Some(client) = notif_client {
+                client.notify_pairing_verification(&code).await;
+            }
+        }
+        PairingUiEvent::Completed { peer_device_id } => {
+            on_pairing_completed(&peer_device_id, notif_client, ctx).await;
+        }
+    }
+}
+
+pub(crate) fn spawn_pairing_event_loop(
+    mut pairing_event_rx: mpsc::Receiver<PairingUiEvent>,
+    notif_client: Option<NotificationsClient>,
+    ctx: IpcDispatchContext,
+    tasks: &mut Vec<JoinHandle<()>>,
+) {
+    tasks.push(tokio::spawn(async move {
+        while let Some(event) = pairing_event_rx.recv().await {
+            handle_pairing_event(event, notif_client.as_ref(), &ctx).await;
+        }
+    }));
 }

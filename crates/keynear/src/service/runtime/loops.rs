@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
 use keynear_core::{PairedDeviceStore, SecretStore};
+use tokio::sync::mpsc;
 use tokio::sync::watch::Sender;
 use tokio::task::JoinHandle;
 
+use crate::ble::gatt::PairingUiEvent;
 use crate::service::clipboard::{spawn_clipboard_loops, ClipboardLoopParams};
 use crate::service::pairing::{
     spawn_bluez_loops, spawn_devices_poll_loop, spawn_mdns_browse_loop, BluezLoopParams,
@@ -18,6 +20,8 @@ pub(super) struct LoopParams<'a> {
     pub secret_store: Option<&'a Arc<dyn SecretStore>>,
     pub state: &'a RuntimeState,
     pub services: &'a mut RuntimeServices,
+    pub pairing_decision_rx: Option<mpsc::Receiver<bool>>,
+    pub pairing_event_tx: Option<mpsc::Sender<PairingUiEvent>>,
 }
 
 struct LoopCtx<'a> {
@@ -26,6 +30,8 @@ struct LoopCtx<'a> {
     secret_store: Option<&'a Arc<dyn SecretStore>>,
     state: &'a RuntimeState,
     services: &'a mut RuntimeServices,
+    pairing_decision_rx: Option<mpsc::Receiver<bool>>,
+    pairing_event_tx: Option<mpsc::Sender<PairingUiEvent>>,
 }
 
 fn spawn_network_loops(ctx: &LoopCtx<'_>, tasks: &mut Vec<JoinHandle<()>>) {
@@ -96,6 +102,8 @@ fn spawn_clipboard_and_bluez(
             device_store: ctx.device_store,
             secret_store: ctx.secret_store,
             quic_node: services.quic_node.as_ref(),
+            pairing_decision_rx: ctx.pairing_decision_rx.take(),
+            pairing_event_tx: ctx.pairing_event_tx.take(),
         },
         tasks,
     );
@@ -112,6 +120,8 @@ pub(super) fn spawn_all_loops(
         secret_store,
         state,
         services,
+        pairing_decision_rx,
+        pairing_event_tx,
     } = params;
     let mut ctx = LoopCtx {
         options,
@@ -119,6 +129,8 @@ pub(super) fn spawn_all_loops(
         secret_store,
         state,
         services,
+        pairing_decision_rx,
+        pairing_event_tx,
     };
     spawn_network_loops(&ctx, tasks);
     spawn_clipboard_and_bluez(&mut ctx, tasks)

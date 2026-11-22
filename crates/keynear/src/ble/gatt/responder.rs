@@ -15,6 +15,7 @@ pub struct GattPairingResponder {
     device_store: PairedDeviceStore,
     session: Option<NoisePairingSession>,
     local_export: Option<Vec<u8>>,
+    pending_peer_export: Option<(Vec<u8>, Option<String>)>,
     peer_ble_address: Option<String>,
 }
 
@@ -30,8 +31,15 @@ impl GattPairingResponder {
             device_store,
             session: None,
             local_export: None,
+            pending_peer_export: None,
             peer_ble_address: None,
         }
+    }
+
+    fn clear_session(&mut self) {
+        self.session = None;
+        self.local_export = None;
+        self.pending_peer_export = None;
     }
 
     pub fn verification_code(&self) -> Option<String> {
@@ -46,6 +54,7 @@ impl GattPairingResponder {
         let session = NoisePairingSession::new_responder(&priv_bytes, self.local_metadata.clone())?;
         self.session = Some(session);
         self.local_export = None;
+        self.pending_peer_export = None;
         self.peer_ble_address = peer_address;
         Ok(())
     }
@@ -118,8 +127,7 @@ impl GattPairingResponder {
             device,
             &secrets,
         )?;
-        self.session = None;
-        self.local_export = None;
+        self.clear_session();
         Ok(GattInboundResult::Completed(completed))
     }
 
@@ -153,15 +161,17 @@ impl GattPairingResponder {
             PairingState::HandshakeM1 | PairingState::HandshakeM3 => {
                 self.handle_handshake_frame(frame)
             }
+            PairingState::AwaitingConfirmation => {
+                self.pending_peer_export = Some((frame.to_vec(), peer_address));
+                Ok(GattInboundResult::PeerExportBuffered)
+            }
             PairingState::Approved => self.handle_approved_frame(frame, peer_address),
             PairingState::Expired => {
-                self.session = None;
-                self.local_export = None;
+                self.clear_session();
                 Err(KeynearError::PairingExpired)
             }
             PairingState::Rejected => {
-                self.session = None;
-                self.local_export = None;
+                self.clear_session();
                 Err(KeynearError::PairingRejected)
             }
             _ => Err(KeynearError::Validation {
@@ -184,7 +194,18 @@ impl GattPairingResponder {
         Ok(export)
     }
 
+    pub fn complete_pending_export(&mut self) -> Result<Option<PairingCompleted>, KeynearError> {
+        let Some((frame, peer_address)) = self.pending_peer_export.take() else {
+            return Ok(None);
+        };
+        match self.handle_approved_frame(&frame, peer_address)? {
+            GattInboundResult::Completed(completed) => Ok(Some(completed)),
+            _ => Ok(None),
+        }
+    }
+
     pub fn reject(&mut self) -> Result<(), KeynearError> {
+        self.pending_peer_export = None;
         if let Some(mut session) = self.session.take() {
             let res = session.reject();
             self.local_export = None;

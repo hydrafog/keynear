@@ -40,6 +40,9 @@ pub fn cli_action_to_ipc_request(action: &super::CliAction) -> Option<IpcRequest
         CliAction::Status => Some(IpcRequest::Status),
         CliAction::Devices => Some(IpcRequest::ListDevices),
         CliAction::SetVisibility { mode } => Some(IpcRequest::SetVisibility { mode: *mode }),
+        CliAction::RespondPairing { approve } => {
+            Some(IpcRequest::RespondPairing { approve: *approve })
+        }
         CliAction::RenameDevice {
             device_id,
             display_name,
@@ -166,6 +169,12 @@ pub fn run_ipc_command(socket_path: &Path, request: &IpcRequest) -> Result<Strin
         IpcResponse::Device(device) => Ok(format_device_summary(&device)),
         IpcResponse::Config(config) => Ok(format_config_summary(&config)),
         IpcResponse::Unpaired { device_id } => Ok(format!("unpaired\t{device_id}")),
+        IpcResponse::PairingDecision { approved } => Ok(if approved {
+            "pairing_decision=approved"
+        } else {
+            "pairing_decision=rejected"
+        }
+        .to_string()),
         IpcResponse::Error { message } => Err(KeynearError::Transfer(message)),
     }
 }

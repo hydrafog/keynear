@@ -47,9 +47,11 @@ fn build_otp_rig() -> OtpRig {
     let (visibility_tx, visibility_rx) = watch::channel(initial_config.visibility_mode);
     let (config_watch_tx, _config_watch_rx) = watch::channel(initial_config.clone());
     let clipboard_engine = Arc::new(ClipboardEngine::new(ClipboardPolicy::from(&initial_config)));
-    let clipboard_handle = ClipboardMonitorHandle::headless();
-    let latest_otp = Arc::new(Mutex::new(None));
-    let refresh_notify = Arc::new(Notify::new());
+    let (clipboard_handle, latest_otp, refresh_notify) = (
+        ClipboardMonitorHandle::headless(),
+        Arc::new(Mutex::new(None)),
+        Arc::new(Notify::new()),
+    );
 
     let ctx = IpcDispatchContext {
         local_device_id: "host-linux".to_string(),
@@ -72,6 +74,7 @@ fn build_otp_rig() -> OtpRig {
         known_peers: Arc::new(Mutex::new(HashSet::new())),
         mdns_degraded: false,
         mdns: None,
+        pairing_decision_tx: None,
     };
 
     OtpRig {

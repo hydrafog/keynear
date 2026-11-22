@@ -41,6 +41,9 @@ pub fn encode_request(request: &IpcRequest) -> Result<Vec<u8>, KeynearError> {
             out.push(REQ_UNPAIR_DEVICE);
             write_str(&mut out, &clean_id)?;
         }
+        IpcRequest::RespondPairing { approve } => {
+            out.extend_from_slice(&[REQ_RESPOND_PAIRING, u8::from(*approve)]);
+        }
     }
 
     check_frame_size(&out)?;
@@ -134,38 +137,43 @@ pub fn decode_request(bytes: &[u8]) -> Result<IpcRequest, KeynearError> {
         )));
     }
     let kind = cur.read_u8()?;
-    let request = match kind {
-        REQ_SEND_FILES => read_send_files(&mut cur)?,
-        REQ_ACCEPT_TRANSFER => read_transfer_id_request(&mut cur, |id| {
-            IpcRequest::AcceptTransfer { transfer_id: id }
-        })?,
-        REQ_DECLINE_TRANSFER => read_transfer_id_request(&mut cur, |id| {
-            IpcRequest::DeclineTransfer { transfer_id: id }
-        })?,
-        REQ_CANCEL_TRANSFER => read_transfer_id_request(&mut cur, |id| {
-            IpcRequest::CancelTransfer { transfer_id: id }
-        })?,
-        REQ_LIST_TRANSFERS => IpcRequest::ListTransfers,
-        REQ_STATUS => IpcRequest::Status,
-        REQ_LIST_DEVICES => IpcRequest::ListDevices,
-        REQ_SET_VISIBILITY => IpcRequest::SetVisibility {
-            mode: decode_visibility(cur.read_u8()?)?,
-        },
-        REQ_GET_CONFIG => IpcRequest::GetConfig,
-        REQ_UPDATE_CONFIG => IpcRequest::UpdateConfig {
-            config: read_daemon_config(&mut cur)?,
-        },
-        REQ_RENAME_DEVICE => read_rename_request(&mut cur)?,
-        REQ_SET_DEVICE_AUTO_ACCEPT => read_auto_accept_request(&mut cur)?,
-        REQ_UNPAIR_DEVICE => read_unpair_request(&mut cur)?,
-        other => {
-            return Err(KeynearError::Protocol(format!(
-                "unknown IPC request kind {other}"
-            )));
-        }
-    };
+    let request = decode_request_body(kind, &mut cur)?;
     cur.ensure_exhausted()?;
     Ok(request)
+}
+
+fn decode_request_body(kind: u8, cur: &mut Cursor<'_>) -> Result<IpcRequest, KeynearError> {
+    match kind {
+        REQ_SEND_FILES => read_send_files(cur),
+        REQ_ACCEPT_TRANSFER => {
+            read_transfer_id_request(cur, |id| IpcRequest::AcceptTransfer { transfer_id: id })
+        }
+        REQ_DECLINE_TRANSFER => {
+            read_transfer_id_request(cur, |id| IpcRequest::DeclineTransfer { transfer_id: id })
+        }
+        REQ_CANCEL_TRANSFER => {
+            read_transfer_id_request(cur, |id| IpcRequest::CancelTransfer { transfer_id: id })
+        }
+        REQ_LIST_TRANSFERS => Ok(IpcRequest::ListTransfers),
+        REQ_STATUS => Ok(IpcRequest::Status),
+        REQ_LIST_DEVICES => Ok(IpcRequest::ListDevices),
+        REQ_SET_VISIBILITY => Ok(IpcRequest::SetVisibility {
+            mode: decode_visibility(cur.read_u8()?)?,
+        }),
+        REQ_GET_CONFIG => Ok(IpcRequest::GetConfig),
+        REQ_UPDATE_CONFIG => Ok(IpcRequest::UpdateConfig {
+            config: read_daemon_config(cur)?,
+        }),
+        REQ_RENAME_DEVICE => read_rename_request(cur),
+        REQ_SET_DEVICE_AUTO_ACCEPT => read_auto_accept_request(cur),
+        REQ_UNPAIR_DEVICE => read_unpair_request(cur),
+        REQ_RESPOND_PAIRING => Ok(IpcRequest::RespondPairing {
+            approve: cur.read_bool()?,
+        }),
+        other => Err(KeynearError::Protocol(format!(
+            "unknown IPC request kind {other}"
+        ))),
+    }
 }
 
 fn read_send_files(cur: &mut Cursor<'_>) -> Result<IpcRequest, KeynearError> {

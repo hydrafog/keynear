@@ -32,16 +32,21 @@ async fn write_all_timed(stream: &mut UnixStream, bytes: &[u8]) -> Result<(), Ke
         .map_err(KeynearError::Io)
 }
 
-pub(crate) async fn bind_and_serve_ipc(
+pub(crate) fn bind_ipc_listener(
     sock_path: PathBuf,
-    ctx: IpcDispatchContext,
-    tasks: &mut Vec<JoinHandle<()>>,
-) -> Result<PathBuf, KeynearError> {
+) -> Result<(PathBuf, UnixListener), KeynearError> {
     prepare_daemon_socket_dir(&sock_path)?;
     let listener = UnixListener::bind(&sock_path)?;
     set_daemon_socket_permissions(&sock_path)?;
     info!(event = "ipc_listening", socket = %sock_path.display());
+    Ok((sock_path, listener))
+}
 
+pub(crate) fn serve_ipc_listener(
+    listener: UnixListener,
+    ctx: IpcDispatchContext,
+    tasks: &mut Vec<JoinHandle<()>>,
+) {
     tasks.push(tokio::spawn(async move {
         loop {
             match listener.accept().await {
@@ -60,17 +65,41 @@ pub(crate) async fn bind_and_serve_ipc(
             }
         }
     }));
+}
 
-    Ok(sock_path)
+#[allow(dead_code)]
+pub(crate) async fn bind_and_serve_ipc(
+    sock_path: PathBuf,
+    ctx: IpcDispatchContext,
+    tasks: &mut Vec<JoinHandle<()>>,
+) -> Result<PathBuf, KeynearError> {
+    let (bound_path, listener) = bind_ipc_listener(sock_path)?;
+    serve_ipc_listener(listener, ctx, tasks);
+    Ok(bound_path)
+}
+
+async fn read_frame_len(stream: &mut UnixStream) -> Result<Option<usize>, KeynearError> {
+    let mut len_buf = [0u8; 4];
+    let first = timeout(READ_TIMEOUT, stream.read(&mut len_buf))
+        .await
+        .map_err(|_| KeynearError::Transport("IPC read timed out".to_string()))?
+        .map_err(KeynearError::Io)?;
+    if first == 0 {
+        return Ok(None);
+    }
+    if first < 4 {
+        read_exact_timed(stream, &mut len_buf[first..]).await?;
+    }
+    Ok(Some(u32::from_be_bytes(len_buf) as usize))
 }
 
 pub(crate) async fn handle_ipc_connection(
     mut stream: UnixStream,
     ctx: IpcDispatchContext,
 ) -> Result<(), KeynearError> {
-    let mut len_buf = [0u8; 4];
-    read_exact_timed(&mut stream, &mut len_buf).await?;
-    let frame_len = u32::from_be_bytes(len_buf) as usize;
+    let Some(frame_len) = read_frame_len(&mut stream).await? else {
+        return Ok(());
+    };
     if frame_len == 0 {
         return Err(KeynearError::Protocol(
             "IPC request frame length must be positive".to_string(),

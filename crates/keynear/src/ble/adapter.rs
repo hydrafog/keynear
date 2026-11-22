@@ -42,6 +42,7 @@ pub struct BlePeerDriver;
 struct GattSetup {
     responder: Arc<Mutex<GattPairingResponder>>,
     notifier_slot: Arc<Mutex<Option<CharacteristicNotifier>>>,
+    pairing_event_tx: Option<mpsc::Sender<PairingUiEvent>>,
     ble_addr_map: Arc<Mutex<BTreeMap<String, String>>>,
 }
 
@@ -110,7 +111,8 @@ impl BlePeerDriver {
             .await
             .map_err(|err| KeynearError::Bluetooth(format!("le discovery start failed: {err}")))?;
 
-        let adv_handle = start_advertising(&adapter, &params).await?;
+        let initial_mode = *params.visibility_rx.borrow();
+        let adv_handle = register_advertisement(&adapter, initial_mode, &params).await?;
         EventLoopState {
             adapter: &adapter,
             params: &mut params,
@@ -168,6 +170,7 @@ impl GattSetup {
         Self {
             responder,
             notifier_slot: Arc::new(Mutex::new(None)),
+            pairing_event_tx: params.pairing_event_tx.clone(),
             ble_addr_map: Arc::new(Mutex::new(BTreeMap::new())),
         }
     }
@@ -194,14 +197,14 @@ async fn register_gatt(
         .map_err(|err| KeynearError::Bluetooth(format!("gatt registration failed: {err}")))
 }
 
-async fn start_advertising(
+async fn register_advertisement(
     adapter: &Adapter,
+    mode: VisibilityMode,
     params: &BleDriverParams,
 ) -> Result<Option<AdvertisementHandle>, KeynearError> {
-    let visibility = *params.visibility_rx.borrow();
     register_visibility_advertisement(
         adapter,
-        visibility,
+        mode,
         &params.local_device_id,
         &params.display_name,
         params.capability_flags,
@@ -218,29 +221,18 @@ async fn reapply_advertisement(
 ) -> Result<(), KeynearError> {
     drop(handle.take());
     let mode = *params.visibility_rx.borrow_and_update();
-    *handle = register_visibility_advertisement(
-        adapter,
-        mode,
-        &params.local_device_id,
-        &params.display_name,
-        params.capability_flags,
-        params.secret_store.as_ref(),
-        &params.device_store,
-    )
-    .await?;
+    *handle = register_advertisement(adapter, mode, params).await?;
     Ok(())
 }
 
 async fn handle_pairing_decision(setup: &GattSetup, approved: bool) {
-    if approved {
-        if let Ok(frame) = setup.responder.lock().await.approve() {
-            if let Some(notifier) = setup.notifier_slot.lock().await.as_mut() {
-                let _ = notifier.notify(frame).await;
-            }
-        }
-    } else {
-        let _ = setup.responder.lock().await.reject();
-    }
+    super::gatt::apply_pairing_decision(
+        &setup.responder,
+        &setup.notifier_slot,
+        setup.pairing_event_tx.as_ref(),
+        approved,
+    )
+    .await;
 }
 
 async fn handle_device_event(

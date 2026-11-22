@@ -209,13 +209,33 @@ pub(crate) async fn handle_tray_command(cmd: TrayCommand, ctx: &IpcDispatchConte
     handle_launch_tray(&cmd, ctx).await;
 }
 
-fn log_pairing_notification(action: NotificationAction) -> bool {
+fn log_pairing_channel_unavailable(approve: bool) {
+    warn!(event = "pairing_decision_channel_unavailable", approve);
+}
+
+fn log_pairing_forward_failed(approve: bool, err: impl std::fmt::Display) {
+    warn!(event = "pairing_decision_forward_failed", approve, error = %err);
+}
+
+fn forward_pairing_decision(approve: bool, ctx: &IpcDispatchContext) {
+    let Some(ref tx) = ctx.pairing_decision_tx else {
+        log_pairing_channel_unavailable(approve);
+        return;
+    };
+    if let Err(err) = tx.try_send(approve) {
+        log_pairing_forward_failed(approve, err);
+    }
+}
+
+fn handle_pairing_notification(action: NotificationAction, ctx: &IpcDispatchContext) -> bool {
     match action {
         NotificationAction::ApprovePairing(peer_id) => {
             log_pairing_approve(&peer_id);
+            forward_pairing_decision(true, ctx);
         }
         NotificationAction::RejectPairing(peer_id) => {
             log_pairing_reject(&peer_id);
+            forward_pairing_decision(false, ctx);
         }
         _ => return false,
     }
@@ -261,7 +281,7 @@ pub(crate) async fn handle_notification_action(
             emit_call_action(id, v1::CallActionKind::CallActionMute, ctx)
         }
         other => {
-            log_pairing_notification(other);
+            handle_pairing_notification(other, ctx);
         }
     }
 }

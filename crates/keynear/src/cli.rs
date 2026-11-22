@@ -10,7 +10,23 @@ pub use parse::parse_cli_args;
 
 use std::path::PathBuf;
 
-use keynear_protocol::{default_config_path, DaemonConfig, KeynearError, VisibilityMode};
+use keynear_protocol::{
+    default_config_dir, default_config_path, DaemonConfig, KeynearError, VisibilityMode,
+};
+
+pub(super) fn data_scoped_config_path() -> Option<PathBuf> {
+    let raw = std::env::var("KEYNEAR_DATA_DIR").ok()?;
+    let trimmed = raw.trim();
+    if trimmed.is_empty() || trimmed.contains('\0') {
+        return None;
+    }
+    let dir = PathBuf::from(trimmed);
+    (dir != default_config_dir()).then(|| dir.join("config.toml"))
+}
+
+pub(super) fn validation_err(field: &'static str, message: String) -> KeynearError {
+    KeynearError::Validation { field, message }
+}
 
 pub(super) fn parse_config_path(
     iter: &mut impl Iterator<Item = String>,
@@ -42,6 +58,17 @@ pub(super) fn parse_visibility_arg(raw: &str) -> Result<VisibilityMode, KeynearE
     }
 }
 
+pub(super) fn parse_pair_arg(raw: &str) -> Result<bool, KeynearError> {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "approve" => Ok(true),
+        "reject" => Ok(false),
+        _ => Err(KeynearError::Validation {
+            field: "pairingDecision",
+            message: format!("unknown pairing decision '{raw}' (expected approve or reject)"),
+        }),
+    }
+}
+
 pub fn load_daemon_config(explicit_path: Option<&PathBuf>) -> Result<DaemonConfig, KeynearError> {
     match explicit_path {
         Some(path) => {
@@ -69,6 +96,7 @@ pub const CLI_USAGE_TEXT: &str = "Usage: keynear [daemon] [--config <path>]
        keynear decline <transfer_id>
        keynear cancel <transfer_id>
        keynear visibility <hidden|paired|everyone>
+       keynear pair <approve|reject>
        keynear rename <device_id> <display_name>
        keynear version | help
 
@@ -85,6 +113,7 @@ Subcommands:
   decline <transfer_id>                    Decline an incoming transfer awaiting consent
   cancel <transfer_id>                     Cancel an active or pending transfer
   visibility <hidden|paired|everyone>      Set daemon visibility mode
+  pair <approve|reject>                    Approve or reject a pending BLE pairing request
   rename <device_id> <name>                Rename a paired device
   version, --version, -V                   Print version information
   help, --help, -h                         Print this help message";
@@ -121,6 +150,9 @@ pub enum CliAction {
     Devices,
     SetVisibility {
         mode: VisibilityMode,
+    },
+    RespondPairing {
+        approve: bool,
     },
     RenameDevice {
         device_id: String,

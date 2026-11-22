@@ -103,6 +103,23 @@ fn cli_subcommands_status_devices_transfers_visibility_and_rename_parsed() {
 }
 
 #[test]
+fn cli_pair_subcommands_parsed() {
+    assert_eq!(
+        parse_cli_args(["pair", "approve"]).unwrap(),
+        CliAction::RespondPairing { approve: true }
+    );
+    assert_eq!(
+        parse_cli_args(["pair", "reject"]).unwrap(),
+        CliAction::RespondPairing { approve: false }
+    );
+    assert_eq!(parse_cli_args(["pair", "--help"]).unwrap(), CliAction::Help);
+    assert_eq!(
+        cli_action_to_ipc_request(&CliAction::RespondPairing { approve: true }),
+        Some(IpcRequest::RespondPairing { approve: true })
+    );
+}
+
+#[test]
 fn cli_send_subcommands_and_legacy_flags_parsed() {
     assert_eq!(
         parse_cli_args(["send", "--picker", "--device", "pixel-9"]).unwrap(),
@@ -156,6 +173,7 @@ fn cli_rejects_invalid_and_conflicting_arguments() {
     expect_validation_field(&["--config"], "config");
     expect_validation_field(&["--bogus"], "args");
     expect_validation_field(&["visibility", "public"], "visibilityMode");
+    expect_validation_field(&["pair", "maybe"], "pairingDecision");
 }
 
 #[test]

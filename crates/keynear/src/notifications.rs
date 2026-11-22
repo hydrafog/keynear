@@ -135,15 +135,6 @@ pub struct NotificationsClient {
     proxy: zbus::Proxy<'static>,
 }
 
-fn parse_action_message(msg: &zbus::Message) -> Option<NotificationAction> {
-    let (_nid, key): (u32, String) = msg.body().deserialize().ok()?;
-    parse_notification_action(&key)
-}
-
-fn log_connected() {
-    info!(event = "notifications_connected");
-}
-
 async fn connect_bus() -> Option<zbus::Connection> {
     zbus::Connection::session()
         .await
@@ -169,8 +160,10 @@ async fn receive_actions(proxy: &zbus::Proxy<'static>) -> Option<ActionStream> {
 
 async fn run_action_listener(mut stream: ActionStream, tx: UnboundedSender<NotificationAction>) {
     while let Some(msg) = stream.next().await {
-        if let Some(action) = parse_action_message(&msg) {
-            let _ = tx.send(action);
+        if let Ok((_nid, key)) = msg.body().deserialize::<(u32, String)>() {
+            if let Some(action) = parse_notification_action(&key) {
+                let _ = tx.send(action);
+            }
         }
     }
 }
@@ -183,7 +176,7 @@ impl NotificationsClient {
         let proxy = create_proxy(&conn).await?;
         let actions_stream = receive_actions(&proxy).await?;
 
-        log_connected();
+        info!(event = "notifications_connected");
         let handle = tokio::spawn(run_action_listener(actions_stream, action_tx));
 
         Some((Self { proxy }, handle))
@@ -272,15 +265,23 @@ impl NotificationsClient {
 
     #[allow(dead_code)]
     pub async fn notify_call_alert(&self, caller: &str, replaces_id: u32) -> Option<u32> {
-        let (summary, body, actions) = call_alert_content(caller);
-        self.notify(
-            replaces_id,
-            "call-start-symbolic",
-            &summary,
-            &body,
-            &actions,
-            2,
-        )
-        .await
+        let (s, b, a) = call_alert_content(caller);
+        self.notify(replaces_id, "call-start-symbolic", &s, &b, &a, 2)
+            .await
+    }
+
+    pub async fn notify_pairing_verification(&self, code: &str) -> Option<u32> {
+        let b = format!("Verify code {code} matches your phone, then approve within 120s.");
+        let a = ["pairing:active:approve", "Approve", "pairing:active:reject", "Reject"]
+            .map(String::from);
+        let title = "Keynear pairing request";
+        self.notify(0, "bluetooth-active-symbolic", title, &b, &a, 2)
+            .await
+    }
+
+    pub async fn notify_pairing_completed(&self, peer_device_id: &str) -> Option<u32> {
+        let b = format!("Paired with {peer_device_id}.");
+        self.notify(0, "emblem-default", "Keynear device paired", &b, &[], 1)
+            .await
     }
 }

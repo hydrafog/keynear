@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use tokio::sync::mpsc;
+
 use crate::ipc::IpcDispatchContext;
 
 use super::{RuntimeOptions, RuntimeServices, RuntimeState};
@@ -8,7 +10,7 @@ pub(crate) fn build_shared_ctx(
     options: &RuntimeOptions,
     state: &RuntimeState,
     services: &RuntimeServices,
-    mdns_degraded: bool,
+    pairing_decision_tx: Option<mpsc::Sender<bool>>,
 ) -> IpcDispatchContext {
     IpcDispatchContext {
         local_device_id: options.local_device_id.clone(),
@@ -29,7 +31,8 @@ pub(crate) fn build_shared_ctx(
         clipboard_handle: services.clipboard_handle.clone(),
         latest_otp: Arc::clone(&services.latest_otp),
         known_peers: Arc::clone(&services.known_peers),
-        mdns_degraded,
+        mdns_degraded: services.mdns_degraded(),
         mdns: services.mdns.clone(),
+        pairing_decision_tx,
     }
 }

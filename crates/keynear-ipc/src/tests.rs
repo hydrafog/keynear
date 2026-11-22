@@ -78,6 +78,8 @@ fn request_and_response_roundtrip_all_variants() {
         IpcRequest::UnpairDevice {
             device_id: "pixel-9".to_string(),
         },
+        IpcRequest::RespondPairing { approve: true },
+        IpcRequest::RespondPairing { approve: false },
     ];
     for req in requests {
         let encoded = encode_request(&req).expect("encode request");
@@ -119,6 +121,8 @@ fn request_and_response_roundtrip_all_variants() {
         IpcResponse::Unpaired {
             device_id: "pixel-9".to_string(),
         },
+        IpcResponse::PairingDecision { approved: true },
+        IpcResponse::PairingDecision { approved: false },
         IpcResponse::Error {
             message: "transfer not found".to_string(),
         },
