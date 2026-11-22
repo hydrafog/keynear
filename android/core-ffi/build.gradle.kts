@@ -16,7 +16,6 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     id("com.android.library")
-    id("org.jetbrains.kotlin.android")
 }
 
 abstract class GenerateUniffiBindingsTask @Inject constructor(
@@ -109,7 +108,7 @@ val workspaceRoot = rootProject.projectDir.parentFile
 val generatedUniffiDir = layout.buildDirectory.dir("generated/source/uniffi")
 val jniLibsDir = layout.projectDirectory.dir("src/main/jniLibs")
 
-val generateUniffiBindings by tasks.registering(GenerateUniffiBindingsTask::class) {
+val generateUniffiBindings = tasks.register<GenerateUniffiBindingsTask>("generateUniffiBindings") {
     val arm64Lib = jniLibsDir.file("arm64-v8a/libkeynear_core.so").asFile
     val x86Lib = jniLibsDir.file("x86_64/libkeynear_core.so").asFile
     jniLibFiles.from(arm64Lib, x86Lib)
@@ -150,7 +149,7 @@ android {
 
     sourceSets {
         getByName("main") {
-            java.srcDir(generatedUniffiDir)
+            kotlin.directories.add(layout.buildDirectory.dir("generated/source/uniffi").get().asFile.absolutePath)
         }
     }
 }
