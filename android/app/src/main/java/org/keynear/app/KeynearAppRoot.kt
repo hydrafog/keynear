@@ -31,8 +31,9 @@ import org.keynear.app.ui.model.VisibilityState
 import org.keynear.app.ui.model.evaluatePermissionsChecklist
 import org.keynear.app.otp.SmsUserConsentManager
 import org.keynear.app.service.KeynearForegroundService
+import org.keynear.app.data.AndroidFolderExporter
+import org.keynear.app.data.SafFolderHelper
 import org.keynear.app.ui.navigation.buildKeynearActions
-import org.keynear.app.ui.navigation.enumerateTreeChildUris
 import org.keynear.app.ui.navigation.snapshotFromState
 import org.keynear.app.ui.navigation.KeynearSubScreen
 import org.keynear.app.ui.navigation.KeynearTab
@@ -223,18 +224,25 @@ private fun PickerContext.stagePickedFolder(treeUri: Uri?) {
         )
     }
     scope.launch {
-        val (folderName, childUris) = withContext(Dispatchers.IO) {
-            enumerateTreeChildUris(context, treeUri)
+        val summary = withContext(Dispatchers.IO) {
+            SafFolderHelper.inspectFolderTree(context, treeUri)
         }
         onUiState(withContext(Dispatchers.IO) {
-            bridge.stageFolderUri(treeUri.toString(), folderName, childUris)
+            bridge.stageFolderUri(treeUri.toString(), summary.displayName, summary.totalBytes)
         })
-        onSnackbar(folderStagedMessage(folderName, childUris.size))
+        onSnackbar(folderStagedMessage(summary.displayName, summary.fileCount))
     }
 }
 
 private fun PickerContext.setSaveFolder(treeUri: Uri?) {
     if (treeUri == null) return
+    runCatching {
+        context.contentResolver.takePersistableUriPermission(
+            treeUri,
+            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+        )
+    }
+    AndroidFolderExporter.saveFolderTreeUriPref(context, treeUri)
     val displayPath = displayPathForTree(treeUri)
     scope.launch {
         onUiState(withContext(Dispatchers.IO) {
@@ -247,8 +255,8 @@ private fun PickerContext.setSaveFolder(treeUri: Uri?) {
 private fun filesStagedMessage(count: Int): String =
     "Added $count file${if (count == 1) "" else "s"} to queue"
 
-private fun folderStagedMessage(folderName: String, childCount: Int): String =
-    if (childCount == 0) "Staged folder $folderName" else "Added $childCount files from $folderName"
+private fun folderStagedMessage(folderName: String, fileCount: Int): String =
+    if (fileCount == 0) "Staged folder $folderName" else "Added folder $folderName ($fileCount files)"
 
 private fun displayPathForTree(treeUri: Uri): String {
     val treeId = runCatching { DocumentsContract.getTreeDocumentId(treeUri) }.getOrNull()

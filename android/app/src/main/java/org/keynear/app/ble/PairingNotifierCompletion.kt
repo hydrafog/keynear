@@ -1,10 +1,12 @@
 package org.keynear.app.ble
 
+import android.app.DownloadManager
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import org.keynear.app.MainActivity
@@ -22,16 +24,7 @@ internal fun PairingNotifier.showTransferCompleted(
     ensureTransferChannel(context)
     val manager = context.getSystemService(NotificationManager::class.java) ?: return
 
-    val mimeType = resolveDownloadMimeType(transfer.summaryName, transfer.mimeType)
-    val viewIntent = completedUri?.let { uri ->
-        Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, mimeType)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
-        }.takeIf { it.resolveActivity(context.packageManager) != null }
-    }
-    val openIntent = viewIntent ?: Intent(context, MainActivity::class.java).apply {
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-    }
+    val openIntent = buildCompletionOpenIntent(context, transfer, completedUri)
     val openPending = PendingIntent.getActivity(
         context,
         301,
@@ -50,6 +43,36 @@ internal fun PairingNotifier.showTransferCompleted(
         .build()
 
     manager.notify(TRANSFER_COMPLETE_ID, notification)
+}
+
+private fun buildCompletionOpenIntent(
+    context: Context,
+    transfer: TransferUi,
+    completedUri: Uri?,
+): Intent {
+    val mimeType = if (transfer.isDirectory) {
+        DocumentsContract.Document.MIME_TYPE_DIR
+    } else {
+        resolveDownloadMimeType(transfer.summaryName, transfer.mimeType)
+    }
+    val viewIntent = completedUri?.let { uri ->
+        Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, mimeType)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+        }.takeIf { it.resolveActivity(context.packageManager) != null }
+    }
+    if (viewIntent != null) return viewIntent
+    if (transfer.isDirectory) {
+        val downloadsIntent = Intent(DownloadManager.ACTION_VIEW_DOWNLOADS).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        if (downloadsIntent.resolveActivity(context.packageManager) != null) {
+            return downloadsIntent
+        }
+    }
+    return Intent(context, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+    }
 }
 
 internal fun PairingNotifier.showTransferError(

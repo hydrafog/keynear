@@ -309,9 +309,9 @@ class SurfacesAndOnboardingTest {
             override fun stageFolderUri(
                 folderUri: String,
                 displayName: String,
-                fileUris: List<String>,
+                sizeBytes: Long,
             ): CoreState {
-                store.addFolder(displayName, folderUri, 4096L)
+                store.addFolder(displayName, folderUri, if (sizeBytes > 0L) sizeBytes else 4096L)
                 return loadState()
             }
 

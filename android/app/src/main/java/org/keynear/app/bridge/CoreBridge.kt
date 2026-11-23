@@ -44,7 +44,7 @@ interface CoreBridge {
     fun stageFolderUri(
         folderUri: String,
         displayName: String,
-        fileUris: List<String> = emptyList(),
+        sizeBytes: Long = 0L,
     ): CoreState = loadState()
     fun stageClipboardText(text: String): CoreState = loadState()
     fun stageTextSnippet(text: String): CoreState = loadState()

@@ -13,8 +13,13 @@ import android.util.Log
 import org.keynear.app.ble.KeynearBleConstants
 import org.keynear.app.ble.PairingNotifier
 import org.keynear.app.data.DeviceRepo
+import org.keynear.app.data.OutboundTarget
 import org.keynear.app.data.PairingRepo
 import org.keynear.app.data.TransferRepo
+import org.keynear.app.data.TransferSyncEnv
+import org.keynear.app.data.TransferSyncHandler
+import org.keynear.app.data.TransferSyncIds
+import org.keynear.app.data.TransferSyncInput
 import org.keynear.app.share.DirectShareManager
 import org.keynear.app.ui.model.BluetoothStatus
 import org.keynear.app.ui.model.CoreSnapshot
@@ -44,14 +49,22 @@ internal fun EventQueue.syncTransferStates(context: Context): Boolean {
     val app = context.applicationContext
     attachContext(app)
     val node = orionNode ?: return false
-    return TransferRepo.syncTransferStates(
-        app = app,
-        node = node,
-        pairedDevices = getPairedDevices(),
-        tracker = mediaStoreTracker,
-        fdHandedOffIds = fdHandedOffIds,
-        notifiedConsentIds = notifiedConsentIds,
-        notifiedTerminalIds = notifiedTerminalIds,
+    return TransferSyncHandler.syncTransferStates(
+        TransferSyncInput(
+            env = TransferSyncEnv(
+                app = app,
+                node = node,
+                pairedDevices = getPairedDevices(),
+                incomingDir = File(app.filesDir, "incoming"),
+            ),
+            tracker = mediaStoreTracker,
+            ids = TransferSyncIds(
+                fdHandedOffIds = fdHandedOffIds,
+                exportedArchiveIds = exportedArchiveIds,
+                notifiedConsentIds = notifiedConsentIds,
+                notifiedTerminalIds = notifiedTerminalIds,
+            ),
+        ),
     )
 }
 internal fun EventQueue.acceptIncomingTransferOrSync(context: Context, transferId: String): CoreState {
@@ -75,38 +88,31 @@ internal fun EventQueue.stageFileUrisImpl(uris: List<String>): CoreState {
 internal fun EventQueue.stageFolderUriImpl(
     folderUri: String,
     displayName: String,
-    fileUris: List<String>,
+    sizeBytes: Long,
 ): CoreState {
-    val ctx = appContext
-    if (fileUris.isNotEmpty()) {
-        fileUris.forEach { raw ->
-            if (raw.isBlank()) return@forEach
-            if (ctx != null) {
-                val (name, size, mime) = TransferRepo.queryContentUriMetadata(ctx, Uri.parse(raw))
-                sendQueueStore.addFile(name, size, mime, raw)
-            } else {
-                val name = raw.substringAfterLast('/').ifBlank { "shared-file.bin" }
-                sendQueueStore.addFile(name, 0L, "application/octet-stream", raw)
-            }
-        }
-    } else if (folderUri.isNotBlank()) {
-        sendQueueStore.addFolder(displayName, folderUri)
+    if (folderUri.isNotBlank()) {
+        sendQueueStore.addFolder(displayName, folderUri, sizeBytes)
     }
     return buildState()
 }
 internal fun EventQueue.sendQueueToPeerImpl(peerDeviceId: String): Result<TransferUi> {
     val items = sendQueueStore.snapshot()
     if (items.isEmpty()) {
-        return Result.failure(IllegalArgumentException("Stage at least one file or snippet first"))
+        return Result.failure(IllegalArgumentException("Stage at least one file, folder, or snippet first"))
     }
-    val uris = items.mapNotNull { item ->
-        item.uriString.takeIf { it.isNotBlank() && item.kind != SendItemKind.FOLDER }
-    }
-    val textCombined = items
-        .mapNotNull { it.textPayload.takeIf { txt -> txt.isNotEmpty() } }
-        .joinToString(separator = "\n\n")
-        .ifBlank { null }
-    val result = sendContentUris(peerDeviceId, uris, textCombined)
+    val ctx = appContext ?: return Result.failure(IllegalStateException("Context not attached"))
+    val node = ensureOrionNode(ctx)
+        ?: return Result.failure(IllegalStateException("Local transfer node could not start"))
+    syncAllPairedPeersToOrion(node)
+
+    val peerNames = getPairedDevices().associate { it.deviceId to it.displayName }
+    val target = OutboundTarget(
+        context = ctx,
+        node = node,
+        peerDeviceId = peerDeviceId,
+        peerNames = peerNames,
+    )
+    val result = TransferRepo.sendQueueItemsViaOrion(target, items)
     if (result.isSuccess) {
         sendQueueStore.clear()
     }
@@ -162,12 +168,15 @@ internal fun EventQueue.sendContentUrisImpl(
     syncAllPairedPeersToOrion(node)
 
     val peerNames = getPairedDevices().associate { it.deviceId to it.displayName }
-    return TransferRepo.sendContentUrisViaOrion(
+    val target = OutboundTarget(
         context = ctx,
         node = node,
         peerDeviceId = peerDeviceId,
+        peerNames = peerNames,
+    )
+    return TransferRepo.sendContentUrisViaOrion(
+        target = target,
         uris = uris,
         sharedText = sharedText,
-        peerNames = peerNames,
     )
 }

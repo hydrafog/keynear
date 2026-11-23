@@ -86,6 +86,7 @@ class EventQueue(
     internal val notifiedConsentIds = ConcurrentHashMap.newKeySet<String>()
     internal val notifiedTerminalIds = ConcurrentHashMap.newKeySet<String>()
     internal val fdHandedOffIds = ConcurrentHashMap.newKeySet<String>()
+    internal val exportedArchiveIds = ConcurrentHashMap.newKeySet<String>()
 
     @Volatile
     internal var lastSyncedShortcutSnapshot: List<Pair<String, String>>? = null
@@ -149,7 +150,7 @@ class EventQueue(
                 capabilityFlags = KeynearBleConstants.ANDROID_CAPABILITY_FLAGS,
                 quicSecretKey = quicKey,
                 incomingDirectory = incomingDir.absolutePath,
-                autoAcceptFromPaired = false,
+                autoAcceptFromPaired = cachedDaemonConfig.autoAcceptFromPaired,
                 requireExplicitFdForSingleFile = true,
             )
             orionNode = node
@@ -173,6 +174,7 @@ class EventQueue(
         }
         orionNode = null
         fdHandedOffIds.clear()
+        exportedArchiveIds.clear()
         notifiedConsentIds.clear()
         notifiedTerminalIds.clear()
     }
@@ -253,7 +255,12 @@ class EventQueue(
         return buildState()
     }
 
-    override fun tick(): CoreState = buildState()
+    override fun tick(): CoreState {
+        if (orionNode != null) {
+            appContext?.let { syncTransferStates(it) }
+        }
+        return buildState()
+    }
 
     fun timeoutSecs(): Long = runCatching { everyoneNearbyTimeoutSecs().toLong() }.getOrDefault(DEFAULT_TIMEOUT_SECS)
 
@@ -264,8 +271,8 @@ class EventQueue(
     override fun stageFolderUri(
         folderUri: String,
         displayName: String,
-        fileUris: List<String>,
-    ): CoreState = stageFolderUriImpl(folderUri, displayName, fileUris)
+        sizeBytes: Long,
+    ): CoreState = stageFolderUriImpl(folderUri, displayName, sizeBytes)
     override fun sendQueueToPeer(peerDeviceId: String): Result<TransferUi> = sendQueueToPeerImpl(peerDeviceId)
     override fun updateDaemonConfig(transform: (DaemonConfigUi) -> DaemonConfigUi): CoreState = updateDaemonConfigImpl(transform)
     override fun renamePairedDevice(deviceId: String, newDisplayName: String): CoreState = renamePairedDeviceImpl(deviceId, newDisplayName)

@@ -148,7 +148,10 @@ internal fun EventQueue.updateDaemonConfigImpl(transform: (DaemonConfigUi) -> Da
     } else {
         updated
     }
-    orionNode?.let { syncClipboardPolicyToNode(it) }
+    orionNode?.let { node ->
+        node.setAutoAcceptFromPaired(cachedDaemonConfig.autoAcceptFromPaired)
+        syncClipboardPolicyToNode(node)
+    }
     buildState()
 } catch (t: Throwable) {
     CoreState.Error(t.message ?: "Unable to save settings", snapshotFromCurrent())
