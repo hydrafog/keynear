@@ -52,23 +52,13 @@ internal fun KeynearAppRoot(
     var confirmUnpairDeviceId by remember { mutableStateOf<String?>(null) }
     var activeTab by rememberSaveable { mutableStateOf(KeynearTab.RECEIVE) }
     var subScreen by remember { mutableStateOf<KeynearSubScreen?>(null) }
-    var snackbarMessage by remember { mutableStateOf<String?>(null) }
     var sheetExpanded by rememberSaveable { mutableStateOf(false) }
 
     val snapshot = snapshotFromState(uiState)
     val darkTheme = snapshot?.daemonConfig?.darkTheme ?: isSystemInDarkTheme()
 
-    val showSnackbar: (String) -> Unit = { msg ->
-        snackbarMessage = msg
-    }
+    val showSnackbar: (String) -> Unit = {}
     val picker = PickerContext(context, bridge, scope, { state -> uiState = state }, showSnackbar)
-
-    LaunchedEffect(snackbarMessage) {
-        if (snackbarMessage != null) {
-            delay(2600L)
-            snackbarMessage = null
-        }
-    }
 
     val syncBleAndLoad: suspend () -> Unit = {
         val loaded = withContext(Dispatchers.IO) { bridge.loadState() }
@@ -182,7 +172,6 @@ internal fun KeynearAppRoot(
             activeTab = activeTab,
             subScreen = subScreen,
             confirmUnpairDeviceId = confirmUnpairDeviceId,
-            snackbarMessage = snackbarMessage,
             permissionsChecklist = permissionsChecklist,
             actions = actions,
             sheetExpanded = sheetExpanded,

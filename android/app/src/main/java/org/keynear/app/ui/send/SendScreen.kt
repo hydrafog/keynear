@@ -1,7 +1,12 @@
 package org.keynear.app.ui.send
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,7 +32,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.window.Dialog
+import org.keynear.app.ui.components.ActiveTransfersStrip
 import org.keynear.app.ui.model.CoreSnapshot
+import org.keynear.app.ui.model.TransferDirectionUi
+import org.keynear.app.ui.model.TransferStateUi
 import org.keynear.app.ui.navigation.KeynearActions
 import org.keynear.designsystem.ActionButton
 import org.keynear.designsystem.IconClipboard
@@ -134,6 +142,23 @@ fun SendScreen(
         }
 
         SendQueueSection(queue = queue, totalBytes = totalBytes, actions = actions)
+
+        val outgoingTransfers = snapshot.activeTransfers.filter {
+            it.direction == TransferDirectionUi.SEND &&
+                (it.state == TransferStateUi.ACTIVE || it.state == TransferStateUi.PENDING_CONSENT)
+        }
+        AnimatedVisibility(
+            visible = outgoingTransfers.isNotEmpty(),
+            enter = fadeIn(tween(KeynearMotion.SHORT_DURATION_MS)) + expandVertically(),
+            exit = fadeOut(tween(KeynearMotion.SHORT_DURATION_MS)) + shrinkVertically(),
+        ) {
+            ActiveTransfersStrip(
+                transfers = outgoingTransfers,
+                onAccept = actions.onAcceptTransfer,
+                onDecline = actions.onDeclineTransfer,
+                onCancel = actions.onCancelTransfer,
+            )
+        }
 
         SendTargetsSection(devices = snapshot.pairedDevices, queue = queue, actions = actions)
 

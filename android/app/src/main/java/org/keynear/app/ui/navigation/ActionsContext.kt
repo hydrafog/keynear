@@ -237,7 +237,6 @@ internal fun ActionsContext.sendQueueToPeer(device: PairedDeviceUi) {
         val res = withContext(Dispatchers.IO) { bridge.sendQueueToPeer(device.deviceId) }
         onStateUpdated(withContext(Dispatchers.IO) { bridge.loadState() })
         res.onSuccess {
-            onNavigateTab(KeynearTab.RECEIVE)
             onShowSnackbar("Sending to ${device.displayName}")
         }.onFailure { err ->
             onShowSnackbar(err.message ?: "Unable to start transfer")

@@ -1,10 +1,5 @@
 package org.keynear.app.ui.navigation
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,8 +18,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.keynear.designsystem.IconArrowLeft
-import org.keynear.designsystem.IconKeynearSymbolic
-import org.keynear.designsystem.KeynearMotion
 import org.keynear.designsystem.KeynearPressScale
 import org.keynear.designsystem.KeynearRadii
 import org.keynear.designsystem.KeynearShapes
@@ -46,7 +39,6 @@ fun KeynearTopAppBar(
     val palette = LocalKeynearPalette.current
     val title = topAppBarTitle(activeTab, subScreen, deviceDisplayName)
 
-    val isReceiveHome = subScreen == null && activeTab == KeynearTab.RECEIVE
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -74,34 +66,17 @@ fun KeynearTopAppBar(
                     IconArrowLeft(modifier = Modifier.size(KeynearSpacing.Xl), tint = palette.textPrimary)
                 }
             }
-        } else if (isReceiveHome) {
-            IconKeynearSymbolic(
-                modifier = Modifier.size(KeynearSpacing.Xl),
-                tint = palette.loadingInk,
-            )
         }
 
-        AnimatedContent(
-            targetState = title,
-            transitionSpec = {
-                fadeIn(
-                    tween(durationMillis = KeynearMotion.FADE_IN_DURATION_MS, easing = KeynearMotion.FadeEasing),
-                ) togetherWith fadeOut(
-                    tween(durationMillis = KeynearMotion.SHORT_DURATION_MS, easing = KeynearMotion.ExitEasing),
-                )
-            },
-            label = "topBarTitle",
-        ) { animatedTitle ->
-            Text(
-                text = animatedTitle,
-                color = palette.textPrimary,
-                fontSize = KeynearTypeSizes.Title,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = (-0.6).sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
+        Text(
+            text = title,
+            color = palette.textPrimary,
+            fontSize = KeynearTypeSizes.Title,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = (-0.6).sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

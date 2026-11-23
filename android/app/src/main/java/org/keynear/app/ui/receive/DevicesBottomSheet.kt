@@ -107,10 +107,10 @@ internal fun DevicesBottomSheet(
     TactileSurface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = KeynearSpacing.Lg, end = KeynearSpacing.Lg, bottom = KeynearSpacing.Sm),
+            .padding(start = KeynearSpacing.Lg, end = KeynearSpacing.Lg, bottom = KeynearSpacing.Lg),
         shape = RoundedCornerShape(KeynearRadii.ThreeXl),
         containerColor = palette.surface,
-        tone = TactileTone.SHEET,
+        tone = TactileTone.SURFACE,
         cornerRadius = KeynearRadii.ThreeXl,
     ) {
         Column(
@@ -194,7 +194,7 @@ private fun PopulatedDevicesSheetContent(
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(height.value),
+                .heightIn(max = height.value),
             verticalArrangement = Arrangement.spacedBy(KeynearLayout.CompactGap),
             contentPadding = PaddingValues(bottom = KeynearSpacing.Xs),
         ) {

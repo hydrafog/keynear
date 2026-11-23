@@ -2,10 +2,9 @@ package org.keynear.app
 
 import android.os.Build
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -21,7 +20,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.launch
 import org.keynear.app.ui.devices.DeviceDetailScreen
@@ -29,7 +27,6 @@ import org.keynear.app.ui.model.CoreSnapshot
 import org.keynear.app.ui.model.CoreState
 import org.keynear.app.ui.navigation.KeynearActions
 import org.keynear.app.ui.navigation.KeynearBottomNav
-import org.keynear.app.ui.navigation.KeynearSnackbarHost
 import org.keynear.app.ui.navigation.KeynearSubScreen
 import org.keynear.app.ui.navigation.KeynearTab
 import org.keynear.app.ui.navigation.KeynearTopAppBar
@@ -38,7 +35,6 @@ import org.keynear.app.ui.send.SendScreen
 import org.keynear.app.ui.settings.PermissionsScreen
 import org.keynear.app.ui.settings.SettingsScreen
 import org.keynear.designsystem.ActionButton
-import org.keynear.designsystem.KeynearDimensions
 import org.keynear.designsystem.KeynearLayout
 import org.keynear.designsystem.KeynearMotion
 import org.keynear.designsystem.KeynearRadii
@@ -56,7 +52,6 @@ internal fun KeynearAppContent(
     activeTab: KeynearTab,
     subScreen: KeynearSubScreen?,
     confirmUnpairDeviceId: String?,
-    snackbarMessage: String?,
     permissionsChecklist: org.keynear.app.ui.model.PermissionsChecklistState,
     actions: KeynearActions,
     sheetExpanded: Boolean,
@@ -71,7 +66,6 @@ internal fun KeynearAppContent(
     val selectedDevice = snapshot?.pairedDevices?.firstOrNull {
         (subScreen as? KeynearSubScreen.DeviceDetail)?.deviceId == it.deviceId
     }
-    val slideOffsetPx = with(LocalDensity.current) { KeynearDimensions.Dp6.roundToPx() }
 
     Scaffold(
         modifier = Modifier
@@ -106,24 +100,12 @@ internal fun KeynearAppContent(
                 AnimatedContent(
                     targetState = subScreen ?: activeTab,
                     transitionSpec = {
-                        val enter = fadeIn(
+                        fadeIn(
                             tween(
-                                durationMillis = KeynearMotion.SCREEN_DURATION_MS,
-                                easing = KeynearMotion.SpringEasing,
+                                durationMillis = KeynearMotion.SHORT_DURATION_MS / 2,
+                                easing = KeynearMotion.FadeEasing,
                             ),
-                        ) + slideInVertically(
-                            animationSpec = tween(
-                                durationMillis = KeynearMotion.SCREEN_DURATION_MS,
-                                easing = KeynearMotion.SpringEasing,
-                            ),
-                        ) { slideOffsetPx }
-                        val exit = fadeOut(
-                            tween(
-                                durationMillis = KeynearMotion.FADE_DURATION_MS,
-                                easing = KeynearMotion.ExitEasing,
-                            ),
-                        )
-                        enter togetherWith exit
+                        ) togetherWith ExitTransition.None
                     },
                     label = "screenTransition",
                 ) { target ->
@@ -134,10 +116,6 @@ internal fun KeynearAppContent(
                         permissionsChecklist, actions, localName, sheetExpanded, onSetSheetExpanded,
                     )
                 }
-            }
-
-            Box(modifier = Modifier.align(Alignment.BottomCenter)) {
-                KeynearSnackbarHost(message = snackbarMessage)
             }
         }
     }
