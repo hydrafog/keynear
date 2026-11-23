@@ -37,14 +37,14 @@ A targeted `#[allow(clippy::...)]` is permitted only where a cap conflicts with 
 
 The repository provides the following quality scripts and CI checks.
 
-- The script `scripts/project/check.sh` runs `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`, `cargo deny check`, `cargo audit`, `cargo llvm-cov --workspace --summary-only`, `scripts/validation/repo-check.sh`, `scripts/validation/size-check.sh`, and Android `testDebugUnitTest lintDebug detekt`.
+- The script `scripts/project/check.sh` runs `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`, `cargo deny check`, `cargo audit`, `cargo llvm-cov -p keynear-protocol -p keynear-core -p keynear-ffi -p keynear-ipc --all-features --fail-under-lines 75 --summary-only`, `scripts/validation/repo-check.sh`, `scripts/validation/size-check.sh`, `scripts/validation/design-lint.sh`, and Android `testDebugUnitTest lintDebug detekt`.
 - The script `scripts/validation/repo-check.sh` verifies `.editorconfig` and `.gitignore` hygiene, the absence of committed secrets or `.env` files, required project files such as `design/tokens.json`, ignore rules for generated outputs, and the size cap through `size-check.sh`.
 - The script `scripts/validation/size-check.sh` fails when a tracked handwritten Rust or Kotlin logic file exceeds 300 lines. It skips generated code, lookup tables, and test fixtures.
 - The script `scripts/validation/design-lint.sh` fails on hardcoded color literals in Kotlin design-system and app UI sources and on non-zero `dp` and `sp` dimensions in the design system. It skips `Tokens.kt`, `*Test.kt`, and build output, accepts explicit file paths for seeded checks, and leaves CSS token parity to `scripts/validation/token-check.py`.
 - The script `scripts/validation/commit-msg.sh` enforces `<prefix>: <imperative summary>` commit subjects within 80 characters.
 - The script `scripts/export/export-docs.sh` exports documentation and `proto3` schemas deterministically to `out/`.
 - The script `scripts/export/export-prototype.sh` exports tracked `design/prototype/` source files deterministically to `out/keynear-prototype.txt`.
-- The workflow `.github/workflows/quality.yml` executes the Rust checks (`fmt`, `clippy`, `test`, `deny`, `audit`, `llvm-cov`), `repo-check.sh`, `size-check.sh`, `design-lint.sh`, `nix flake check --no-build`, and Android `gradle testDebugUnitTest lintDebug detekt assembleDebug`.
+- The workflow `.github/workflows/quality.yml` executes the Rust checks (`fmt`, `clippy`, `test`, `deny`, `audit`, and a 75% line coverage gate over `keynear-protocol`, `keynear-core`, `keynear-ffi`, and `keynear-ipc`), `repo-check.sh`, `size-check.sh`, `design-lint.sh`, `nix flake check --no-build`, a bounded `cargo fuzz` smoke on nightly, and Android `gradle testDebugUnitTest lintDebug detekt assembleDebug`.
 
 ## Commit Conventions
 

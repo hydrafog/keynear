@@ -39,8 +39,8 @@ jobs:
         run: |
           cargo deny check
           cargo audit
-      - name: Coverage report
-        run: cargo llvm-cov --workspace --all-features --summary-only
+      - name: Coverage gate
+        run: cargo llvm-cov -p keynear-protocol -p keynear-core -p keynear-ffi -p keynear-ipc --all-features --fail-under-lines 75 --summary-only
 
   fuzz:
     runs-on: ubuntu-latest
