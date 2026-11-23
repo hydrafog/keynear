@@ -1,0 +1,32 @@
+[package]
+name = "keynear-fuzz"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+arbitrary = "1"
+libfuzzer-sys = "0.4"
+
+[dependencies.keynear-ipc]
+path = "../crates/keynear-ipc"
+
+[dependencies.keynear-protocol]
+path = "../crates/keynear-protocol"
+
+[workspace]
+
+[[bin]]
+name = "ipc_codec"
+path = "fuzz_targets/ipc_codec.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "proto_decode"
+path = "fuzz_targets/proto_decode.rs"
+test = false
+doc = false

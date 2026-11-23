@@ -9,3 +9,5 @@ publish = false
 [dependencies]
 keynear-protocol = { path = "../keynear-protocol" }
 
+[dev-dependencies]
+proptest.workspace = true

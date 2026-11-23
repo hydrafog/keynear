@@ -4,6 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::*;
 use keynear_protocol::{TransferDirection, TransferItem, TransferState};
+use proptest::prelude::*;
 
 fn temp_sock_dir(label: &str) -> PathBuf {
     let nanos = SystemTime::now()
@@ -229,4 +230,70 @@ fn loopback_unix_socket_enforces_0600_permissions_and_roundtrips() {
     server.join().expect("server thread");
 
     let _ = fs::remove_dir_all(&dir);
+}
+
+fn token() -> impl Strategy<Value = String> {
+    prop::collection::vec(b'a'..=b'z', 1..=8).prop_map(|v| v.into_iter().map(char::from).collect())
+}
+
+fn free_text() -> impl Strategy<Value = String> {
+    prop::collection::vec(b' '..=b'~', 0..=16).prop_map(|v| v.into_iter().map(char::from).collect())
+}
+
+proptest! {
+    #[test]
+    fn generated_request_roundtrips(request in prop_oneof![
+        (token(), prop::collection::vec(token(), 1..=3)).prop_map(|(device_id, paths)| {
+            IpcRequest::SendFiles { device_id, paths: paths.into_iter().map(PathBuf::from).collect() }
+        }),
+        token().prop_map(|transfer_id| IpcRequest::AcceptTransfer { transfer_id }),
+        Just(IpcRequest::ListTransfers),
+        Just(IpcRequest::Status),
+        Just(IpcRequest::ListDevices),
+        prop_oneof![
+            Just(VisibilityMode::Hidden),
+            Just(VisibilityMode::PairedOnly),
+            Just(VisibilityMode::EveryoneNearby),
+        ]
+        .prop_map(|mode| IpcRequest::SetVisibility { mode }),
+        Just(IpcRequest::GetConfig),
+        token().prop_map(|dir| IpcRequest::UpdateConfig {
+            config: DaemonConfig { incoming_directory: dir, ..DaemonConfig::default() },
+        }),
+        (token(), token()).prop_map(|(device_id, display_name)| IpcRequest::RenameDevice { device_id, display_name }),
+        (token(), any::<bool>()).prop_map(|(device_id, enabled)| IpcRequest::SetDeviceAutoAccept { device_id, enabled }),
+        token().prop_map(|device_id| IpcRequest::UnpairDevice { device_id }),
+        any::<bool>().prop_map(|approve| IpcRequest::RespondPairing { approve }),
+    ]) {
+        let encoded = encode_request(&request).expect("encode request");
+        prop_assert_eq!(decode_request(&encoded).expect("decode request"), request);
+    }
+
+    #[test]
+    fn generated_response_roundtrips(s in free_text(), id in token(), flag in any::<bool>()) {
+        let mut session = sample_session();
+        session.transfer_id = s.clone();
+        let responses = [
+            IpcResponse::Transfer(session),
+            IpcResponse::Config(DaemonConfig { incoming_directory: id.clone(), ..DaemonConfig::default() }),
+            IpcResponse::Unpaired { device_id: id },
+            IpcResponse::PairingDecision { approved: flag },
+            IpcResponse::Error { message: s },
+        ];
+        for response in responses {
+            let encoded = encode_response(&response).expect("encode response");
+            prop_assert_eq!(decode_response(&encoded).expect("decode response"), response);
+        }
+    }
+
+    #[test]
+    fn arbitrary_non_frames_rejected(
+        first in any::<u8>().prop_filter("not a wire version", |b| *b != 1),
+        tail in prop::collection::vec(any::<u8>(), 0..=1024),
+    ) {
+        let mut bytes = vec![first];
+        bytes.extend(tail);
+        prop_assert!(decode_request(&bytes).is_err());
+        prop_assert!(decode_response(&bytes).is_err());
+    }
 }
