@@ -22,9 +22,6 @@ private const val ORBIT_MAX_RADIUS_DP = 172f
 private const val ORBIT_MIN_SCALE = 0.62f
 private const val ORBIT_INNER_RATIO = 0.8f
 private const val ORBIT_RING_COUNT = 3
-private const val RSSI_MIN = -90
-private const val RSSI_MAX = -40
-private const val RSSI_RANGE = 50f
 
 fun radarLayoutFor(widthDp: Float, heightDp: Float): RadarLayout {
     if (widthDp <= 0f || heightDp <= 0f) {
