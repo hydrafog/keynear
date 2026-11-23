@@ -270,6 +270,7 @@ object KeynearDimensions {
     val Dp17 = 17.dp
     val Dp18 = 18.dp
     val Dp20 = 20.dp
+    val Dp22 = 22.dp
     val Dp24 = 24.dp
     val Dp26 = 26.dp
     val Dp32 = 32.dp

@@ -56,6 +56,7 @@ internal fun KeynearAppContent(
     activeTab: KeynearTab,
     subScreen: KeynearSubScreen?,
     confirmUnpairDeviceId: String?,
+    snackbarMessage: String?,
     permissionsChecklist: org.keynear.app.ui.model.PermissionsChecklistState,
     actions: KeynearActions,
     sheetExpanded: Boolean,
