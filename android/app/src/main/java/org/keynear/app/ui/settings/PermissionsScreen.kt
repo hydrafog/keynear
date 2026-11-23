@@ -19,7 +19,6 @@ import org.keynear.designsystem.ActionButton
 import org.keynear.designsystem.TactileSurface
 import org.keynear.designsystem.TactileTone
 import org.keynear.app.ui.navigation.KeynearActions
-import org.keynear.designsystem.KeynearDimensions
 import org.keynear.designsystem.KeynearLayout
 import org.keynear.designsystem.KeynearRadii
 import org.keynear.designsystem.KeynearShapes
@@ -89,14 +88,14 @@ fun PermissionsScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(KeynearDimensions.Dp10),
-                verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
+                    .padding(KeynearLayout.SectionInnerPadding),
+                verticalArrangement = Arrangement.spacedBy(KeynearLayout.SectionRowGap),
             ) {
                 rows.forEach { row ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(KeynearLayout.GridGap),
+                            .padding(horizontal = KeynearSpacing.Lg, vertical = KeynearSpacing.Md),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Md),
                     ) {
@@ -108,7 +107,7 @@ fun PermissionsScreen(
                                 text = row.title,
                                 color = palette.textPrimary,
                                 fontSize = KeynearTypeSizes.Body,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.SemiBold,
                             )
                             Text(
                                 text = row.description,

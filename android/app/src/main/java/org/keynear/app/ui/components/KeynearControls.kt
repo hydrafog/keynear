@@ -11,8 +11,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import org.keynear.app.ui.model.formatBytes
 import org.keynear.app.ui.model.BluetoothStatus
 import org.keynear.app.ui.model.CoreSnapshot
 import org.keynear.app.ui.model.LocalNetworkStatus
@@ -20,6 +18,7 @@ import org.keynear.app.ui.model.PendingPairingUi
 import org.keynear.app.ui.model.TransferDirectionUi
 import org.keynear.app.ui.model.TransferStateUi
 import org.keynear.app.ui.model.TransferUi
+import org.keynear.app.ui.model.formatBytes
 import org.keynear.app.ui.navigation.KeynearActions
 import org.keynear.designsystem.ActionButton
 import org.keynear.designsystem.KeynearLayout
@@ -33,10 +32,6 @@ import org.keynear.designsystem.PairingPromptCard
 import org.keynear.designsystem.TactileSurface
 import org.keynear.designsystem.TactileTone
 import org.keynear.designsystem.WarningBannerCard
-
-private val CompactGap = 6.dp
-private val ContentGap = 10.dp
-private val TransferActionMinHeight = 44.dp
 
 @Composable
 fun TransportWarningBanner(
@@ -88,12 +83,12 @@ fun ActiveTransfersStrip(
     TactileSurface(
         modifier = modifier.fillMaxWidth(),
         shape = KeynearShapes.Card,
-        containerColor = palette.surface.copy(alpha = 0.94f),
+        containerColor = palette.surface,
         tone = TactileTone.SURFACE,
         cornerRadius = KeynearRadii.TwoXl,
     ) {
         Column(
-            modifier = Modifier.padding(KeynearLayout.CardPaddingLarge),
+            modifier = Modifier.padding(KeynearLayout.CardPadding),
             verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Lg),
         ) {
             transfers.take(2).forEach { tx ->
@@ -150,14 +145,14 @@ fun ActiveTransfersStrip(
                                     label = "Decline",
                                     onClick = { onDecline(tx.transferId) },
                                     tonalSurface = true,
-                                    minHeight = KeynearSpacing.MinTouchTarget,
+                                    minHeight = KeynearLayout.CompactButtonMinHeight,
                                     modifier = Modifier.weight(1f),
                                 )
                                 ActionButton(
                                     label = "Accept",
                                     onClick = { onAccept(tx.transferId) },
                                     primary = true,
-                                    minHeight = KeynearSpacing.MinTouchTarget,
+                                    minHeight = KeynearLayout.CompactButtonMinHeight,
                                     modifier = Modifier.weight(1f),
                                 )
                             }
@@ -167,7 +162,7 @@ fun ActiveTransfersStrip(
                                 label = "Cancel transfer",
                                 onClick = { onCancel(tx.transferId) },
                                 tonalSurface = true,
-                                minHeight = KeynearSpacing.MinTouchTarget,
+                                minHeight = KeynearLayout.CompactButtonMinHeight,
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         }

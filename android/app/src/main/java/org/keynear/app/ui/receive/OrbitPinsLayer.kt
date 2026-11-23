@@ -1,38 +1,55 @@
 package org.keynear.app.ui.receive
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import org.keynear.app.ui.model.DeviceRoleUi
+import org.keynear.app.ui.model.OrbitPlacement
+import org.keynear.app.ui.model.RadarLayout
 import org.keynear.app.ui.model.orbitFor
 import org.keynear.app.ui.navigation.KeynearActions
 import org.keynear.app.ui.navigation.OrbitPinUi
 import org.keynear.designsystem.IconLaptop
 import org.keynear.designsystem.IconSmartphone
+import org.keynear.designsystem.KeynearDimensions
+import org.keynear.designsystem.KeynearMotion
+import org.keynear.designsystem.KeynearPressScale
 import org.keynear.designsystem.KeynearRadii
 import org.keynear.designsystem.KeynearShapes
 import org.keynear.designsystem.KeynearSpacing
@@ -41,205 +58,220 @@ import org.keynear.designsystem.LocalKeynearPalette
 import org.keynear.designsystem.TactileSurface
 import org.keynear.designsystem.TactileTone
 import org.keynear.designsystem.tactileCushion
+import org.keynear.designsystem.tactilePressScale
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
-private val BadgeHorizontalPadding = 2.dp
-private val ChevronSize = 20.dp
-private val CompactGap = 6.dp
-private val ContentGap = 10.dp
-private val DeviceRowMinHeight = 62.dp
-private val EchoStrokeWidth = 4.5.dp
-private val EmptyIconSize = 22.dp
-private val EmptySheetExpandedHeight = 156.dp
-private const val ORBIT_CYCLE_MS = 40_000
-private val PinIconSize = 28.dp
-private val PinLabelTextSize = 13.sp
-private val PinLabelVerticalPadding = 7.dp
-private val PinNodeSize = 64.dp
-private val RowHorizontalPadding = 14.dp
-private val RowIconSize = 44.dp
-private val SelfIconSize = 36.dp
-private val SelfNodeRadius = 41.dp
-private val SelfNodeSize = 82.dp
-private val SheetCollapsedHeight = 132.dp
-private val SheetExpandedHeight = 252.dp
-private val SpokeStrokeWidth = 1.dp
-private val VisibilityControlHeight = 56.dp
-private val VisibilityIconSize = 18.dp
-private const val WAVE_CYCLE_MS = 120_000
-private const val WAVE_MOTE_ALPHA = 0.5f
+private const val FOG_SURFACE_ALPHA = 0.84f
+private const val MAX_FRAME_DELTA_MS = 64f
+private const val NANOS_PER_MS = 1_000_000f
+private const val PIN_ENTER_BASE_SCALE = 0.92f
+private const val PIN_VISIBLE_BASE_SCALE = 0.75f
 private const val SKELETON_DRIFT_HALF_MS = 4_000
+private const val SKELETON_PULSE_MIN = 0.45f
+private const val SKELETON_PULSE_MAX = 0.85f
+private const val SKELETON_PULSE_IDLE = 0.55f
 private const val SKELETON_SCALE_MIN = 0.97f
 private const val SKELETON_SCALE_MAX = 1.03f
-private val SkeletonOffsets = listOf(
-    (-96.dp to (-56.dp)),
-    (112.dp to 28.dp),
-    (-52.dp to 92.dp),
-)
+private const val SKELETON_ICON_ALPHA = 0.55f
+private const val SKELETON_TITLE_ALPHA = 0.32f
+private const val SKELETON_SUB_ALPHA = 0.22f
+private val PinLabelMaxWidth = 164.dp
+private val SkeletonBarHeight = 6.dp
 private val SkeletonLabelWidth = 56.dp
 private val SkeletonSubLabelWidth = 36.dp
-private val SkeletonBarHeight = 6.dp
+private val SkeletonRssis = listOf(-52, -68, -84)
 
+private fun nextOrbitRate(
+    startRate: Float,
+    targetRate: Float,
+    elapsedMs: Float,
+): Float {
+    if (elapsedMs >= KeynearMotion.RADAR_RAMP_MS) return targetRate
+    val inv = 1f - elapsedMs / KeynearMotion.RADAR_RAMP_MS.toFloat()
+    return startRate + (targetRate - startRate) * (1f - inv * inv * inv)
+}
 
 @Composable
 internal fun OrbitPinsLayer(
     pins: List<OrbitPinUi>,
+    radarActive: Boolean,
+    layout: RadarLayout,
+    actions: KeynearActions,
+) {
+    var orbitPhase by remember { mutableFloatStateOf(0f) }
+    var orbitRate by remember { mutableFloatStateOf(if (radarActive) 1f else 0f) }
+    val currentActive by rememberUpdatedState(radarActive)
+
+    LaunchedEffect(radarActive) {
+        val startRate = orbitRate
+        val targetRate = if (currentActive) 1f else 0f
+        var elapsedMs = 0f
+        var lastNanos = 0L
+        while (currentActive || orbitRate > 0f) {
+            withFrameNanos { frameNanos ->
+                if (lastNanos == 0L) lastNanos = frameNanos
+                val deltaMs = ((frameNanos - lastNanos) / NANOS_PER_MS).coerceIn(0f, MAX_FRAME_DELTA_MS)
+                lastNanos = frameNanos
+                elapsedMs = minOf(KeynearMotion.RADAR_RAMP_MS.toFloat(), elapsedMs + deltaMs)
+                orbitRate = nextOrbitRate(startRate, targetRate, elapsedMs)
+                orbitPhase = (orbitPhase + (deltaMs / KeynearMotion.ORBIT_CYCLE_MS.toFloat()) * orbitRate) % 1f
+            }
+        }
+    }
+
+    if (pins.isEmpty()) {
+        SkeletonPins(radarActive = radarActive, layout = layout, orbitPhase = orbitPhase)
+        return
+    }
+    pins.forEachIndexed { idx, pin ->
+        OrbitPeerPin(pin, idx, orbitFor(pin.rssi, idx, pins.size, layout), orbitPhase, actions)
+    }
+}
+
+private fun orbitCoordinatesPx(
+    orbit: OrbitPlacement,
+    orbitPhase: Float,
+    densityPxPerDp: Float,
+): Pair<Float, Float> {
+    val angle = (((orbit.phaseSec / orbit.durationSec.toFloat()) + orbitPhase) * 2f * PI.toFloat()) - (PI.toFloat() / 2f)
+    val radiusPx = orbit.radiusPx.toFloat() * densityPxPerDp
+    return (cos(angle) * radiusPx) to (sin(angle) * radiusPx)
+}
+
+@Composable
+private fun OrbitPeerPin(
+    pin: OrbitPinUi,
+    index: Int,
+    orbit: OrbitPlacement,
+    orbitPhase: Float,
     actions: KeynearActions,
 ) {
     val palette = LocalKeynearPalette.current
-    val transition = rememberInfiniteTransition(label = "orbit")
-    val orbitProgress by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = ORBIT_CYCLE_MS, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "orbitPhase",
-    )
-
-    if (pins.isEmpty()) {
-        SkeletonPins()
+    val density = LocalDensity.current
+    val enter = remember(pin.id) { Animatable(0f) }
+    LaunchedEffect(pin.id) {
+        delay((index * KeynearMotion.PIN_STAGGER_MS).toLong())
+        enter.animateTo(1f, tween(KeynearMotion.PIN_ENTER_DURATION_MS, easing = KeynearMotion.SpringEasing))
     }
+    val visible by animateFloatAsState(
+        targetValue = if (pin.isVisible) 1f else 0f,
+        animationSpec = tween(KeynearMotion.DURATION_500_MS, easing = KeynearMotion.SpringEasing),
+        label = "pinVisibility",
+    )
+    val interactionSource = remember { MutableInteractionSource() }
+    val (xPx, yPx) = orbitCoordinatesPx(orbit, orbitPhase, density.density)
+    val enterSlidePx = with(density) { KeynearDimensions.Dp4.toPx() }
 
-    pins.forEachIndexed { idx, pin ->
-        val orbit = orbitFor(pin.rssi, idx, pins.size)
-        val fraction = (orbit.phaseSec / orbit.durationSec.toFloat()) + orbitProgress
-        val angle = (fraction * 2f * PI.toFloat()) - (PI.toFloat() / 2f)
-        val radiusDp = orbit.radiusPx * 0.72f
-        val xOffset = (cos(angle) * radiusDp).dp
-        val yOffset = (sin(angle) * radiusDp).dp
-
-        Column(
-            modifier = Modifier
-                .offset(x = xOffset, y = yOffset)
-                .clickable {
-                    if (pin.isPaired) {
-                        actions.onOpenDeviceDetail(pin.id)
-                    } else {
-                        actions.onInitiatePairing(pin.peerAddress)
-                    }
-                },
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
-        ) {
-            TactileSurface(
-                modifier = Modifier.size(PinNodeSize),
-                shape = CircleShape,
-                containerColor = palette.surface.copy(alpha = 0.94f),
-                tone = TactileTone.SURFACE,
-                cornerRadius = KeynearSpacing.TwoXl,
-                isCircle = true,
-            ) {
-                Box(modifier = Modifier.size(PinNodeSize), contentAlignment = Alignment.Center) {
-                    if (pin.role == DeviceRoleUi.DESKTOP) {
-                        IconLaptop(modifier = Modifier.size(PinIconSize), tint = palette.loadingInk)
-                    } else {
-                        IconSmartphone(modifier = Modifier.size(PinIconSize), tint = palette.loadingInk)
-                    }
-                }
+    Column(
+        modifier = Modifier
+            .graphicsLayer {
+                val e = enter.value
+                val scale = (PIN_ENTER_BASE_SCALE + (1f - PIN_ENTER_BASE_SCALE) * e) *
+                    (PIN_VISIBLE_BASE_SCALE + (1f - PIN_VISIBLE_BASE_SCALE) * visible)
+                translationX = xPx
+                translationY = yPx + enterSlidePx * (1f - e)
+                scaleX = scale
+                scaleY = scale
+                alpha = e * visible
             }
-
-            TactileSurface(
-                shape = KeynearShapes.Xl,
-                containerColor = palette.surface.copy(alpha = 0.94f),
-                tone = TactileTone.SURFACE,
-                cornerRadius = KeynearRadii.Xl,
+            .tactilePressScale(interactionSource, KeynearPressScale.PRESS_95)
+            .semantics { if (!pin.isVisible) disabled() }
+            .clickable(enabled = pin.isVisible, interactionSource = interactionSource, indication = LocalIndication.current) {
+                if (pin.isPaired) actions.onOpenDeviceDetail(pin.id) else actions.onInitiatePairing(pin.peerAddress)
+            },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
+    ) {
+        TactileSurface(
+            modifier = Modifier.size(KeynearDimensions.Dp44),
+            shape = CircleShape,
+            containerColor = palette.surface.copy(alpha = FOG_SURFACE_ALPHA),
+            tone = TactileTone.SURFACE,
+            cornerRadius = KeynearDimensions.Dp22,
+            isCircle = true,
+            contentAlignment = Alignment.Center,
+        ) {
+            if (pin.role == DeviceRoleUi.DESKTOP) {
+                IconLaptop(modifier = Modifier.size(KeynearDimensions.Dp20), tint = palette.loadingInk)
+            } else {
+                IconSmartphone(modifier = Modifier.size(KeynearDimensions.Dp20), tint = palette.loadingInk)
+            }
+        }
+        TactileSurface(
+            modifier = Modifier.widthIn(max = PinLabelMaxWidth),
+            shape = KeynearShapes.Xl,
+            containerColor = palette.surface.copy(alpha = FOG_SURFACE_ALPHA),
+            tone = TactileTone.SURFACE,
+            cornerRadius = KeynearRadii.Xl,
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = KeynearDimensions.Dp14, vertical = KeynearDimensions.Dp6),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = KeynearSpacing.Lg, vertical = PinLabelVerticalPadding),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        text = pin.displayName,
-                        color = palette.textPrimary,
-                        fontSize = PinLabelTextSize,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = pin.statusLabel,
-                        color = palette.textMuted,
-                        fontSize = KeynearTypeSizes.Caption,
-                    )
-                    Text(
-                        text = "${pin.rssi} dBm",
-                        color = palette.textMuted,
-                        fontSize = KeynearTypeSizes.Caption,
-                    )
-                }
+                Text(pin.displayName, color = palette.textPrimary, fontSize = KeynearTypeSizes.Caption, fontWeight = FontWeight.Bold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${pin.statusLabel} · ${pin.rssi} dBm", color = palette.textMuted, fontSize = KeynearTypeSizes.Caption,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
 }
 
 @Composable
-private fun SkeletonPins() {
+private fun SkeletonPins(radarActive: Boolean, layout: RadarLayout, orbitPhase: Float) {
     val palette = LocalKeynearPalette.current
-    val transition = rememberInfiniteTransition(label = "skeletonDrift")
-    val driftSpec = infiniteRepeatable<Float>(
-        animation = tween(durationMillis = SKELETON_DRIFT_HALF_MS, easing = FastOutSlowInEasing),
-        repeatMode = RepeatMode.Reverse,
-    )
-    val pulseFirst = transition.animateFloat(0.45f, 0.85f, driftSpec, label = "skeletonDrift0")
-    val pulseSecond = transition.animateFloat(0.85f, 0.45f, driftSpec, label = "skeletonDrift1")
-    val pulseThird = transition.animateFloat(0.45f, 0.85f, driftSpec, label = "skeletonDrift2")
-    val pulses = listOf(pulseFirst, pulseSecond, pulseThird)
-
-    SkeletonOffsets.forEachIndexed { idx, (xOffset, yOffset) ->
-        val pulse = pulses[idx].value
-        val scale = SKELETON_SCALE_MIN + (pulse - 0.45f) / 0.40f * (SKELETON_SCALE_MAX - SKELETON_SCALE_MIN)
+    val pulses = if (radarActive) {
+        val transition = rememberInfiniteTransition(label = "skeletonDrift")
+        val spec = infiniteRepeatable<Float>(
+            animation = tween(durationMillis = SKELETON_DRIFT_HALF_MS, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        )
+        listOf(
+            transition.animateFloat(SKELETON_PULSE_MIN, SKELETON_PULSE_MAX, spec, label = "s0").value,
+            transition.animateFloat(SKELETON_PULSE_MAX, SKELETON_PULSE_MIN, spec, label = "s1").value,
+            transition.animateFloat(SKELETON_PULSE_MIN, SKELETON_PULSE_MAX, spec, label = "s2").value,
+        )
+    } else {
+        listOf(SKELETON_PULSE_IDLE, SKELETON_PULSE_IDLE, SKELETON_PULSE_IDLE)
+    }
+    val density = LocalDensity.current.density
+    SkeletonRssis.forEachIndexed { idx, rssi ->
+        val pulse = pulses[idx]
+        val (xPx, yPx) = orbitCoordinatesPx(orbitFor(rssi, idx, SkeletonRssis.size, layout), orbitPhase, density)
+        val scale = SKELETON_SCALE_MIN +
+            ((pulse - SKELETON_PULSE_MIN) / (SKELETON_PULSE_MAX - SKELETON_PULSE_MIN)) * (SKELETON_SCALE_MAX - SKELETON_SCALE_MIN)
         Column(
-            modifier = Modifier
-                .offset(x = xOffset, y = yOffset)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                },
+            modifier = Modifier.graphicsLayer { translationX = xPx; translationY = yPx; scaleX = scale; scaleY = scale },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
         ) {
             Box(
                 modifier = Modifier
-                    .size(PinNodeSize)
+                    .size(KeynearDimensions.Dp44)
                     .clip(CircleShape)
                     .background(palette.surfaceTonal.copy(alpha = pulse))
-                    .tactileCushion(
-                        tone = TactileTone.INSET,
-                        isDark = palette.isDark,
-                        cornerRadius = KeynearSpacing.TwoXl,
-                        isCircle = true,
-                    ),
+                    .tactileCushion(TactileTone.INSET, palette.isDark, KeynearDimensions.Dp22, isCircle = true),
                 contentAlignment = Alignment.Center,
             ) {
                 IconLaptop(
-                    modifier = Modifier.size(PinIconSize),
-                    tint = palette.textMuted.copy(alpha = 0.55f * pulse),
+                    modifier = Modifier.size(KeynearDimensions.Dp20),
+                    tint = palette.textMuted.copy(alpha = SKELETON_ICON_ALPHA * pulse),
                 )
             }
             Column(
                 modifier = Modifier
                     .clip(KeynearShapes.Xl)
                     .background(palette.surfaceTonal.copy(alpha = pulse))
-                    .padding(horizontal = KeynearSpacing.Lg, vertical = PinLabelVerticalPadding),
+                    .padding(horizontal = KeynearDimensions.Dp14, vertical = KeynearDimensions.Dp6),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Xs),
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(width = SkeletonLabelWidth, height = SkeletonBarHeight)
-                        .clip(CircleShape)
-                        .background(palette.textMuted.copy(alpha = 0.32f * pulse)),
-                )
-                Box(
-                    modifier = Modifier
-                        .size(width = SkeletonSubLabelWidth, height = SkeletonBarHeight)
-                        .clip(CircleShape)
-                        .background(palette.textMuted.copy(alpha = 0.22f * pulse)),
-                )
+                Box(Modifier.size(SkeletonLabelWidth, SkeletonBarHeight).clip(CircleShape)
+                    .background(palette.textMuted.copy(alpha = SKELETON_TITLE_ALPHA * pulse)))
+                Box(Modifier.size(SkeletonSubLabelWidth, SkeletonBarHeight).clip(CircleShape)
+                    .background(palette.textMuted.copy(alpha = SKELETON_SUB_ALPHA * pulse)))
             }
         }
     }

@@ -1,59 +1,36 @@
 package org.keynear.app.share
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.keynear.app.ui.model.ShareValidationResult
 import org.keynear.app.ui.model.formatBytes
+import org.keynear.designsystem.ActionButton
+import org.keynear.designsystem.IconClose
+import org.keynear.designsystem.KeynearDimensions
+import org.keynear.designsystem.KeynearLayout
+import org.keynear.designsystem.KeynearPressScale
 import org.keynear.designsystem.KeynearRadii
+import org.keynear.designsystem.KeynearShapes
 import org.keynear.designsystem.KeynearSpacing
 import org.keynear.designsystem.KeynearTypeSizes
 import org.keynear.designsystem.LocalKeynearPalette
-
-private val SheetCornerTop = 28.dp
-private val SheetElevation = 16.dp
-private val HandleWidth = 36.dp
-private val HandleHeight = 4.dp
-private val CloseBadgeSize = 36.dp
-private val CardCornerRadius = 20.dp
-private val DeviceGridMaxHeight = 320.dp
-private val DeviceTileCornerRadius = 18.dp
-private val DeviceTileMinHeight = 96.dp
-private val DeviceIconContainerSize = 44.dp
-private val DeviceIconContainerRadius = 14.dp
-private val PillCorner = 999.dp
-private val SheetGap = 14.dp
-private val SectionGap = 10.dp
-private val HeaderTextSize = 19.sp
-private val EmptyHeaderSize = 15.sp
-private val SmallHeaderSize = 13.sp
-private val CaptionLetterSpacing = 0.8.sp
-private val MicroLabelSize = 11.sp
+import org.keynear.designsystem.TactileSurface
+import org.keynear.designsystem.TactileTone
 
 @Composable
 internal fun ShareSheetHeader(
@@ -65,9 +42,9 @@ internal fun ShareSheetHeader(
     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Box(
             modifier = Modifier
-                .width(HandleWidth)
-                .height(HandleHeight)
-                .clip(RoundedCornerShape(PillCorner))
+                .width(KeynearSpacing.MinTouchTarget)
+                .height(KeynearDimensions.Dp6)
+                .clip(CircleShape)
                 .background(palette.sheetHandle),
         )
     }
@@ -85,8 +62,8 @@ internal fun ShareSheetHeader(
             }
             Text(
                 text = headerTitle,
-                fontSize = HeaderTextSize,
-                fontWeight = FontWeight.ExtraBold,
+                fontSize = KeynearTypeSizes.Sp19,
+                fontWeight = FontWeight.Bold,
                 color = palette.textPrimary,
             )
             val subtitle = when (validation) {
@@ -96,18 +73,21 @@ internal fun ShareSheetHeader(
             }
             Text(text = subtitle, fontSize = KeynearTypeSizes.Caption, color = palette.textMuted)
         }
-        Box(
-            modifier = Modifier
-                .size(KeynearSpacing.MinTouchTarget)
-                .clip(CircleShape)
-                .clickable(onClick = onClose),
+        TactileSurface(
+            modifier = Modifier.size(KeynearLayout.EmptyBadgeSize),
+            shape = CircleShape,
+            containerColor = palette.surfaceTonal,
+            tone = TactileTone.TONAL,
+            cornerRadius = KeynearDimensions.Dp22,
+            isCircle = true,
+            pressScale = KeynearPressScale.PRESS_95,
             contentAlignment = Alignment.Center,
+            onClick = onClose,
         ) {
-            Surface(modifier = Modifier.size(CloseBadgeSize), shape = CircleShape, color = palette.surfaceTonal) {
-                Box(contentAlignment = Alignment.Center) {
-                    ShareCloseIcon(color = palette.textSecondary, size = KeynearSpacing.Lg)
-                }
-            }
+            IconClose(
+                modifier = Modifier.size(KeynearDimensions.Dp20),
+                tint = palette.textSecondary,
+            )
         }
     }
 }
@@ -119,41 +99,34 @@ internal fun ShareInvalidSection(
     onClose: () -> Unit,
 ) {
     val palette = LocalKeynearPalette.current
-    Surface(
+    TactileSurface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(KeynearRadii.Xl),
-        color = palette.errorTonal,
+        shape = KeynearShapes.Xl,
+        containerColor = palette.errorTonal,
+        tone = TactileTone.DANGER_TONAL,
+        cornerRadius = KeynearRadii.Xl,
     ) {
         Text(
             text = reason,
-            fontSize = SmallHeaderSize,
+            fontSize = KeynearTypeSizes.Description,
             color = palette.onDangerTonal,
             modifier = Modifier.padding(KeynearSpacing.Lg),
         )
     }
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(SectionGap),
+        horizontalArrangement = Arrangement.spacedBy(KeynearLayout.ContentGap),
     ) {
-        Button(
+        ActionButton(
+            label = "Open Keynear",
+            primary = true,
             onClick = onOpenMain,
-            modifier = Modifier
-                .weight(1f)
-                .defaultMinSize(minHeight = KeynearSpacing.MinTouchTarget),
-            shape = RoundedCornerShape(PillCorner),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = palette.loading,
-                contentColor = palette.onAccent,
-            ),
-        ) {
-            Text("Open Keynear", fontWeight = FontWeight.Bold)
-        }
-        OutlinedButton(
+            modifier = Modifier.weight(1f),
+        )
+        ActionButton(
+            label = "Close",
+            tonalSurface = true,
             onClick = onClose,
-            modifier = Modifier.defaultMinSize(minHeight = KeynearSpacing.MinTouchTarget),
-            shape = RoundedCornerShape(PillCorner),
-        ) {
-            Text("Close", color = palette.textPrimary)
-        }
+        )
     }
 }

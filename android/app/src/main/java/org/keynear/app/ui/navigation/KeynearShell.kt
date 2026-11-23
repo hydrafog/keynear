@@ -1,5 +1,10 @@
 package org.keynear.app.ui.navigation
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,36 +16,25 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.keynear.designsystem.TactileSurface
-import org.keynear.designsystem.TactileTone
 import org.keynear.designsystem.IconArrowLeft
 import org.keynear.designsystem.IconKeynearSymbolic
+import org.keynear.designsystem.KeynearMotion
+import org.keynear.designsystem.KeynearPressScale
 import org.keynear.designsystem.KeynearRadii
 import org.keynear.designsystem.KeynearShapes
 import org.keynear.designsystem.KeynearSpacing
 import org.keynear.designsystem.KeynearTypeSizes
 import org.keynear.designsystem.LocalKeynearPalette
+import org.keynear.designsystem.TactileSurface
+import org.keynear.designsystem.TactileTone
 
-private val ActivePillWidth = 64.dp
-private val BadgeInset = 6.dp
-private val BadgeOffsetX = 3.dp
-private val BadgeOffsetY = (-3).dp
-private val BadgeRadius = 5.dp
-private val ContentGap = 10.dp
-private val InactivePillWidth = 40.dp
-private val NavIconSize = 20.dp
-private val NavItemVerticalPadding = 2.dp
-private val NavPillHeight = 36.dp
-private val NavPillRadius = 18.dp
-private val SnackbarTextSize = 13.sp
+private val TopBarHeight = 64.dp
 
 @Composable
 fun KeynearTopAppBar(
@@ -58,7 +52,7 @@ fun KeynearTopAppBar(
             .fillMaxWidth()
             .background(palette.canvas)
             .statusBarsPadding()
-            .height(ActivePillWidth)
+            .height(TopBarHeight)
             .padding(horizontal = KeynearSpacing.Lg),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Md),
@@ -70,6 +64,7 @@ fun KeynearTopAppBar(
                 containerColor = palette.surface,
                 tone = TactileTone.SURFACE,
                 cornerRadius = KeynearRadii.TwoXl,
+                pressScale = KeynearPressScale.PRESS_95,
                 onClick = onBack,
             ) {
                 Box(
@@ -82,19 +77,31 @@ fun KeynearTopAppBar(
         } else if (isReceiveHome) {
             IconKeynearSymbolic(
                 modifier = Modifier.size(KeynearSpacing.Xl),
-                tint = palette.textPrimary,
+                tint = palette.loadingInk,
             )
         }
 
-        Text(
-            text = title,
-            color = palette.textPrimary,
-            fontSize = KeynearTypeSizes.Title,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = (-0.6).sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        AnimatedContent(
+            targetState = title,
+            transitionSpec = {
+                fadeIn(
+                    tween(durationMillis = KeynearMotion.FADE_IN_DURATION_MS, easing = KeynearMotion.FadeEasing),
+                ) togetherWith fadeOut(
+                    tween(durationMillis = KeynearMotion.SHORT_DURATION_MS, easing = KeynearMotion.ExitEasing),
+                )
+            },
+            label = "topBarTitle",
+        ) { animatedTitle ->
+            Text(
+                text = animatedTitle,
+                color = palette.textPrimary,
+                fontSize = KeynearTypeSizes.Title,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.6).sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

@@ -5,52 +5,30 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.keynear.app.ui.model.PairedDeviceUi
 import org.keynear.app.ui.model.TransferUi
+import org.keynear.designsystem.ActionButton
+import org.keynear.designsystem.KeynearLayout
 import org.keynear.designsystem.KeynearRadii
+import org.keynear.designsystem.KeynearShapes
 import org.keynear.designsystem.KeynearSpacing
 import org.keynear.designsystem.KeynearTypeSizes
 import org.keynear.designsystem.LocalKeynearPalette
+import org.keynear.designsystem.SectionHeading
+import org.keynear.designsystem.TactileSurface
+import org.keynear.designsystem.TactileTone
 
-private val SheetCornerTop = 28.dp
-private val SheetElevation = 16.dp
-private val HandleWidth = 36.dp
-private val HandleHeight = 4.dp
-private val CloseBadgeSize = 36.dp
-private val CardCornerRadius = 20.dp
 private val DeviceGridMaxHeight = 320.dp
-private val DeviceTileCornerRadius = 18.dp
-private val DeviceTileMinHeight = 96.dp
-private val DeviceIconContainerSize = 44.dp
-private val DeviceIconContainerRadius = 14.dp
-private val PillCorner = 999.dp
-private val SheetGap = 14.dp
-private val SectionGap = 10.dp
-private val HeaderTextSize = 19.sp
-private val EmptyHeaderSize = 15.sp
-private val SmallHeaderSize = 13.sp
-private val CaptionLetterSpacing = 0.8.sp
-private val MicroLabelSize = 11.sp
 
 @Composable
 internal fun ShareValidBody(
@@ -65,14 +43,16 @@ internal fun ShareValidBody(
 ) {
     val palette = LocalKeynearPalette.current
     sendError?.let { msg ->
-        Surface(
+        TactileSurface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(KeynearRadii.Xl),
-            color = palette.errorTonal,
+            shape = KeynearShapes.Xl,
+            containerColor = palette.errorTonal,
+            tone = TactileTone.DANGER_TONAL,
+            cornerRadius = KeynearRadii.Xl,
         ) {
             Text(
                 text = msg,
-                fontSize = SmallHeaderSize,
+                fontSize = KeynearTypeSizes.Description,
                 color = palette.onDangerTonal,
                 modifier = Modifier.padding(KeynearSpacing.Md),
             )
@@ -80,14 +60,16 @@ internal fun ShareValidBody(
     }
 
     if (sentTransfer != null) {
-        Surface(
+        TactileSurface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(CardCornerRadius),
-            color = palette.loadingTonal,
+            shape = KeynearShapes.Card,
+            containerColor = palette.loadingTonal,
+            tone = TactileTone.ACCENT_TONAL,
+            cornerRadius = KeynearRadii.TwoXl,
         ) {
             Column(
                 modifier = Modifier.padding(KeynearSpacing.Lg),
-                verticalArrangement = Arrangement.spacedBy(SectionGap),
+                verticalArrangement = Arrangement.spacedBy(KeynearLayout.ContentGap),
             ) {
                 Text(
                     text = "Sending ${sentTransfer.summaryName} to ${sentTransfer.peerDisplayName}",
@@ -96,39 +78,24 @@ internal fun ShareValidBody(
                     color = palette.onLoadingTonal,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm)) {
-                    Button(
+                    ActionButton(
+                        label = "Open Keynear",
+                        primary = true,
                         onClick = onOpenMain,
-                        modifier = Modifier
-                            .weight(1f)
-                            .defaultMinSize(minHeight = KeynearSpacing.MinTouchTarget),
-                        shape = RoundedCornerShape(PillCorner),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = palette.loading,
-                            contentColor = palette.onAccent,
-                        ),
-                    ) {
-                        Text("Open Keynear", fontWeight = FontWeight.Bold)
-                    }
-                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                    )
+                    ActionButton(
+                        label = "Done",
+                        tonalSurface = true,
                         onClick = onClose,
-                        modifier = Modifier.defaultMinSize(minHeight = KeynearSpacing.MinTouchTarget),
-                        shape = RoundedCornerShape(PillCorner),
-                    ) {
-                        Text("Done", color = palette.onLoadingTonal)
-                    }
+                    )
                 }
             }
         }
         return
     }
 
-    Text(
-        text = "DIRECT SHARE VIA KEYNEAR",
-        fontSize = MicroLabelSize,
-        fontWeight = FontWeight.Bold,
-        letterSpacing = CaptionLetterSpacing,
-        color = palette.textMuted,
-    )
+    SectionHeading(title = "Direct Share via Keynear")
 
     when {
         pairedDevices == null -> {
@@ -142,37 +109,33 @@ internal fun ShareValidBody(
             }
         }
         pairedDevices.isEmpty() -> {
-            Surface(
+            TactileSurface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(CardCornerRadius),
-                color = palette.surfaceTonal,
+                shape = KeynearShapes.Card,
+                containerColor = palette.surfaceTonal,
+                tone = TactileTone.TONAL,
+                cornerRadius = KeynearRadii.TwoXl,
             ) {
                 Column(
                     modifier = Modifier.padding(KeynearSpacing.Lg),
-                    verticalArrangement = Arrangement.spacedBy(SectionGap),
+                    verticalArrangement = Arrangement.spacedBy(KeynearLayout.ContentGap),
                 ) {
                     Text(
                         text = "No paired devices yet",
-                        fontSize = EmptyHeaderSize,
+                        fontSize = KeynearTypeSizes.Body,
                         fontWeight = FontWeight.Bold,
                         color = palette.textPrimary,
                     )
                     Text(
                         text = "Open Keynear to pair a nearby device before sharing.",
-                        fontSize = SmallHeaderSize,
+                        fontSize = KeynearTypeSizes.Description,
                         color = palette.textMuted,
                     )
-                    Button(
+                    ActionButton(
+                        label = "Open Keynear",
+                        primary = true,
                         onClick = onOpenMain,
-                        modifier = Modifier.defaultMinSize(minHeight = KeynearSpacing.MinTouchTarget),
-                        shape = RoundedCornerShape(PillCorner),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = palette.loading,
-                            contentColor = palette.onAccent,
-                        ),
-                    ) {
-                        Text("Open Keynear", fontWeight = FontWeight.Bold)
-                    }
+                    )
                 }
             }
         }
@@ -182,12 +145,12 @@ internal fun ShareValidBody(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = DeviceGridMaxHeight),
-                verticalArrangement = Arrangement.spacedBy(SectionGap),
+                verticalArrangement = Arrangement.spacedBy(KeynearLayout.ContentGap),
             ) {
                 rows.forEach { pair ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(SectionGap),
+                        horizontalArrangement = Arrangement.spacedBy(KeynearLayout.ContentGap),
                     ) {
                         pair.forEach { dev ->
                             ShareDeviceTile(

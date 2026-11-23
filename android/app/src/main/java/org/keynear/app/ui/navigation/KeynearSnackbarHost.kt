@@ -1,59 +1,82 @@
 package org.keynear.app.ui.navigation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import org.keynear.designsystem.TactileSurface
-import org.keynear.designsystem.TactileTone
+import org.keynear.designsystem.KeynearLayout
+import org.keynear.designsystem.KeynearMotion
 import org.keynear.designsystem.KeynearRadii
 import org.keynear.designsystem.KeynearShapes
 import org.keynear.designsystem.KeynearSpacing
+import org.keynear.designsystem.KeynearTypeSizes
 import org.keynear.designsystem.LocalKeynearPalette
-
-private val ActivePillWidth = 64.dp
-private val BadgeInset = 6.dp
-private val BadgeOffsetX = 3.dp
-private val BadgeOffsetY = (-3).dp
-private val BadgeRadius = 5.dp
-private val ContentGap = 10.dp
-private val InactivePillWidth = 40.dp
-private val NavIconSize = 20.dp
-private val NavItemVerticalPadding = 2.dp
-private val NavPillHeight = 36.dp
-private val NavPillRadius = 18.dp
-private val SnackbarTextSize = 13.sp
+import org.keynear.designsystem.TactileSurface
+import org.keynear.designsystem.TactileTone
 
 @Composable
 fun KeynearSnackbarHost(message: String?) {
-    if (message == null) return
+    var retainedMessage by remember { mutableStateOf(message) }
+    if (message != null) {
+        retainedMessage = message
+    }
     val palette = LocalKeynearPalette.current
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = KeynearSpacing.Xl, vertical = KeynearSpacing.Md),
-        contentAlignment = Alignment.Center,
+    val slideOffsetPx = with(LocalDensity.current) { KeynearSpacing.Xl.roundToPx() }
+    val enterTransition = fadeIn(
+        tween(durationMillis = KeynearMotion.SHEET_DURATION_MS, easing = KeynearMotion.SpringEasing),
+    ) + slideInVertically(
+        animationSpec = tween(durationMillis = KeynearMotion.SHEET_DURATION_MS, easing = KeynearMotion.SpringEasing),
+    ) { slideOffsetPx }
+    val exitTransition = fadeOut(
+        tween(durationMillis = KeynearMotion.EXIT_DURATION_MS, easing = KeynearMotion.ExitEasing),
+    ) + slideOutVertically(
+        animationSpec = tween(durationMillis = KeynearMotion.EXIT_DURATION_MS, easing = KeynearMotion.ExitEasing),
+    ) { slideOffsetPx }
+
+    AnimatedVisibility(
+        visible = message != null,
+        enter = enterTransition,
+        exit = exitTransition,
     ) {
-        TactileSurface(
-            shape = KeynearShapes.Card,
-            containerColor = palette.snackbar,
-            tone = TactileTone.SURFACE,
-            cornerRadius = KeynearRadii.TwoXl,
+        val displayMessage = retainedMessage ?: return@AnimatedVisibility
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = KeynearSpacing.Xl, vertical = KeynearSpacing.Md),
+            contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = message,
-                color = palette.onSnackbar,
-                fontSize = SnackbarTextSize,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(horizontal = KeynearSpacing.Lg, vertical = ContentGap),
-            )
+            TactileSurface(
+                shape = KeynearShapes.Xl,
+                containerColor = palette.snackbar,
+                tone = TactileTone.SURFACE,
+                cornerRadius = KeynearRadii.Xl,
+            ) {
+                Text(
+                    text = displayMessage,
+                    color = palette.onSnackbar,
+                    fontSize = KeynearTypeSizes.Description,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(
+                        horizontal = KeynearLayout.CardPaddingLarge,
+                        vertical = KeynearSpacing.Md,
+                    ),
+                )
+            }
         }
     }
 }

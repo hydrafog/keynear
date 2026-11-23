@@ -1,6 +1,5 @@
 package org.keynear.app.ui.navigation
 
-import androidx.compose.runtime.getValue
 import org.keynear.app.ui.model.DeviceRoleUi
 import org.keynear.app.ui.model.PairedDeviceUi
 
@@ -24,6 +23,7 @@ data class OrbitPinUi(
     val isPaired: Boolean,
     val isOnline: Boolean,
     val peerAddress: String,
+    val isVisible: Boolean = true,
 )
 
 data class KeynearActions(

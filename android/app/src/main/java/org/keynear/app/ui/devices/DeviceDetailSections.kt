@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -19,31 +17,29 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.keynear.app.ui.model.DeviceRoleUi
 import org.keynear.app.ui.model.PairedDeviceUi
+import org.keynear.app.ui.navigation.KeynearActions
 import org.keynear.designsystem.ActionButton
-import org.keynear.designsystem.KeynearSwitch
-import org.keynear.designsystem.RecessedInput
-import org.keynear.designsystem.TactileSurface
-import org.keynear.designsystem.TactileTone
 import org.keynear.designsystem.IconLaptop
 import org.keynear.designsystem.IconSmartphone
-import org.keynear.app.ui.navigation.KeynearActions
 import org.keynear.designsystem.KeynearLayout
 import org.keynear.designsystem.KeynearRadii
 import org.keynear.designsystem.KeynearShapes
 import org.keynear.designsystem.KeynearSpacing
+import org.keynear.designsystem.KeynearSwitch
 import org.keynear.designsystem.KeynearTypeSizes
 import org.keynear.designsystem.LocalKeynearPalette
+import org.keynear.designsystem.RecessedInput
+import org.keynear.designsystem.TactileSurface
+import org.keynear.designsystem.TactileTone
 
 private val ActionIconSize = 20.dp
 private val ContentGap = 10.dp
 private val ControlMinHeight = 52.dp
-private val DetailRowMinHeight = 54.dp
 private val DeviceNameSize = 18.sp
 private val HeaderIconSize = 56.dp
 private val RowIconSize = 14.dp
 private val SectionIconSize = 28.dp
 private val TextSubtitleGap = 2.dp
-private val ValueSize = 22.sp
 
 @Composable
 internal fun DeviceHeaderCard(
@@ -69,7 +65,7 @@ TactileSurface(
             modifier = Modifier.size(HeaderIconSize),
             shape = KeynearShapes.Xl,
             containerColor = palette.loadingTonal,
-            tone = TactileTone.TONAL,
+            tone = TactileTone.ACCENT_TONAL,
             cornerRadius = KeynearRadii.Xl,
         ) {
             Box(modifier = Modifier.size(HeaderIconSize), contentAlignment = Alignment.Center) {

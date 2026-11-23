@@ -20,9 +20,11 @@ import org.keynear.app.ui.model.TransferProgressStage
 import org.keynear.app.ui.model.TransferStateUi
 import org.keynear.app.ui.model.TransferUi
 import org.keynear.app.ui.model.VisibilityState
+import org.keynear.app.ui.model.RadarLayout
 import org.keynear.app.ui.model.computeTransferProgressModel
 import org.keynear.app.ui.model.formatBytes
 import org.keynear.app.ui.model.orbitFor
+import org.keynear.app.ui.model.radarLayoutFor
 import org.keynear.app.ui.model.validateDisplayNameInput
 import uniffi.keynear_core.FfiVisibilityMode
 import org.keynear.app.service.TileTransitionDecision
@@ -224,6 +226,31 @@ class SurfacesAndOnboardingTest {
 
         assertEquals(176, orbitFor(rssi = -120, index = 0, count = 1).radiusPx)
         assertEquals(128, orbitFor(rssi = -10, index = 0, count = 1).radiusPx)
+    }
+
+    @Test
+    fun radarLayoutForGuardsZeroAndClampsNarrowAndWideViewports() {
+        assertEquals(RadarLayout(scale = 1f, maxRadiusDp = 116f), radarLayoutFor(0f, 400f))
+        assertEquals(RadarLayout(scale = 1f, maxRadiusDp = 116f), radarLayoutFor(360f, -12f))
+
+        val narrow = radarLayoutFor(widthDp = 280f, heightDp = 300f)
+        assertTrue(narrow.scale >= 0.62f && narrow.scale < 1f)
+        assertTrue(narrow.maxRadiusDp in 116f..172f)
+
+        val cramped = radarLayoutFor(widthDp = 120f, heightDp = 120f)
+        assertEquals(0.62f, cramped.scale, 0.001f)
+        assertEquals(116f, cramped.maxRadiusDp, 0.001f)
+
+        val wide = radarLayoutFor(widthDp = 640f, heightDp = 720f)
+        assertEquals(1f, wide.scale, 0.001f)
+        assertEquals(172f, wide.maxRadiusDp, 0.001f)
+
+        val layoutNear = orbitFor(rssi = -40, index = 0, count = 3, layout = wide)
+        val layoutFar = orbitFor(rssi = -90, index = 2, count = 3, layout = wide)
+        assertTrue(layoutNear.radiusPx in 116..172)
+        assertEquals(172, layoutFar.radiusPx)
+        assertEquals(0f, layoutNear.phaseSec, 0.001f)
+        assertEquals(40f * 2f / 3f, layoutFar.phaseSec, 0.001f)
     }
 
     @Test

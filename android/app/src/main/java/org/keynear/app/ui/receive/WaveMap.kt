@@ -6,7 +6,9 @@ internal object WaveMap {
     val InnerRadius = 78.dp
     val MiddleRadius = 136.dp
     val OuterRadius = 196.dp
-    val GuideRadii = listOf(InnerRadius, MiddleRadius, OuterRadius)
+    val Ratios = listOf(78f / 196f, 136f / 196f, 1f)
+    const val FadeMs = 800
+    const val IdleAlpha = 0.4f
     const val Spokes = 12
     const val RingPoints = 96
     const val BaseLobes = 6

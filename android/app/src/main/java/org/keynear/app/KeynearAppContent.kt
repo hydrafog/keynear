@@ -1,6 +1,12 @@
 package org.keynear.app
 
 import android.os.Build
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,25 +14,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import org.keynear.app.ui.devices.DeviceDetailScreen
 import org.keynear.app.ui.model.CoreSnapshot
 import org.keynear.app.ui.model.CoreState
-import org.keynear.designsystem.ActionButton
-import org.keynear.designsystem.TactileSurface
-import org.keynear.app.ui.devices.DeviceDetailScreen
 import org.keynear.app.ui.navigation.KeynearActions
 import org.keynear.app.ui.navigation.KeynearBottomNav
 import org.keynear.app.ui.navigation.KeynearSnackbarHost
@@ -37,9 +37,18 @@ import org.keynear.app.ui.receive.ReceiveScreen
 import org.keynear.app.ui.send.SendScreen
 import org.keynear.app.ui.settings.PermissionsScreen
 import org.keynear.app.ui.settings.SettingsScreen
+import org.keynear.designsystem.ActionButton
+import org.keynear.designsystem.KeynearDimensions
+import org.keynear.designsystem.KeynearLayout
+import org.keynear.designsystem.KeynearMotion
+import org.keynear.designsystem.KeynearRadii
+import org.keynear.designsystem.KeynearShapes
+import org.keynear.designsystem.KeynearSpacing
+import org.keynear.designsystem.KeynearTypeSizes
 import org.keynear.designsystem.LocalKeynearPalette
+import org.keynear.designsystem.TactileSurface
+import org.keynear.designsystem.TactileTone
 
-@Suppress("CyclomaticComplexMethod")
 @Composable
 internal fun KeynearAppContent(
     snapshot: CoreSnapshot?,
@@ -47,7 +56,6 @@ internal fun KeynearAppContent(
     activeTab: KeynearTab,
     subScreen: KeynearSubScreen?,
     confirmUnpairDeviceId: String?,
-    snackbarMessage: String?,
     permissionsChecklist: org.keynear.app.ui.model.PermissionsChecklistState,
     actions: KeynearActions,
     sheetExpanded: Boolean,
@@ -62,6 +70,7 @@ internal fun KeynearAppContent(
     val selectedDevice = snapshot?.pairedDevices?.firstOrNull {
         (subScreen as? KeynearSubScreen.DeviceDetail)?.deviceId == it.deviceId
     }
+    val slideOffsetPx = with(LocalDensity.current) { KeynearDimensions.Dp6.roundToPx() }
 
     Scaffold(
         modifier = Modifier
@@ -93,20 +102,46 @@ internal fun KeynearAppContent(
             if (snapshot == null) {
                 LoadingOrErrorContent(uiState, scope, syncBleAndLoad)
             } else {
-                CurrentScreenContent(
-                    snapshot, activeTab, subScreen, confirmUnpairDeviceId,
-                    permissionsChecklist, actions, localName, sheetExpanded, onSetSheetExpanded,
-                )
+                AnimatedContent(
+                    targetState = subScreen ?: activeTab,
+                    transitionSpec = {
+                        val enter = fadeIn(
+                            tween(
+                                durationMillis = KeynearMotion.SCREEN_DURATION_MS,
+                                easing = KeynearMotion.SpringEasing,
+                            ),
+                        ) + slideInVertically(
+                            animationSpec = tween(
+                                durationMillis = KeynearMotion.SCREEN_DURATION_MS,
+                                easing = KeynearMotion.SpringEasing,
+                            ),
+                        ) { slideOffsetPx }
+                        val exit = fadeOut(
+                            tween(
+                                durationMillis = KeynearMotion.FADE_DURATION_MS,
+                                easing = KeynearMotion.ExitEasing,
+                            ),
+                        )
+                        enter togetherWith exit
+                    },
+                    label = "screenTransition",
+                ) { target ->
+                    val targetSub = target as? KeynearSubScreen
+                    val targetTab = (target as? KeynearTab) ?: activeTab
+                    CurrentScreenContent(
+                        snapshot, targetTab, targetSub, confirmUnpairDeviceId,
+                        permissionsChecklist, actions, localName, sheetExpanded, onSetSheetExpanded,
+                    )
+                }
             }
-
 
             Box(modifier = Modifier.align(Alignment.BottomCenter)) {
                 KeynearSnackbarHost(message = snackbarMessage)
             }
         }
+    }
 }
 
-}
 @Composable
 private fun LoadingOrErrorContent(
     uiState: CoreState,
@@ -117,7 +152,7 @@ private fun LoadingOrErrorContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(KeynearSpacing.Xl),
         contentAlignment = Alignment.Center,
     ) {
         when (val current = uiState) {
@@ -125,18 +160,19 @@ private fun LoadingOrErrorContent(
             is CoreState.Error -> {
                 TactileSurface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = KeynearShapes.Card,
                     containerColor = palette.errorTonal,
-                    shadowElevation = 0.dp,
+                    tone = TactileTone.DANGER_TONAL,
+                    cornerRadius = KeynearRadii.TwoXl,
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.padding(KeynearLayout.CardPadding),
+                        verticalArrangement = Arrangement.spacedBy(KeynearLayout.ContentGap),
                     ) {
                         Text(
                             text = current.message,
                             color = palette.onDangerTonal,
-                            fontSize = 14.sp,
+                            fontSize = KeynearTypeSizes.Description,
                             fontWeight = FontWeight.Medium,
                         )
                         ActionButton(

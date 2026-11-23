@@ -27,14 +27,14 @@ object ReceiveStateHolder {
         val pairedNames = snapshot.pairedDevices
             .map { it.displayName.trim().lowercase() }
             .toSet()
-        if (snapshot.visibility != VisibilityState.HIDDEN) {
-            snapshot.nearbyPeers
-                .filter { peer ->
-                    !peer.isPaired &&
-                        peer.address.lowercase() !in pairedAddresses &&
-                        peer.displayName.trim().lowercase() !in pairedNames
-                }
-                .forEach { peer ->
+        val peerVisible = snapshot.visibility != VisibilityState.HIDDEN
+        snapshot.nearbyPeers
+            .filter { peer ->
+                !peer.isPaired &&
+                    peer.address.lowercase() !in pairedAddresses &&
+                    peer.displayName.trim().lowercase() !in pairedNames
+            }
+            .forEach { peer ->
                 result.add(
                     OrbitPinUi(
                         id = peer.address,
@@ -45,10 +45,10 @@ object ReceiveStateHolder {
                         isPaired = false,
                         isOnline = true,
                         peerAddress = peer.address,
+                        isVisible = peerVisible,
                     ),
                 )
             }
-        }
         return result
     }
 }
