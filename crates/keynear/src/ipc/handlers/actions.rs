@@ -120,8 +120,8 @@ async fn set_auto_accept_from_paired(enabled: bool, ctx: &IpcDispatchContext) {
     }
 }
 
-fn launch_send_picker(device_id: Option<String>) {
-    if let Err(err) = spawn_send_picker_process(device_id.as_deref()) {
+fn launch_send_picker(device_id: Option<String>, directory: bool) {
+    if let Err(err) = spawn_send_picker_process(device_id.as_deref(), directory) {
         log_send_picker_launch(err);
     }
 }
@@ -190,7 +190,10 @@ async fn handle_launch_tray(cmd: &TrayCommand, ctx: &IpcDispatchContext) -> bool
                 }
             }
         }
-        TrayCommand::LaunchSendPicker { device_id } => launch_send_picker(device_id.clone()),
+        TrayCommand::LaunchSendPicker {
+            device_id,
+            directory,
+        } => launch_send_picker(device_id.clone(), *directory),
         _ => return false,
     }
     true

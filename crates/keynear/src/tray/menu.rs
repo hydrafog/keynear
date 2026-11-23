@@ -110,6 +110,14 @@ impl KeynearTray {
                     "Send files...",
                     TrayCommand::LaunchSendPicker {
                         device_id: Some(device.device_id.clone()),
+                        directory: false,
+                    },
+                ),
+                command_item(
+                    "Send folder...",
+                    TrayCommand::LaunchSendPicker {
+                        device_id: Some(device.device_id.clone()),
+                        directory: true,
                     },
                 ),
                 CheckmarkItem {
@@ -148,7 +156,7 @@ impl KeynearTray {
         .into()
     }
 
-    fn send_files_item(&self) -> MenuItem<Self> {
+    fn send_picker_item(&self, label: &str, directory: bool) -> MenuItem<Self> {
         if self.state.paired_devices.len() > 1 {
             let targets = self
                 .state
@@ -159,12 +167,13 @@ impl KeynearTray {
                         &device.display_name,
                         TrayCommand::LaunchSendPicker {
                             device_id: Some(device.device_id.clone()),
+                            directory,
                         },
                     )
                 })
                 .collect();
             return SubMenu {
-                label: "Send files...".to_string(),
+                label: label.to_string(),
                 submenu: targets,
                 ..Default::default()
             }
@@ -176,11 +185,12 @@ impl KeynearTray {
             .first()
             .map(|d| d.device_id.clone());
         StandardItem {
-            label: "Send files...".to_string(),
+            label: label.to_string(),
             enabled: !self.state.paired_devices.is_empty(),
             activate: Box::new(move |this: &mut Self| {
                 let _ = this.cmd_tx.send(TrayCommand::LaunchSendPicker {
                     device_id: default_device.clone(),
+                    directory,
                 });
             }),
             ..Default::default()
@@ -210,7 +220,8 @@ impl KeynearTray {
             }
             .into(),
             MenuItem::Separator,
-            self.send_files_item(),
+            self.send_picker_item("Send files...", false),
+            self.send_picker_item("Send folder...", true),
         ]
     }
 }

@@ -28,9 +28,15 @@ pub enum TrayCommand {
     DeclineTransfer(String),
     CancelTransfer(String),
     SetAutoAcceptFromPaired(bool),
-    SetDeviceAutoAccept { device_id: String, enabled: bool },
+    SetDeviceAutoAccept {
+        device_id: String,
+        enabled: bool,
+    },
     CopyLatestOtp,
-    LaunchSendPicker { device_id: Option<String> },
+    LaunchSendPicker {
+        device_id: Option<String>,
+        directory: bool,
+    },
     MediaPlay,
     MediaPause,
     MediaNext,
@@ -212,13 +218,16 @@ fn format_transfer_menu_label(session: &TransferSession) -> String {
     }
 }
 
-pub fn spawn_send_picker_process(device_id: Option<&str>) -> std::io::Result<()> {
+pub fn spawn_send_picker_process(device_id: Option<&str>, directory: bool) -> std::io::Result<()> {
     let bin_path = std::env::current_exe()
         .ok()
         .filter(|candidate| candidate.is_file())
         .unwrap_or_else(|| PathBuf::from("keynear"));
     let mut cmd = Command::new(bin_path);
     cmd.args(["send", "--picker"]);
+    if directory {
+        cmd.arg("--folder");
+    }
     if let Some(id) = device_id {
         cmd.args(["--device", id]);
     }

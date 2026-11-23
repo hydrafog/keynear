@@ -91,7 +91,7 @@ pub const CLI_USAGE_TEXT: &str = "Usage: keynear [daemon] [--config <path>]
        keynear transfers
        keynear send [--device <device_id>] [--] <path>...
        keynear send <device_id> [--] <path>...
-       keynear send --picker [--device <device_id>]
+       keynear send --picker [--folder] [--device <device_id>]
        keynear accept <transfer_id>
        keynear decline <transfer_id>
        keynear cancel <transfer_id>
@@ -108,7 +108,7 @@ Subcommands:
   devices                                  List paired devices from running daemon
   transfers                                List known transfers from running daemon
   send [--device <id>] [--] <path>...      Send files or folders via running daemon
-  send --picker [--device <id>]            Pick files via desktop portal and send
+  send --picker [--folder] [--device <id>] Pick files or folders via desktop portal and send
   accept <transfer_id>                     Accept an incoming transfer awaiting consent
   decline <transfer_id>                    Decline an incoming transfer awaiting consent
   cancel <transfer_id>                     Cancel an active or pending transfer
@@ -135,6 +135,7 @@ pub enum CliAction {
     },
     SendPicker {
         device_id: Option<String>,
+        directory: bool,
     },
     Accept {
         transfer_id: String,

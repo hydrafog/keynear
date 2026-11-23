@@ -124,7 +124,8 @@ fn cli_send_subcommands_and_legacy_flags_parsed() {
     assert_eq!(
         parse_cli_args(["send", "--picker", "--device", "pixel-9"]).unwrap(),
         CliAction::SendPicker {
-            device_id: Some("pixel-9".into())
+            device_id: Some("pixel-9".into()),
+            directory: false,
         }
     );
     assert_eq!(
@@ -158,7 +159,8 @@ fn cli_send_subcommands_and_legacy_flags_parsed() {
     assert_eq!(
         parse_cli_args(["--send-picker", "--device", "pixel-9"]).unwrap(),
         CliAction::SendPicker {
-            device_id: Some("pixel-9".into())
+            device_id: Some("pixel-9".into()),
+            directory: false,
         }
     );
 }

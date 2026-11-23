@@ -141,14 +141,12 @@ fn tray_menu_renders_header_and_omits_settings() {
         &menu[0],
         MenuItem::Standard(item) if !item.enabled && item.label == "Keynear — Paired devices only"
     ));
-    assert!(menu
-        .iter()
-        .filter_map(item_label)
-        .all(|label| !label.starts_with("Settings")));
-    assert!(matches!(
-        menu.last(),
-        Some(MenuItem::Standard(item)) if item.label == "Send files..." && !item.enabled
-    ));
+    let labels: Vec<&str> = menu.iter().filter_map(item_label).collect();
+    assert!(labels.iter().all(|label| !label.starts_with("Settings")));
+    assert_eq!(
+        &labels[labels.len() - 2..],
+        &["Send files...", "Send folder..."]
+    );
 }
 
 #[test]
@@ -166,7 +164,11 @@ fn tray_menu_groups_send_files_by_device_when_multiple_paired() {
     };
     let multi_menu = multi.menu();
     assert!(matches!(
+        &multi_menu[multi_menu.len() - 2],
+        MenuItem::SubMenu(sub) if sub.label == "Send files..." && sub.submenu.len() == 2
+    ));
+    assert!(matches!(
         multi_menu.last(),
-        Some(MenuItem::SubMenu(sub)) if sub.label == "Send files..." && sub.submenu.len() == 2
+        Some(MenuItem::SubMenu(sub)) if sub.label == "Send folder..." && sub.submenu.len() == 2
     ));
 }

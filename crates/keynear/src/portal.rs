@@ -76,10 +76,16 @@ pub fn file_uri_to_path(uri: &str) -> Result<PathBuf, KeynearError> {
     }
 }
 
-pub async fn pick_files_via_portal() -> Result<Vec<PathBuf>, KeynearError> {
+pub async fn pick_paths_via_portal(directory: bool) -> Result<Vec<PathBuf>, KeynearError> {
+    let title = if directory {
+        "Send folder via Keynear"
+    } else {
+        "Send files via Keynear"
+    };
     let pending = ashpd::desktop::file_chooser::SelectedFiles::open_file()
-        .title("Send files via Keynear")
+        .title(title)
         .modal(true)
+        .directory(directory)
         .multiple(true)
         .send()
         .await

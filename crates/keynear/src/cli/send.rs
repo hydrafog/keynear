@@ -78,9 +78,11 @@ where
     I: Iterator<Item = String>,
 {
     let mut device_id = None;
+    let mut directory = false;
     while let Some(arg) = iter.next() {
         match arg.as_str() {
             "--help" | "-h" => return Ok(CliAction::Help),
+            "--folder" | "--directory" => directory = true,
             "--device" => {
                 if device_id.is_some() {
                     return Err(validation(
@@ -98,13 +100,17 @@ where
             }
         }
     }
-    Ok(CliAction::SendPicker { device_id })
+    Ok(CliAction::SendPicker {
+        device_id,
+        directory,
+    })
 }
 
 #[derive(Default)]
 struct SendArgsState {
     device_id: Option<String>,
     picker: bool,
+    directory: bool,
     paths: Vec<PathBuf>,
     literal_paths: bool,
 }
@@ -126,6 +132,7 @@ where
         "--help" | "-h" => return Ok(Some(CliAction::Help)),
         "--" => state.literal_paths = true,
         "--picker" if allow_positional_device => state.picker = true,
+        "--folder" | "--directory" if allow_positional_device => state.directory = true,
         "--device" => {
             if state.device_id.is_some() {
                 return Err(validation(
@@ -164,7 +171,11 @@ fn finalize_send_state(state: SendArgsState, flag_name: &str) -> Result<CliActio
         }
         return Ok(CliAction::SendPicker {
             device_id: state.device_id,
+            directory: state.directory,
         });
+    }
+    if state.directory {
+        return Err(validation("args", "--folder requires --picker".to_string()));
     }
     if state.paths.is_empty() {
         return Err(validation(
@@ -214,4 +225,32 @@ where
         }
     }
     finalize_send_state(state, "send")
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::cli::{parse_cli_args, CliAction};
+    use keynear_protocol::KeynearError;
+
+    #[test]
+    fn cli_send_folder_picker_flags_parsed() {
+        assert_eq!(
+            parse_cli_args(["send", "--picker", "--folder", "--device", "pixel-9"]).unwrap(),
+            CliAction::SendPicker {
+                device_id: Some("pixel-9".into()),
+                directory: true,
+            }
+        );
+        assert_eq!(
+            parse_cli_args(["--send-picker", "--directory", "--device", "pixel-9"]).unwrap(),
+            CliAction::SendPicker {
+                device_id: Some("pixel-9".into()),
+                directory: true,
+            }
+        );
+        assert!(matches!(
+            parse_cli_args(["send", "--folder", "--", "/tmp/a"]),
+            Err(KeynearError::Validation { field: "args", .. })
+        ));
+    }
 }

@@ -102,10 +102,10 @@ async fn run_daemon(config_path: Option<PathBuf>) {
     }
 }
 
-async fn run_send_picker(device_id: Option<String>) {
+async fn run_send_picker(device_id: Option<String>, directory: bool) {
     let sock = daemon_socket_path();
     let target = run_blocking_ipc(move || portal::resolve_send_device(&sock, device_id)).await;
-    let paths = match portal::pick_files_via_portal().await {
+    let paths = match portal::pick_paths_via_portal(directory).await {
         Ok(paths) => paths,
         Err(err) => exit_with_error(err),
     };
@@ -145,7 +145,10 @@ async fn dispatch_action(action: CliAction) {
             })
             .await;
         }
-        CliAction::SendPicker { device_id } => run_send_picker(device_id).await,
+        CliAction::SendPicker {
+            device_id,
+            directory,
+        } => run_send_picker(device_id, directory).await,
         _ => unreachable!(),
     }
 }
