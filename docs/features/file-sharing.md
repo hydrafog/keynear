@@ -23,8 +23,9 @@ Keynear uses two streaming paths depending on the source.
   - It clears `IS_PENDING = 0` on completion.
   - It deletes the pending row on error or cancellation.
 - Directories and multi-file batches stream as uncompressed `CompressionMethod::Stored` zip archives (`zip::ZipWriter::new_stream`) over `QuicStreamKind::StoredZipArchive`. They use `1 MiB` (`1_048_576`-byte, `ZIP_IO_BUFFER_BYTES`) buffered I/O. Sender and receiver handle archives as follows.
-  - Senders skip symlinks with `symlink_metadata`.
-  - Receivers spool the archive and validate SHA-256 against `TransferComplete` before unpacking it with `ZipArchive` into `incoming_directory` (default `~/Downloads/Keynear` on Linux).
+  - Senders skip symlinks with `symlink_metadata`. On Android, `SafFolderHelper` stages selected SAF folder trees recursively into a temporary directory preserving nested and empty subdirectories before streaming via `OrionNodeHandle.send_paths`.
+  - Receivers spool the archive, validate SHA-256 against `TransferComplete`, unpack it with `ZipArchive`, and atomically promote each top-level folder or file into `incoming_directory` (default `~/Downloads/Keynear` on Linux) while preserving empty directories and avoiding filename scattering on folder collisions.
+  - On Android, `TransferSyncHandler` and `AndroidFolderExporter` export completed incoming folders and batches out of private staging into either the persisted SAF Save Folder (preserving empty directories) or `MediaStore.Downloads` with full `RELATIVE_PATH` subdirectories, then remove the temporary private copy.
   - Receivers reject path traversal (`enclosed_name()`), symlinks, encrypted entries, non-`Stored` entries, and byte counts exceeding `TransferOffer.total_bytes`.
 
 ## Resumable Transfers and On-Demand Browsing
@@ -52,8 +53,8 @@ Incoming transfers are gated by consent.
 Keynear exposes transfers through desktop and mobile interfaces.
 
 - On Linux, `keynear` communicates with the daemon over the `0o600` `daemon.sock` Unix socket. Subcommands handle `keynear send [--device <id>] [--] <path>...`, `keynear accept <transfer_id>`, `keynear decline <transfer_id>`, `keynear cancel <transfer_id>`, `keynear transfers`, and `keynear settings`. When a graphical D-Bus session is available, `keynear daemon` registers a `ksni` `StatusNotifierItem` tray menu (`org.keynear.Keynear-symbolic`, `Keynear`, click-to-open menu) and posts `org.freedesktop.Notifications` consent and status alerts with inline actions.
-- The tray menu and `keynear send --picker` use `ashpd` (`xdg-desktop-portal`) file choosers (`crates/keynear/src/portal.rs`) and IPC controls. They provide:
-  - Sending files through the tray `Send files...` item (`keynear send --picker`) or `keynear send`.
+- The tray menu and `keynear send --picker [--folder]` use `ashpd` (`xdg-desktop-portal`) file and folder choosers (`crates/keynear/src/portal.rs`) and IPC controls. They provide:
+  - Sending files through the tray `Send files...` item (`keynear send --picker`) or `keynear send`, and sending whole folders through the tray `Send folder...` item (`keynear send --picker --folder`) or `keynear send -- <folder>`.
   - Toggles in the tray menu for global `Auto-accept from paired` and per-device `Auto-accept files`.
   - Paired-device renaming through `keynear rename <device_id> <display_name>`.
   - Active transfer controls in the tray `Transfers` submenu and CLI with `Accept`, `Decline`, and `Cancel`.
