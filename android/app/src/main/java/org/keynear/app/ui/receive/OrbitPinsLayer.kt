@@ -8,7 +8,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -180,7 +179,7 @@ private fun OrbitPeerPin(
             }
             .tactilePressScale(interactionSource, KeynearPressScale.PRESS_95)
             .semantics { if (!pin.isVisible) disabled() }
-            .clickable(enabled = pin.isVisible, interactionSource = interactionSource, indication = LocalIndication.current) {
+            .clickable(enabled = pin.isVisible, interactionSource = interactionSource, indication = null) {
                 if (pin.isPaired) actions.onOpenDeviceDetail(pin.id) else actions.onInitiatePairing(pin.peerAddress)
             },
         horizontalAlignment = Alignment.CenterHorizontally,
