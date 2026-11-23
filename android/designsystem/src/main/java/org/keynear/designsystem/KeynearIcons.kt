@@ -450,20 +450,20 @@ fun IconKeynearSymbolic(
 ) {
     val fills = remember {
         listOf(
-            0.08f to "M 144,290 a 88,88 0 1,0 176,0 a 88,88 0 1,0 -176,0",
-            0.22f to "M 357.6,335.8 a 34,34 0 1,0 68,0 a 34,34 0 1,0 -68,0",
-            0.96f to "M 373.6,335.8 a 18,18 0 1,0 36,0 a 18,18 0 1,0 -36,0",
+            SYMBOLIC_BEACON_ALPHA to "M 144,290 a 88,88 0 1,0 176,0 a 88,88 0 1,0 -176,0",
+            SYMBOLIC_PEER_HALO_ALPHA to "M 357.6,335.8 a 34,34 0 1,0 68,0 a 34,34 0 1,0 -68,0",
+            SYMBOLIC_PEER_CORE_ALPHA to "M 373.6,335.8 a 18,18 0 1,0 36,0 a 18,18 0 1,0 -36,0",
         ).map { (alpha, pathData) -> alpha to PathParser().parsePathString(pathData).toPath() }
     }
     val strokes = remember {
         listOf(
-            Triple(0.18f, 5f, "M 60.4 146.0 A 224 224 0 0 1 330.2 88.7"),
-            Triple(0.18f, 5f, "M 452.6 251.1 A 224 224 0 0 1 393.1 445.6"),
-            Triple(0.24f, 6f, "M 389.9 238.7 A 166 166 0 0 1 398.0 287.1"),
-            Triple(0.24f, 6f, "M 371.2 380.4 A 166 166 0 0 1 86.8 209.5"),
-            Triple(0.30f, 6f, "M 339.6 246.5 A 116 116 0 1 1 118.5 265.9"),
-            Triple(0.68f, 18f, "M 101.2 187.8 A 166 166 0 0 1 272.2 128.9"),
-            Triple(0.88f, 22f, "M 127.7 239.1 A 116 116 0 0 1 267.8 179.7"),
+            Triple(SYMBOLIC_OUTER_ARC_ALPHA, 5f, "M 60.4 146.0 A 224 224 0 0 1 330.2 88.7"),
+            Triple(SYMBOLIC_OUTER_ARC_ALPHA, 5f, "M 452.6 251.1 A 224 224 0 0 1 393.1 445.6"),
+            Triple(SYMBOLIC_MIDDLE_ORBIT_ALPHA, 6f, "M 389.9 238.7 A 166 166 0 0 1 398.0 287.1"),
+            Triple(SYMBOLIC_MIDDLE_ORBIT_ALPHA, 6f, "M 371.2 380.4 A 166 166 0 0 1 86.8 209.5"),
+            Triple(SYMBOLIC_INNER_ORBIT_ALPHA, 6f, "M 339.6 246.5 A 116 116 0 1 1 118.5 265.9"),
+            Triple(SYMBOLIC_WAVE_ALPHA, 18f, "M 101.2 187.8 A 166 166 0 0 1 272.2 128.9"),
+            Triple(SYMBOLIC_INNER_WAVE_ALPHA, 22f, "M 127.7 239.1 A 116 116 0 0 1 267.8 179.7"),
             Triple(1.0f, 42f, "M 178,290 a 54,54 0 1,0 108,0 a 54,54 0 1,0 -108,0"),
             Triple(1.0f, 42f, "M 270.2 251.8 L 387.6 134.4 L 424.3 171.2"),
             Triple(1.0f, 42f, "M 339.5 182.5 L 364.9 208.0"),

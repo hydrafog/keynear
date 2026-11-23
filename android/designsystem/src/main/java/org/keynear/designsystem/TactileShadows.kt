@@ -22,6 +22,15 @@ private const val CUSHION_BLUR_THRESHOLD_PX = 0.4f
 private const val CUSHION_PADDING_MARGIN_PX = 8f
 private const val HALF_FRACTION = 0.5f
 
+internal const val SYMBOLIC_BEACON_ALPHA = 0.08f
+internal const val SYMBOLIC_PEER_HALO_ALPHA = 0.22f
+internal const val SYMBOLIC_PEER_CORE_ALPHA = 0.96f
+internal const val SYMBOLIC_OUTER_ARC_ALPHA = 0.18f
+internal const val SYMBOLIC_MIDDLE_ORBIT_ALPHA = 0.24f
+internal const val SYMBOLIC_INNER_ORBIT_ALPHA = 0.30f
+internal const val SYMBOLIC_WAVE_ALPHA = 0.68f
+internal const val SYMBOLIC_INNER_WAVE_ALPHA = 0.88f
+
 private data class ShadowSpec(
     val offsetY: Dp,
     val blurRadius: Dp,
