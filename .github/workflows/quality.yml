@@ -55,9 +55,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler libdbus-1-dev pkg-config g++
       - name: Fuzz IPC codec
-        run: cargo fuzz run ipc_codec -- -max_total_time=30 -rss_limit_mb=2048
+        run: cargo fuzz run --target x86_64-unknown-linux-gnu ipc_codec -- -max_total_time=30 -rss_limit_mb=2048
       - name: Fuzz proto decode
-        run: cargo fuzz run proto_decode -- -max_total_time=30 -rss_limit_mb=2048
+        run: cargo fuzz run --target x86_64-unknown-linux-gnu proto_decode -- -max_total_time=30 -rss_limit_mb=2048
 
   nix:
     runs-on: ubuntu-latest

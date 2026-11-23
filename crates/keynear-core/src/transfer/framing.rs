@@ -179,11 +179,15 @@ pub(crate) async fn await_transfer_consent_with_cancel(
     let mut read_fut = std::pin::pin!(read_control_envelope(recv));
     loop {
         if cancel_flag.load(std::sync::atomic::Ordering::Acquire) {
-            return Err(KeynearError::TransferCancelled("cancelled by sender".to_string()));
+            return Err(KeynearError::TransferCancelled(
+                "cancelled by sender".to_string(),
+            ));
         }
         let now = tokio::time::Instant::now();
         if now >= deadline {
-            return Err(KeynearError::Transfer("transfer consent timed out".to_string()));
+            return Err(KeynearError::Transfer(
+                "transfer consent timed out".to_string(),
+            ));
         }
         let step = (deadline - now).min(CANCEL_POLL_INTERVAL);
         tokio::select! {
@@ -197,7 +201,9 @@ fn handle_consent_envelope(env: v1::Envelope, transfer_id: &str) -> Result<(), K
     match env.payload {
         Some(v1::envelope::Payload::TransferConsent(consent)) => {
             if consent.transfer_id != transfer_id {
-                return Err(KeynearError::Protocol("TransferConsent transfer_id mismatch".to_string()));
+                return Err(KeynearError::Protocol(
+                    "TransferConsent transfer_id mismatch".to_string(),
+                ));
             }
             if consent.accepted {
                 Ok(())
@@ -208,7 +214,9 @@ fn handle_consent_envelope(env: v1::Envelope, transfer_id: &str) -> Result<(), K
         Some(v1::envelope::Payload::TransferCancel(cancel)) => {
             Err(KeynearError::TransferCancelled(cancel.reason))
         }
-        _ => Err(KeynearError::Protocol("expected TransferConsent response".to_string())),
+        _ => Err(KeynearError::Protocol(
+            "expected TransferConsent response".to_string(),
+        )),
     }
 }
 

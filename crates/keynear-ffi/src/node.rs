@@ -89,7 +89,8 @@ async fn accept_loop(
                                         .await;
                                 }
                                 Ok(
-                                    kind @ (QuicStreamKind::Control | QuicStreamKind::ClipboardBlob),
+                                    kind
+                                    @ (QuicStreamKind::Control | QuicStreamKind::ClipboardBlob),
                                 ) => {
                                     let _ = clip
                                         .handle_incoming_stream_with_kind(&peer, kind, send, recv)
