@@ -26,38 +26,27 @@ private data class SheenOverlay(
     val radiusExtent: Float,
 )
 
-private fun tactileSheenOverlays(tone: TactileTone, palette: KeynearPalette): List<SheenOverlay> = when (tone) {
-    TactileTone.SURFACE -> listOf(
-        SheenOverlay(palette.surfaceSheen, SheenAnchor(0.5f, 0f), 0.82f),
-    )
-    TactileTone.TONAL -> listOf(
-        SheenOverlay(palette.tonalSheen, SheenAnchor(0.28f, 0f), 0.80f),
-    )
-    TactileTone.SHEET -> listOf(
-        SheenOverlay(palette.sheetSheen, SheenAnchor(0.5f, 0f), 0.74f),
-    )
-    TactileTone.ACCENT -> listOf(
-        SheenOverlay(palette.accentSheen, SheenAnchor(0.18f, -0.10f), 0.70f),
-        SheenOverlay(palette.accentShift, SheenAnchor(0.88f, 1.15f), 0.68f),
-    )
-    TactileTone.ACCENT_TONAL -> listOf(
-        SheenOverlay(palette.accentTonalSheen, SheenAnchor(0.18f, 0f), 0.76f),
-    )
-    TactileTone.DANGER -> listOf(
-        SheenOverlay(palette.dangerSheen, SheenAnchor(0.18f, -0.10f), 0.70f),
-    )
-    TactileTone.DANGER_TONAL -> listOf(
-        SheenOverlay(
-            if (palette.isDark) palette.dangerSheen else palette.accentTonalSheen,
-            SheenAnchor(0.15f, 0f),
-            0.75f,
-        ),
-    )
-    TactileTone.THUMB -> listOf(
-        SheenOverlay(palette.thumbSheen, SheenAnchor(0.30f, 0f), 0.76f),
-    )
-    TactileTone.INSET, TactileTone.NONE -> emptyList()
-}
+private val SHEEN_BUILDERS: Map<TactileTone, (KeynearPalette) -> List<SheenOverlay>> = mapOf(
+    TactileTone.SURFACE to { p -> listOf(SheenOverlay(p.surfaceSheen, SheenAnchor(0.5f, 0f), 0.82f)) },
+    TactileTone.TONAL to { p -> listOf(SheenOverlay(p.tonalSheen, SheenAnchor(0.28f, 0f), 0.80f)) },
+    TactileTone.SHEET to { p -> listOf(SheenOverlay(p.sheetSheen, SheenAnchor(0.5f, 0f), 0.74f)) },
+    TactileTone.ACCENT to { p ->
+        listOf(
+            SheenOverlay(p.accentSheen, SheenAnchor(0.18f, -0.10f), 0.70f),
+            SheenOverlay(p.accentShift, SheenAnchor(0.88f, 1.15f), 0.68f),
+        )
+    },
+    TactileTone.ACCENT_TONAL to { p -> listOf(SheenOverlay(p.accentTonalSheen, SheenAnchor(0.18f, 0f), 0.76f)) },
+    TactileTone.DANGER to { p -> listOf(SheenOverlay(p.dangerSheen, SheenAnchor(0.18f, -0.10f), 0.70f)) },
+    TactileTone.DANGER_TONAL to { p ->
+        val color = if (p.isDark) p.dangerSheen else p.accentTonalSheen
+        listOf(SheenOverlay(color, SheenAnchor(0.15f, 0f), 0.75f))
+    },
+    TactileTone.THUMB to { p -> listOf(SheenOverlay(p.thumbSheen, SheenAnchor(0.30f, 0f), 0.76f)) },
+)
+
+private fun tactileSheenOverlays(tone: TactileTone, palette: KeynearPalette): List<SheenOverlay> =
+    SHEEN_BUILDERS[tone]?.invoke(palette).orEmpty()
 
 private fun DrawScope.drawSheenOverlay(overlay: SheenOverlay) {
     if (overlay.color.alpha == 0f) return

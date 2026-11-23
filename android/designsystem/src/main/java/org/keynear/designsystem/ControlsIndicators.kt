@@ -41,6 +41,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.IntOffset
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -89,16 +90,90 @@ private suspend fun PointerInputScope.handleSwitchDrag(
 }
 
 @Composable
+private fun Modifier.switchInteractive(
+    checked: Boolean,
+    onFractionChange: (Float?) -> Unit,
+    onCheckedChange: (Boolean) -> Unit,
+): Modifier {
+    val currentChecked = rememberUpdatedState(checked)
+    val latestOnCheckedChange by rememberUpdatedState(onCheckedChange)
+    var lastDragEndUptimeMs by remember { mutableLongStateOf(0L) }
+    val toggleState = if (checked) ToggleableState.On else ToggleableState.Off
+
+    return defaultMinSize(minWidth = KeynearLayout.SwitchMinWidth, minHeight = KeynearLayout.ControlMinHeight)
+        .semantics { toggleableState = toggleState }
+        .pointerInput(Unit) {
+            handleSwitchDrag(
+                currentChecked = currentChecked,
+                onFractionChange = onFractionChange,
+                onDragFinished = { moved, nextChecked ->
+                    if (!moved) return@handleSwitchDrag
+                    lastDragEndUptimeMs = SystemClock.uptimeMillis()
+                    if (nextChecked != currentChecked.value) latestOnCheckedChange(nextChecked)
+                },
+            )
+        }
+        .clickable(role = Role.Switch) {
+            val sinceDrag = SystemClock.uptimeMillis() - lastDragEndUptimeMs
+            if (sinceDrag >= KeynearMotion.CLICK_SUPPRESS_MS) onCheckedChange(!checked)
+        }
+}
+
+@Composable
+private fun SwitchTrack(
+    trackTone: TactileTone,
+    trackColor: Color,
+    effectiveFraction: Float,
+) {
+    val palette = LocalKeynearPalette.current
+    val trackRim = tactileSurfaceRimColor(trackTone, palette)
+    val rimModifier = if (trackRim != null) {
+        Modifier.border(KeynearDimensions.Dp1, trackRim, CircleShape)
+    } else {
+        Modifier
+    }
+    Box(
+        modifier = Modifier
+            .width(KeynearLayout.SwitchTrackWidth)
+            .height(KeynearLayout.SwitchTrackHeight)
+            .tactileShadow(tone = trackTone, isDark = palette.isDark, cornerRadius = KeynearLayout.SwitchTrackRadius)
+            .clip(CircleShape)
+            .tactileSurfaceBackground(tone = trackTone, containerColor = trackColor, palette = palette)
+            .then(rimModifier)
+            .tactileCushion(tone = trackTone, isDark = palette.isDark, cornerRadius = KeynearLayout.SwitchTrackRadius)
+            .padding(KeynearSpacing.Xs),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Box(
+            modifier = Modifier
+                .offset { IntOffset((KeynearLayout.SwitchThumbTravel.toPx() * effectiveFraction).roundToInt(), 0) }
+                .size(KeynearLayout.SwitchThumbSize)
+                .tactileShadow(
+                    tone = TactileTone.THUMB,
+                    isDark = palette.isDark,
+                    cornerRadius = KeynearLayout.SwitchThumbRadius,
+                    isCircle = true,
+                )
+                .clip(CircleShape)
+                .tactileSurfaceBackground(tone = TactileTone.THUMB, containerColor = palette.switchThumb, palette = palette)
+                .tactileCushion(
+                    tone = TactileTone.THUMB,
+                    isDark = palette.isDark,
+                    cornerRadius = KeynearLayout.SwitchThumbRadius,
+                    isCircle = true,
+                ),
+        )
+    }
+}
+
+@Composable
 fun KeynearSwitch(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val palette = LocalKeynearPalette.current
-    val currentChecked = rememberUpdatedState(checked)
-    val latestOnCheckedChange by rememberUpdatedState(onCheckedChange)
     var dragFraction by remember { mutableStateOf<Float?>(null) }
-    var lastDragEndUptimeMs by remember { mutableLongStateOf(0L) }
     val animatedFraction by animateFloatAsState(
         targetValue = if (checked) 1f else 0f,
         animationSpec = tween(durationMillis = KeynearMotion.SWITCH_DURATION_MS, easing = KeynearMotion.SpringEasing),
@@ -112,62 +187,16 @@ fun KeynearSwitch(
         label = "switchTrack",
     )
     val trackTone = if (visualChecked) TactileTone.ACCENT else TactileTone.INSET
-    val trackRim = tactileSurfaceRimColor(trackTone, palette)
 
     Box(
-        modifier = modifier
-            .defaultMinSize(minWidth = KeynearLayout.SwitchMinWidth, minHeight = KeynearLayout.ControlMinHeight)
-            .semantics { toggleableState = if (checked) ToggleableState.On else ToggleableState.Off }
-            .pointerInput(Unit) {
-                handleSwitchDrag(
-                    currentChecked = currentChecked,
-                    onFractionChange = { dragFraction = it },
-                    onDragFinished = { moved, nextChecked ->
-                        if (moved) {
-                            lastDragEndUptimeMs = SystemClock.uptimeMillis()
-                            if (nextChecked != currentChecked.value) latestOnCheckedChange(nextChecked)
-                        }
-                    },
-                )
-            }
-            .clickable(role = Role.Switch) {
-                val sinceDrag = SystemClock.uptimeMillis() - lastDragEndUptimeMs
-                if (sinceDrag >= KeynearMotion.CLICK_SUPPRESS_MS) onCheckedChange(!checked)
-            },
+        modifier = modifier.switchInteractive(checked, { dragFraction = it }, onCheckedChange),
         contentAlignment = Alignment.CenterEnd,
     ) {
-        Box(
-            modifier = Modifier
-                .width(KeynearLayout.SwitchTrackWidth)
-                .height(KeynearLayout.SwitchTrackHeight)
-                .tactileShadow(tone = trackTone, isDark = palette.isDark, cornerRadius = KeynearLayout.SwitchTrackRadius)
-                .clip(CircleShape)
-                .tactileSurfaceBackground(tone = trackTone, containerColor = trackColor, palette = palette)
-                .let { m -> if (trackRim != null) m.border(KeynearDimensions.Dp1, trackRim, CircleShape) else m }
-                .tactileCushion(tone = trackTone, isDark = palette.isDark, cornerRadius = KeynearLayout.SwitchTrackRadius)
-                .padding(KeynearSpacing.Xs),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            Box(
-                modifier = Modifier
-                    .offset { IntOffset((KeynearLayout.SwitchThumbTravel.toPx() * effectiveFraction).roundToInt(), 0) }
-                    .size(KeynearLayout.SwitchThumbSize)
-                    .tactileShadow(
-                        tone = TactileTone.THUMB,
-                        isDark = palette.isDark,
-                        cornerRadius = KeynearLayout.SwitchThumbRadius,
-                        isCircle = true,
-                    )
-                    .clip(CircleShape)
-                    .tactileSurfaceBackground(tone = TactileTone.THUMB, containerColor = palette.switchThumb, palette = palette)
-                    .tactileCushion(
-                        tone = TactileTone.THUMB,
-                        isDark = palette.isDark,
-                        cornerRadius = KeynearLayout.SwitchThumbRadius,
-                        isCircle = true,
-                    ),
-            )
-        }
+        SwitchTrack(
+            trackTone = trackTone,
+            trackColor = trackColor,
+            effectiveFraction = effectiveFraction,
+        )
     }
 }
 

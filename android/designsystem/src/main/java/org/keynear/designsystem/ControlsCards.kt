@@ -26,6 +26,25 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
+private fun Modifier.tactileInteractiveSurface(
+    onClick: (() -> Unit)?,
+    enabled: Boolean,
+    interactionSource: MutableInteractionSource?,
+    pressScale: Float,
+): Modifier {
+    if (onClick == null || !enabled) return this
+    val resolved = interactionSource ?: remember { MutableInteractionSource() }
+    return tactilePressScale(resolved, pressScale).clickable(
+        interactionSource = resolved,
+        indication = LocalIndication.current,
+        onClick = onClick,
+    )
+}
+
+private fun Modifier.tactileOptionalRim(rimColor: Color?, shape: Shape): Modifier =
+    if (rimColor != null) border(KeynearDimensions.Dp1, rimColor, shape) else this
+
+@Composable
 fun TactileSurface(
     modifier: Modifier = Modifier,
     shape: Shape = KeynearShapes.Card,
@@ -46,32 +65,14 @@ fun TactileSurface(
     val isDark = palette.isDark
     val effectiveTone = if (isAccent) TactileTone.ACCENT else tone
     val rimColor = tactileSurfaceRimColor(effectiveTone, palette)
-    val resolvedInteraction = if (onClick != null && enabled) {
-        interactionSource ?: remember { MutableInteractionSource() }
-    } else {
-        null
-    }
     Box(
         modifier = modifier
-            .let { m ->
-                if (resolvedInteraction != null) m.tactilePressScale(resolvedInteraction, pressScale) else m
-            }
+            .tactileInteractiveSurface(onClick, enabled, interactionSource, pressScale)
             .tactileShadow(effectiveTone, isDark, cornerRadius, isCircle)
             .clip(shape)
             .tactileSurfaceBackground(effectiveTone, containerColor, palette)
-            .let { m -> if (rimColor != null) m.border(KeynearDimensions.Dp1, rimColor, shape) else m }
-            .tactileCushion(effectiveTone, isDark, cornerRadius, isCircle)
-            .let { m ->
-                if (onClick != null && enabled && resolvedInteraction != null) {
-                    m.clickable(
-                        interactionSource = resolvedInteraction,
-                        indication = LocalIndication.current,
-                        onClick = onClick,
-                    )
-                } else {
-                    m
-                }
-            },
+            .tactileOptionalRim(rimColor, shape)
+            .tactileCushion(effectiveTone, isDark, cornerRadius, isCircle),
         contentAlignment = contentAlignment,
     ) { content() }
 }
