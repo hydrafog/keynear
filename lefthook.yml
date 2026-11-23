@@ -5,6 +5,8 @@ pre-commit:
       run: bash scripts/validation/repo-check.sh
     size-check:
       run: bash scripts/validation/size-check.sh
+    design-lint:
+      run: bash scripts/validation/design-lint.sh
     rust-fmt:
       glob: "*.rs"
       run: cargo fmt --check

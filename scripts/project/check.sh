@@ -7,6 +7,7 @@ cd "$repo_root"
 bash scripts/validation/repo-check.sh
 bash scripts/validation/size-check.sh
 python3 scripts/validation/token-check.py
+bash scripts/validation/design-lint.sh
 
 run_rust_checks() {
   cargo fmt --check

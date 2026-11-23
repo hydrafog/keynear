@@ -27,6 +27,8 @@ jobs:
         run: bash scripts/validation/size-check.sh
       - name: Design token guard
         run: python3 scripts/validation/token-check.py
+      - name: Design drift lint
+        run: bash scripts/validation/design-lint.sh
       - name: Format check
         run: cargo fmt --check
       - name: Clippy
