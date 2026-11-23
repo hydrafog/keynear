@@ -1,4 +1,5 @@
 import { useApp } from '../../state/AppProvider';
+import { ListGroup } from '../../design-system/Card';
 import type { PermissionKey } from '../../types';
 
 interface PermissionRowSpec {
@@ -34,13 +35,13 @@ export function Permissions() {
   const { permissions, setPermissions, showSnackbar } = useApp();
   return (
     <div className="space-y-4">
-      <div className="space-y-2 rounded-kn-2xl p-2.5 kn-surface">
+      <ListGroup>
         {PERMISSION_ROWS.map((perm) => {
           const granted = permissions[perm.key];
           return (
-            <div key={perm.key} className="flex items-center justify-between gap-3 rounded-kn-xl p-3.5">
+            <div key={perm.key} className="flex items-center justify-between gap-3 rounded-kn-xl px-4 py-3">
               <div className="min-w-0">
-                <div className="text-kn-base font-kn-bold">{perm.title}</div>
+                <div className="text-kn-base font-kn-semibold">{perm.title}</div>
                 <div className="mt-1 text-kn-xs leading-kn-relaxed kn-text-muted">
                   {perm.desc}
                 </div>
@@ -54,7 +55,7 @@ export function Permissions() {
                   }));
                   showSnackbar(!granted ? `Allowed ${perm.title}.` : `Revoked ${perm.title}.`);
                 }}
-                className={`min-h-(--kn-size-48px) shrink-0 cursor-pointer rounded-kn-xl px-5 text-kn-sm font-kn-bold transition-all duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-blue-500 ${
+                className={`min-h-(--kn-size-48px) shrink-0 cursor-pointer rounded-kn-xl px-5 text-kn-sm font-kn-bold transition-all duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-focus ${
                   granted ? 'kn-loading-tonal' : 'kn-loading-bg'
                 }`}
               >
@@ -63,7 +64,7 @@ export function Permissions() {
             </div>
           );
         })}
-      </div>
+      </ListGroup>
     </div>
   );
 }

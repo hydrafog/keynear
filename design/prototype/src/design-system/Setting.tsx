@@ -1,14 +1,21 @@
 import type { ReactNode } from 'react';
+import { ListGroup } from './Card';
 
-export function SectionHeading({ children }: { children: ReactNode }) {
-  return <h2 className="mb-2.5 px-1 text-kn-xs font-kn-bold uppercase tracking-kn-wider kn-text-muted">{children}</h2>;
+export function SectionHeading({
+  children,
+  className = 'mb-2.5 px-1',
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <h2 className={`text-kn-xs font-kn-bold uppercase tracking-kn-wider kn-text-muted ${className}`}>{children}</h2>;
 }
 
 export function SettingsSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section>
       <SectionHeading>{title}</SectionHeading>
-      <div className="space-y-1.5 rounded-kn-2xl p-2 kn-surface">{children}</div>
+      <ListGroup>{children}</ListGroup>
     </section>
   );
 }

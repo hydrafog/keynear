@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import {
-  Headphones, MessageSquare, Mic, MicOff, Pause,
-  PhoneCall, PhoneOff, Play, Send, SkipBack, SkipForward,
+  Mic, MicOff, Pause, PhoneCall, PhoneOff, Play, Send, SkipBack, SkipForward,
 } from 'lucide-react';
 import { useApp } from '../../state/AppProvider';
+import { KeynearMark } from '../../design-system/KeynearMark';
 import { NotificationCard, NotificationHeader } from '../../design-system/Notifications';
+import { joinMeta } from '../../lib/format';
 
-const FOCUS_RING = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-blue-500';
+const FOCUS_RING = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-focus';
 const MEDIA_ICON_BTN = `flex h-11 w-11 min-h-(--kn-size-44px) min-w-(--kn-size-44px) cursor-pointer items-center justify-center rounded-full text-white/90 transition-colors duration-(--kn-duration-150) hover:bg-white/15 active:scale-(--kn-press-95) ${FOCUS_RING}`;
 const SYS_PILL_BTN = `min-h-(--kn-size-44px) cursor-pointer rounded-full px-3.5 text-kn-xs font-kn-semibold transition-colors duration-(--kn-duration-150) active:scale-(--kn-press-95) kn-sys-notif-action ${FOCUS_RING}`;
 const CALL_PILL_BTN = `inline-flex min-h-(--kn-size-44px) flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full px-3 text-kn-xs font-kn-bold transition-transform duration-(--kn-duration-150) active:scale-(--kn-press-95) ${FOCUS_RING}`;
@@ -19,11 +20,11 @@ export function MediaCarouselCard() {
     : 0;
 
   return (
-    <section aria-label="Now playing media controls" className="rounded-3xl p-4 kn-sys-media">
+    <section aria-label="Now playing media controls" className="rounded-kn-3xl p-4 kn-sys-media">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-kn-xs text-white/80">
           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/15">
-            <Headphones className="h-3 w-3 text-white" aria-hidden="true" />
+            <KeynearMark size={12} variant="symbolic" className="text-white" />
           </span>
           <span className="font-kn-semibold">Keynear</span>
         </div>
@@ -62,7 +63,7 @@ export function MediaCarouselCard() {
           type="button"
           onClick={toggleMediaPlay}
           aria-label={currentMedia.isPlaying ? 'Pause playback' : 'Play track'}
-          className={`flex h-12 w-12 min-h-(--kn-size-48px) min-w-(--kn-size-48px) cursor-pointer items-center justify-center rounded-2xl bg-white text-[#0B1931] transition-transform duration-(--kn-duration-150) active:scale-(--kn-press-95) ${FOCUS_RING}`}
+          className={`flex h-12 w-12 min-h-(--kn-size-48px) min-w-(--kn-size-48px) cursor-pointer items-center justify-center rounded-full bg-white text-[#0B1931] transition-transform duration-(--kn-duration-150) active:scale-(--kn-press-95) ${FOCUS_RING}`}
         >
           {currentMedia.isPlaying ? <Pause className="h-5 w-5" aria-hidden="true" /> : <Play className="h-5 w-5" aria-hidden="true" />}
         </button>
@@ -94,17 +95,14 @@ export function MirroredNotificationCard() {
   return (
     <NotificationCard>
       <div className="flex items-center justify-between gap-2">
-        <NotificationHeader
-          icon={<MessageSquare className="h-3 w-3" aria-hidden="true" />}
-          label={`${mirroredNotification.appName} · ${mirroredNotification.timestamp}`}
-        />
+        <NotificationHeader label={joinMeta('Keynear', mirroredNotification.appName, mirroredNotification.timestamp)} />
         {mirroredNotification.read && (
-          <span className="shrink-0 text-kn-xs font-kn-semibold kn-loading-text">Read</span>
+          <span className="shrink-0 text-kn-xs font-kn-semibold kn-sys-accent-text">Read</span>
         )}
       </div>
 
       <div className="mt-2.5 flex items-start gap-3">
-        <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-kn-sm font-kn-bold kn-loading-tonal">
+        <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-kn-base font-kn-bold kn-sys-accent-tonal">
           {mirroredNotification.sender.slice(0, 1).toUpperCase()}
         </span>
         <div className="min-w-0 flex-1">
@@ -138,7 +136,7 @@ export function MirroredNotificationCard() {
             type="submit"
             disabled={!replyDraft.trim()}
             aria-label="Send reply"
-            className={`flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full transition-opacity duration-(--kn-duration-150) active:scale-(--kn-press-95) disabled:opacity-45 kn-sys-qs-on ${FOCUS_RING}`}
+            className={`flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full transition-opacity duration-(--kn-duration-150) active:scale-(--kn-press-95) disabled:opacity-45 kn-sys-accent ${FOCUS_RING}`}
           >
             <Send className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -146,7 +144,7 @@ export function MirroredNotificationCard() {
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button type="button" aria-expanded={replyOpen} onClick={() => setReplyOpen((open) => !open)} className={`kn-loading-text ${SYS_PILL_BTN}`}>
+        <button type="button" aria-expanded={replyOpen} onClick={() => setReplyOpen((open) => !open)} className={`kn-sys-accent-text ${SYS_PILL_BTN}`}>
           Reply
         </button>
         <button type="button" disabled={mirroredNotification.read} onClick={markMirroredNotificationRead} className={`disabled:opacity-45 ${SYS_PILL_BTN}`}>
@@ -168,19 +166,16 @@ export function CallAlertCard() {
 
   return (
     <NotificationCard>
-      <NotificationHeader
-        icon={<PhoneCall className="h-3 w-3" aria-hidden="true" />}
-        label={isRinging ? 'Incoming call · Keynear' : 'Ongoing call · Keynear'}
-      />
+      <NotificationHeader label={isRinging ? 'Keynear · Incoming call' : 'Keynear · Ongoing call'} />
 
       <div className="mt-2.5 flex items-center gap-3">
-        <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-kn-base font-kn-bold kn-loading-tonal">
+        <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-kn-base font-kn-bold kn-sys-accent-tonal">
           {callAlert.callerName.slice(0, 1).toUpperCase()}
         </span>
         <div className="min-w-0 flex-1">
           <div className="truncate text-kn-base font-kn-bold">{callAlert.callerName}</div>
           <div className="truncate text-kn-xs tabular-nums kn-text-muted">{callAlert.phoneNumber}</div>
-          <div className="mt-0.5 truncate text-kn-xs kn-text-muted">Headset handoff ({callAlert.headsetProfile})</div>
+          <div className="mt-0.5 truncate text-kn-xs kn-text-muted">{joinMeta('Headset handoff', callAlert.headsetProfile)}</div>
         </div>
       </div>
 
@@ -193,12 +188,14 @@ export function CallAlertCard() {
         )}
         <button type="button" onClick={declineCall} className={`kn-sys-call-decline ${CALL_PILL_BTN}`}>
           <PhoneOff className="h-4 w-4" aria-hidden="true" />
-          <span>Decline</span>
+          <span>{isRinging ? 'Decline' : 'End call'}</span>
         </button>
-        <button type="button" onClick={toggleMuteCall} aria-pressed={isMuted} className={`kn-sys-notif-action font-kn-semibold ${CALL_PILL_BTN}`}>
-          {isMuted ? <MicOff className="h-4 w-4" aria-hidden="true" /> : <Mic className="h-4 w-4" aria-hidden="true" />}
-          <span>{isMuted ? 'Unmute' : 'Mute'}</span>
-        </button>
+        {!isRinging && (
+          <button type="button" onClick={toggleMuteCall} aria-pressed={isMuted} className={`kn-sys-notif-action font-kn-semibold ${CALL_PILL_BTN}`}>
+            {isMuted ? <MicOff className="h-4 w-4" aria-hidden="true" /> : <Mic className="h-4 w-4" aria-hidden="true" />}
+            <span>{isMuted ? 'Unmute' : 'Mute'}</span>
+          </button>
+        )}
       </div>
     </NotificationCard>
   );

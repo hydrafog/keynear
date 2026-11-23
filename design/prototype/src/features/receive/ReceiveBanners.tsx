@@ -1,4 +1,8 @@
 import { useApp } from '../../state/AppProvider';
+import { ActionButton } from '../../design-system/Controls';
+import { Card } from '../../design-system/Card';
+import { SectionHeading } from '../../design-system/Setting';
+import { joinMeta } from '../../lib/format';
 import type { TransferSession } from '../../types';
 
 function summarizeTransfer(tx: TransferSession): string {
@@ -26,43 +30,27 @@ export function ReceiveBanners() {
   return (
     <div className="space-y-2.5">
       {pairingPrompt && (
-        <section
-          aria-label={`Pair with ${pairingPrompt.peerName}`}
-          className="animate-kn-modal-in space-y-2.5 rounded-kn-2xl p-4 kn-fog-surface"
-        >
-          <div className="text-center text-kn-xs font-kn-bold tracking-kn-wider kn-text-muted">
-            PAIR WITH {pairingPrompt.peerName.toUpperCase()}
-          </div>
-          <div className="rounded-kn-xl py-2.5 text-center text-kn-2xl font-kn-bold tracking-kn-code tabular-nums kn-track-well">
+        <Card label={`Pair with ${pairingPrompt.peerName}`} className="animate-kn-modal-in space-y-3">
+          <SectionHeading className="text-center">Pair with {pairingPrompt.peerName}</SectionHeading>
+          <div className="rounded-kn-xl py-2.5 text-center text-kn-2xl font-kn-bold font-kn-mono tracking-kn-code tabular-nums kn-track-well">
             {pairingPrompt.verificationCode}
           </div>
           <p className="text-center text-kn-xs tabular-nums kn-text-muted">
             Confirm this code matches ({pairingPrompt.secondsLeft}s)
           </p>
           <div className="flex gap-2.5">
-            <button
-              type="button"
-              onClick={() => handlePairingDecision(false)}
-              className="min-h-(--kn-size-44px) flex-1 rounded-kn-xl px-4 text-kn-sm font-kn-bold transition-colors duration-(--kn-duration-150) active:scale-(--kn-press-95) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-blue-500 kn-surface-tonal"
-            >
+            <ActionButton tone="tonal" height={46} width="grow" onClick={() => handlePairingDecision(false)}>
               Decline
-            </button>
-            <button
-              type="button"
-              onClick={() => handlePairingDecision(true)}
-              className="min-h-(--kn-size-44px) flex-1 rounded-kn-xl px-4 text-kn-sm font-kn-bold transition-colors duration-(--kn-duration-150) active:scale-(--kn-press-95) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-blue-500 kn-loading-bg"
-            >
+            </ActionButton>
+            <ActionButton tone="accent" height={46} width="grow" onClick={() => handlePairingDecision(true)}>
               Pair
-            </button>
+            </ActionButton>
           </div>
-        </section>
+        </Card>
       )}
 
       {activeTransfers.length > 0 && (
-        <section
-          aria-label="Active transfers"
-          className="animate-kn-modal-in space-y-4 rounded-kn-2xl p-5 kn-fog-surface"
-        >
+        <Card label="Active transfers" className="animate-kn-modal-in space-y-4">
           {activeTransfers.map((tx) => {
             const pct =
               tx.totalBytes > 0
@@ -71,14 +59,14 @@ export function ReceiveBanners() {
             const directionLabel = tx.direction === 'send' ? 'To' : 'From';
 
             return (
-              <div key={tx.transferId} className="space-y-3.5">
+              <div key={tx.transferId} className="space-y-3">
                 <div className="flex items-baseline justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-kn-base font-kn-bold">
+                    <div className="truncate text-kn-base font-kn-semibold">
                       {summarizeTransfer(tx)}
                     </div>
                     <div className="mt-0.5 truncate text-kn-xs tabular-nums kn-text-muted">
-                      {directionLabel} {tx.peerName} · {formatBytes(tx.totalBytes)}
+                      {joinMeta(`${directionLabel} ${tx.peerName}`, formatBytes(tx.totalBytes))}
                     </div>
                   </div>
                   {tx.state === 'active' && (
@@ -106,36 +94,23 @@ export function ReceiveBanners() {
 
                 {tx.state === 'pendingConsent' ? (
                   <div className="flex gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => handleTransferConsent(tx.transferId, false)}
-                      className="min-h-(--kn-size-48px) flex-1 cursor-pointer rounded-kn-xl px-4 text-kn-sm font-kn-bold transition-all duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-blue-500 kn-surface-tonal kn-surface-hover kn-text-secondary"
-                    >
+                    <ActionButton tone="tonal" height={46} width="grow" onClick={() => handleTransferConsent(tx.transferId, false)}>
                       Decline
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleTransferConsent(tx.transferId, true)}
-                      className="min-h-(--kn-size-48px) flex-1 cursor-pointer rounded-kn-xl px-4 text-kn-sm font-kn-bold transition-all duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-blue-500 kn-loading-bg"
-                    >
+                    </ActionButton>
+                    <ActionButton tone="accent" height={46} width="grow" onClick={() => handleTransferConsent(tx.transferId, true)}>
                       Accept
-                    </button>
+                    </ActionButton>
                   </div>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleCancelTransfer(tx.transferId)}
-                    className="min-h-(--kn-size-48px) w-full cursor-pointer rounded-kn-xl px-4 text-kn-sm font-kn-bold transition-all duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-blue-500 kn-surface-tonal kn-surface-hover kn-text-secondary"
-                  >
+                  <ActionButton tone="tonal" height={46} width="block" onClick={() => handleCancelTransfer(tx.transferId)}>
                     Cancel transfer
-                  </button>
+                  </ActionButton>
                 )}
               </div>
             );
           })}
-        </section>
+        </Card>
       )}
     </div>
   );
 }
-

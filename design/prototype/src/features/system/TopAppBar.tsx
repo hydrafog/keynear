@@ -13,7 +13,7 @@ export function TopAppBar() {
             type="button"
             onClick={() => setSubScreen(null)}
             aria-label="Navigate back"
-            className="flex h-12 w-12 items-center justify-center rounded-kn-2xl transition-all duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-blue-500 kn-surface"
+            className="flex h-12 w-12 items-center justify-center rounded-kn-2xl transition-all duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-focus kn-surface"
           >
             <ArrowLeft className="h-6 w-6" aria-hidden="true" />
           </button>

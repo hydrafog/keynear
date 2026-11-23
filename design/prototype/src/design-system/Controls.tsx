@@ -1,7 +1,7 @@
 import type { MouseEventHandler, ReactNode } from 'react';
 
 const FOCUS_RING =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-blue-500';
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-focus';
 
 export function SelectionTile({
   icon,
@@ -89,7 +89,34 @@ export function ShadeTriggerButton({
     <button
       type="button"
       onClick={onClick}
-      className={`min-h-(--kn-size-44px) cursor-pointer rounded-full px-3.5 text-kn-xs font-kn-semibold transition-all duration-(--kn-duration-150) active:scale-(--kn-press-95) kn-sys-notif-action ${FOCUS_RING}`}
+      className={`min-h-(--kn-size-44px) cursor-pointer rounded-full px-3.5 text-kn-xs font-kn-semibold transition-all duration-(--kn-duration-150) active:scale-(--kn-press-95) kn-proto-button ${FOCUS_RING}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
+ * Compact system icon button. The button is a 44px hit area; `bg-clip-content` with
+ * 6px padding keeps the visible circle at 32px, centered inside it.
+ */
+export function SystemIconButton({
+  label,
+  onClick,
+  className = '',
+  children,
+}: {
+  label: string;
+  onClick: MouseEventHandler<HTMLButtonElement>;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className={`flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full p-1.5 bg-clip-content transition-colors duration-(--kn-duration-150) active:scale-(--kn-press-95) kn-sys-notif-action ${className} ${FOCUS_RING}`}
     >
       {children}
     </button>

@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { INITIAL_CONFIG, INITIAL_NEARBY_PEERS, INITIAL_PAIRED_DEVICES, INITIAL_PERMISSIONS, INITIAL_SEND_QUEUE, INITIAL_TRANSFERS } from '../data';
 import { useCarinaState } from './useCarinaState';
+import { pluralize } from '../lib/format';
 import type {
   ActiveTab,
   OtpPrompt,
@@ -59,8 +60,6 @@ export function useAppState() {
   const [expandedNotifIds, setExpandedNotifIds] = useState<Record<string, boolean>>({ 'tx-initial-1': true });
   const [pairingPrompt, setPairingPrompt] = useState<PairingPrompt | null>(null);
   const [otpPrompt, setOtpPrompt] = useState<OtpPrompt | null>(null);
-  const [lnpWarning, setLnpWarning] = useState(false);
-  const [audioHandoffNotif, setAudioHandoffNotif] = useState<string | null>(null);
 
   useEffect(() => {
     if (config.visibilityMode !== 'everyoneNearby') return;
@@ -106,8 +105,8 @@ export function useAppState() {
           if (isDone) {
             showSnackbar(
               t.direction === 'receive'
-                ? `Saved ${t.items.length} item(s) to ${config.incomingDirectory}`
-                : `Sent ${t.items.length} item(s) to ${t.peerName}`
+                ? `Saved ${pluralize(t.items.length, 'item')} to ${config.incomingDirectory}`
+                : `Sent ${pluralize(t.items.length, 'item')} to ${t.peerName}`
             );
           }
           return {
@@ -151,8 +150,6 @@ export function useAppState() {
     let count = 0;
     if (pairingPrompt) count += 1;
     if (otpPrompt) count += 1;
-    if (lnpWarning) count += 1;
-    if (audioHandoffNotif) count += 1;
     if (carina.mirroredNotification) count += 1;
     if (carina.callAlert) count += 1;
     count += transfers.filter((t) => t.state === 'pendingConsent' || t.state === 'active').length;
@@ -160,8 +157,6 @@ export function useAppState() {
   }, [
     pairingPrompt,
     otpPrompt,
-    lnpWarning,
-    audioHandoffNotif,
     carina.mirroredNotification,
     carina.callAlert,
     transfers,
@@ -425,25 +420,26 @@ export function useAppState() {
       displayName: dev.displayName,
       state: dev.isOnline ? 'Wi-Fi' : 'Standby',
       isPaired: true,
+      isVisible: true,
       isOnline: dev.isOnline,
       autoAcceptFiles: dev.autoAcceptFiles,
       rssi: dev.rssi,
       rawDevice: dev,
     }));
 
-    const nearbyPins =
-      config.visibilityMode === 'hidden'
-        ? []
-        : nearbyPeers.map((peer) => ({
-            id: peer.presenceToken,
-            displayName: peer.displayName,
-            state: 'Tap to pair',
-            isPaired: false,
-            isOnline: true,
-            autoAcceptFiles: false,
-            rssi: peer.rssi,
-            rawDevice: null,
-          }));
+    // Unpaired peers stay in the list while hidden so the radar can fade them out
+    // instead of unmounting them; `isVisible` tells consumers whether they count.
+    const nearbyPins = nearbyPeers.map((peer) => ({
+      id: peer.presenceToken,
+      displayName: peer.displayName,
+      state: 'Tap to pair',
+      isPaired: false,
+      isVisible: config.visibilityMode !== 'hidden',
+      isOnline: true,
+      autoAcceptFiles: false,
+      rssi: peer.rssi,
+      rawDevice: null,
+    }));
 
     return [...pairedPins, ...nearbyPins];
   }, [pairedDevices, nearbyPeers, config.visibilityMode]);
@@ -459,7 +455,7 @@ export function useAppState() {
   }, [darkMode]);
 
   return {
-    darkMode, setDarkMode, activeTab, setActiveTab, subScreen, setSubScreen, shadeOpen, setShadeOpen, shareSheetOpen, setShareSheetOpen, lockScreenOpen, setLockScreenOpen, isDeviceLocked, setIsDeviceLocked, pendingUnlockAction, setPendingUnlockAction, config, setConfig, permissions, setPermissions, pairedDevices, setPairedDevices, nearbyPeers, setNearbyPeers, everyoneNearbySecondsLeft, setEveryoneNearbySecondsLeft, sendQueue, setSendQueue, showTextComposer, setShowTextComposer, customTextSnippet, setCustomTextSnippet, selectedDeviceId, setSelectedDeviceId, editingName, setEditingName, confirmUnpairId, setConfirmUnpairId, showMimeEditor, setShowMimeEditor, newMimeInput, setNewMimeInput, snackbarMessage, setSnackbarMessage, showAllDevicesSheet, setShowAllDevicesSheet, transfers, setTransfers, expandedNotifIds, setExpandedNotifIds, pairingPrompt, setPairingPrompt, otpPrompt, setOtpPrompt, lnpWarning, setLnpWarning, audioHandoffNotif, setAudioHandoffNotif, showSnackbar, missingPermissionsCount, activeTransfer, pendingShadeCount, formatBytes, formatCountdown, handleVisibilityChange, handleCycleQuickSettingsTile, handleUnlockDevice, triggerIncomingDrop, handleTransferConsent, handleCancelTransfer, dismissTransferNotification, triggerBlePairing, handlePairingDecision, triggerSmsOtpConsent, handlePushOtp, handleSendClipboardFromTile, startOutgoingTransfer, selectedDevice, openDeviceDetail, saveDeviceName, togglePerDeviceAutoAccept, unpairDevice, addIgnoredMime, removeIgnoredMime, mapPins, activePct, visibilityIndex, renderStamp, ...carina,
+    darkMode, setDarkMode, activeTab, setActiveTab, subScreen, setSubScreen, shadeOpen, setShadeOpen, shareSheetOpen, setShareSheetOpen, lockScreenOpen, setLockScreenOpen, isDeviceLocked, setIsDeviceLocked, pendingUnlockAction, setPendingUnlockAction, config, setConfig, permissions, setPermissions, pairedDevices, setPairedDevices, nearbyPeers, setNearbyPeers, everyoneNearbySecondsLeft, setEveryoneNearbySecondsLeft, sendQueue, setSendQueue, showTextComposer, setShowTextComposer, customTextSnippet, setCustomTextSnippet, selectedDeviceId, setSelectedDeviceId, editingName, setEditingName, confirmUnpairId, setConfirmUnpairId, showMimeEditor, setShowMimeEditor, newMimeInput, setNewMimeInput, snackbarMessage, setSnackbarMessage, showAllDevicesSheet, setShowAllDevicesSheet, transfers, setTransfers, expandedNotifIds, setExpandedNotifIds, pairingPrompt, setPairingPrompt, otpPrompt, setOtpPrompt, showSnackbar, missingPermissionsCount, activeTransfer, pendingShadeCount, formatBytes, formatCountdown, handleVisibilityChange, handleCycleQuickSettingsTile, handleUnlockDevice, triggerIncomingDrop, handleTransferConsent, handleCancelTransfer, dismissTransferNotification, triggerBlePairing, handlePairingDecision, triggerSmsOtpConsent, handlePushOtp, handleSendClipboardFromTile, startOutgoingTransfer, selectedDevice, openDeviceDetail, saveDeviceName, togglePerDeviceAutoAccept, unpairDevice, addIgnoredMime, removeIgnoredMime, mapPins, activePct, visibilityIndex, renderStamp, ...carina,
   };
 }
 

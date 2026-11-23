@@ -129,16 +129,18 @@ export function SettingsScreen() {
                         {config.ignoredMimeTypes.map((mime) => (
                           <span
                             key={mime}
-                            className={`inline-flex min-h-(--kn-size-38px) items-center gap-2 rounded-kn-xl px-3.5 py-1.5 text-kn-xs font-kn-semibold kn-surface-tonal`}
+                            className={`inline-flex min-h-(--kn-size-38px) items-center gap-1 rounded-kn-xl py-1.5 pl-3.5 pr-1 text-kn-xs font-kn-semibold kn-surface-tonal`}
                           >
                             <span>{mime}</span>
                             <button
                               type="button"
                               onClick={() => removeIgnoredMime(mime)}
                               aria-label={`Remove ${mime}`}
-                              className="cursor-pointer rounded-kn-lg p-1 transition-all duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) kn-surface kn-surface-hover kn-text-secondary"
+                              className="-my-2.5 flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-kn-lg transition-transform duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-focus"
                             >
-                              <X className="h-4 w-4" aria-hidden="true" />
+                              <span className="flex h-7 w-7 items-center justify-center rounded-kn-lg kn-surface kn-text-secondary">
+                                <X className="h-4 w-4" aria-hidden="true" />
+                              </span>
                             </button>
                           </span>
                         ))}
@@ -154,7 +156,7 @@ export function SettingsScreen() {
                           value={newMimeInput}
                           onChange={(e) => setNewMimeInput(e.target.value)}
                           placeholder="application/x-secret"
-                          className={`min-h-(--kn-size-50px) min-w-0 flex-1 rounded-kn-xl px-4 text-kn-base focus-visible:outline-2 focus-visible:outline-kn-blue-500 kn-input`}
+                          className={`min-h-(--kn-size-50px) min-w-0 flex-1 rounded-kn-xl px-4 text-kn-base focus-visible:outline-2 focus-visible:outline-kn-focus kn-input`}
                         />
                         <button
                           type="submit"

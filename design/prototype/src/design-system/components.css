@@ -79,10 +79,14 @@
   color: var(--kn-brand-ink);
 }
 
+@utility kn-on-accent {
+  color: var(--kn-on-accent);
+}
+
 @utility kn-loading-bg {
-  background-color: var(--kn-brand-ink);
+  background-color: var(--kn-accent-fill);
   background-image: var(--kn-grad-accent);
-  color: #FFFFFE;
+  color: var(--kn-on-accent);
   box-shadow: var(--kn-brand-depth-accent), var(--kn-brand-accent-rim);
 
   @variant hover {
@@ -121,7 +125,7 @@
 
 @utility kn-ripple {
   border-width: var(--kn-ripple-width);
-  border-color: color-mix(in oklab, var(--kn-brand-ink) 24%, transparent);
+  border-color: color-mix(in oklab, var(--kn-accent-fill) 28%, transparent);
 }
 
 @utility kn-error-bg {
@@ -153,7 +157,7 @@
 }
 
 @utility kn-switch-track-on {
-  background-color: var(--kn-brand-ink);
+  background-color: var(--kn-accent-fill);
   background-image: var(--kn-grad-accent);
   box-shadow: var(--kn-brand-depth-accent), var(--kn-brand-accent-rim);
 }
@@ -207,22 +211,28 @@
 
 @utility kn-fog-well {
   background-image: var(--kn-fog-well-bg);
-  backdrop-filter: blur(32px) saturate(0.85);
-  -webkit-backdrop-filter: blur(32px) saturate(0.85);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
   box-shadow: var(--kn-depth-inset), var(--kn-brand-tonal-rim);
 }
 
 @utility kn-fog-surface {
   background-image: var(--kn-fog-surface-bg);
-  backdrop-filter: blur(32px) saturate(0.85);
-  -webkit-backdrop-filter: blur(32px) saturate(0.85);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
   box-shadow: var(--kn-depth-surface), var(--kn-brand-surface-rim);
+}
+
+@utility kn-fog-hover {
+  @variant hover {
+    background-image: var(--kn-fog-surface-hover-bg);
+  }
 }
 
 @utility kn-fog-sheet {
   background-image: var(--kn-fog-sheet-bg);
-  backdrop-filter: blur(36px) saturate(0.85);
-  -webkit-backdrop-filter: blur(36px) saturate(0.85);
+  backdrop-filter: blur(20px) saturate(1.15);
+  -webkit-backdrop-filter: blur(20px) saturate(1.15);
   box-shadow: var(--kn-depth-sheet), var(--kn-brand-surface-rim);
 }
 
@@ -252,9 +262,37 @@
   box-shadow: inset 0 0 0 1px var(--kn-sys-notif-border);
 }
 
-@utility kn-sys-qs-on {
-  background-color: var(--kn-sys-qs-on);
+@utility kn-sys-accent {
+  background-color: var(--kn-sys-accent);
+  color: var(--kn-sys-on-accent);
+}
+
+@utility kn-sys-accent-tonal {
+  background-color: var(--kn-sys-accent-tonal);
+  color: var(--kn-sys-on-accent-tonal);
+}
+
+@utility kn-sys-accent-text {
+  color: var(--kn-sys-accent-ink);
+}
+
+@utility kn-sys-success {
+  background-color: var(--kn-sys-success);
   color: #FFFFFE;
+}
+
+@utility kn-proto-tray {
+  border: 1px dashed color-mix(in oklab, var(--kn-text-muted) 50%, transparent);
+  color: var(--kn-text-muted);
+}
+
+@utility kn-proto-button {
+  border: 1px dashed color-mix(in oklab, var(--kn-text-muted) 50%, transparent);
+  color: var(--kn-text-secondary);
+
+  @variant hover {
+    background-color: var(--kn-sys-notif-action);
+  }
 }
 
 @utility kn-sys-media {
@@ -263,7 +301,7 @@
 }
 
 @utility kn-sys-call-accept {
-  background-color: var(--kn-sys-call-accept);
+  background-color: var(--kn-sys-success);
   color: #FFFFFE;
 }
 
@@ -273,14 +311,14 @@
 }
 
 .kn-sys-theme-tile[aria-pressed='true'] {
-  background-color: var(--kn-sys-qs-on);
-  color: #FFFFFE;
+  background-color: var(--kn-sys-accent);
+  color: var(--kn-sys-on-accent);
 }
 
 .kn-theme-tile[aria-pressed='true'] {
-  background-color: var(--kn-brand-ink);
+  background-color: var(--kn-accent-fill);
   background-image: var(--kn-grad-accent);
-  color: #FFFFFE;
+  color: var(--kn-on-accent);
   box-shadow: var(--kn-brand-depth-accent), var(--kn-brand-accent-rim);
 }
 
@@ -334,6 +372,9 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .animate-kn-fade-in,
+  .animate-kn-fade-out,
+  .animate-kn-shade-up,
+  .animate-kn-sheet-down,
   .animate-kn-screen-in,
   .animate-kn-modal-in,
   .animate-kn-shade-down,
@@ -350,6 +391,10 @@ body {
 }
 
 @media (prefers-reduced-transparency: reduce) {
+  .kn-fog-hover:hover {
+    background-image: var(--kn-grad-surface-hover);
+  }
+
   .kn-fog-well {
     background-color: var(--kn-track-well);
     background-image: var(--kn-grad-well);
@@ -390,8 +435,20 @@ body {
   .kn-track-well,
   .kn-sys-notif,
   .kn-sys-qs-off,
-  .kn-sys-qs-on,
+  .kn-sys-accent,
+  .kn-sys-accent-tonal,
+  .kn-sys-success,
   .kn-sys-media {
+    border: 1px solid CanvasText;
+  }
+
+  .kn-fog-well,
+  .kn-fog-surface,
+  .kn-fog-sheet {
+    background-color: Canvas;
+    background-image: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     border: 1px solid CanvasText;
   }
 

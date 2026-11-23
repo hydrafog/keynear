@@ -1,27 +1,29 @@
 import { useApp } from '../../state/AppProvider';
 import { Laptop, RefreshCw, Trash2 } from 'lucide-react';
 import { Switch } from '../../design-system/Switch';
+import { Card } from '../../design-system/Card';
+import { joinMeta } from '../../lib/format';
 
-const FOCUS_RING = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-blue-500';
+const FOCUS_RING = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-focus';
 
 export function DeviceDetail() {
   const { editingName, setEditingName, confirmUnpairId, setConfirmUnpairId, showSnackbar, selectedDevice, saveDeviceName, togglePerDeviceAutoAccept, unpairDevice, renderStamp } = useApp();
   if (!selectedDevice) return null;
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4 rounded-kn-2xl p-5 kn-surface">
+      <Card className="flex items-center gap-4">
         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-kn-xl kn-loading-tonal">
           <Laptop className="h-7 w-7" aria-hidden="true" />
         </div>
         <div className="min-w-0">
           <div className="truncate text-kn-lg font-kn-bold">{selectedDevice.displayName}</div>
           <div className="text-kn-sm kn-text-muted">
-            {selectedDevice.connectionLabel} ({selectedDevice.pairedAt})
+            {joinMeta(selectedDevice.connectionLabel, `Paired ${selectedDevice.pairedAt}`)}
           </div>
         </div>
-      </div>
+      </Card>
 
-      <section className="space-y-5 rounded-kn-2xl p-5 kn-surface">
+      <Card label="Device details" className="space-y-5">
         <form onSubmit={saveDeviceName}>
           <label
             htmlFor="device-name-input"
@@ -48,7 +50,7 @@ export function DeviceDetail() {
 
         <div className="flex items-center justify-between gap-3">
           <div className="pr-2">
-            <div className="text-kn-base font-kn-bold">Auto-accept files</div>
+            <div className="text-kn-base font-kn-semibold">Auto-accept files</div>
             <div className="text-kn-xs kn-text-muted">
               Save files from {selectedDevice.displayName} without asking
             </div>
@@ -64,20 +66,20 @@ export function DeviceDetail() {
         <dl className="space-y-3.5 pt-1 text-kn-sm">
           <div className="flex items-center justify-between gap-2">
             <dt className="kn-text-muted">Key fingerprint</dt>
-            <dd className="text-kn-xs tabular-nums">
+            <dd className="min-w-0 break-all text-right text-kn-xs font-kn-mono">
               {selectedDevice.staticX25519Pubkey.slice(0, 19)}…
             </dd>
           </div>
           <div className="flex items-center justify-between gap-2">
             <dt className="kn-text-muted">Bluetooth address</dt>
-            <dd className="text-kn-xs tabular-nums">{selectedDevice.lastBleAddress}</dd>
+            <dd className="min-w-0 break-all text-right text-kn-xs font-kn-mono">{selectedDevice.lastBleAddress}</dd>
           </div>
           <div className="flex items-center justify-between gap-2">
             <dt className="kn-text-muted">Local Wi-Fi endpoint</dt>
-            <dd className="text-kn-xs tabular-nums">{selectedDevice.lastLanAddress}</dd>
+            <dd className="min-w-0 break-all text-right text-kn-xs font-kn-mono">{selectedDevice.lastLanAddress}</dd>
           </div>
         </dl>
-      </section>
+      </Card>
 
       <div className="space-y-3">
         <button
@@ -90,7 +92,7 @@ export function DeviceDetail() {
         </button>
 
         {confirmUnpairId === selectedDevice.deviceId ? (
-          <div className="animate-kn-modal-in rounded-kn-2xl p-5 kn-surface-tonal">
+          <Card tone="tonal" className="animate-kn-modal-in">
             <p className="text-kn-sm font-kn-semibold leading-kn-relaxed kn-text-primary">
               Remove {selectedDevice.displayName}? You will need to confirm a new 6-digit code on
               both devices to pair again.
@@ -111,7 +113,7 @@ export function DeviceDetail() {
                 Cancel
               </button>
             </div>
-          </div>
+          </Card>
         ) : (
           <button
             type="button"

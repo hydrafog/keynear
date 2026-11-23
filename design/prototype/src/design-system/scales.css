@@ -1,11 +1,8 @@
 
 
 @theme inline {
-  --color-kn-amber-500: #F79801;
   --color-kn-black: theme(--color-black);
-  --color-kn-blue-500: #0172F9;
-  --color-kn-blue-600: #004CED;
-  --color-kn-emerald-500: #01B37D;
+  --color-kn-focus: var(--kn-focus-ring);
   --color-kn-red-500: #ED012B;
   --color-kn-red-700: #A7001A;
   --color-kn-red-800: #8A0017;

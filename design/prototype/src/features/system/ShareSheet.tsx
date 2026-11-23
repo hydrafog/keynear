@@ -2,9 +2,15 @@ import { useEffect } from 'react';
 import { useApp } from '../../state/AppProvider';
 import { Laptop, X } from 'lucide-react';
 import { INITIAL_SEND_QUEUE } from '../../data';
+import { SectionHeading } from '../../design-system/Setting';
+import { pluralize } from '../../lib/format';
 
-export function ShareSheet() {
+const FOCUS_RING = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-focus';
+
+export function ShareSheet({ closing }: { closing: boolean }) {
   const { setShareSheetOpen, pairedDevices, sendQueue, formatBytes, startOutgoingTransfer } = useApp();
+  const items = sendQueue.length ? sendQueue : INITIAL_SEND_QUEUE;
+  const totalBytes = items.reduce((acc, i) => acc + i.sizeBytes, 0);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -22,54 +28,42 @@ export function ShareSheet() {
       onClick={(e) => {
         if (e.target === e.currentTarget) setShareSheetOpen(false);
       }}
-      className="animate-kn-fade-in absolute inset-0 z-40 flex flex-col justify-end kn-scrim"
+      aria-hidden={closing || undefined}
+      className={`${closing ? 'animate-kn-fade-out pointer-events-none' : 'animate-kn-fade-in'} absolute inset-0 z-40 flex flex-col justify-end kn-scrim`}
     >
-      <div className="animate-kn-sheet-up rounded-t-3xl p-5 kn-fog-sheet">
+      <div className={`${closing ? 'animate-kn-sheet-down' : 'animate-kn-sheet-up'} rounded-t-kn-3xl p-4 kn-sys-shade`}>
         <div className="mx-auto mb-3.5 h-1.5 w-12 rounded-full kn-sheet-handle" aria-hidden="true" />
 
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-kn-lg font-kn-bold">Share {sendQueue.length || 2} item(s)</h2>
-            <p className="text-kn-xs tabular-nums kn-text-muted">
-              {formatBytes(
-                (sendQueue.length ? sendQueue : INITIAL_SEND_QUEUE).reduce(
-                  (acc, i) => acc + i.sizeBytes,
-                  0
-                )
-              )}
-            </p>
+            <h2 className="text-kn-lg font-kn-bold">Share {pluralize(items.length, 'item')}</h2>
+            <p className="text-kn-xs tabular-nums kn-text-muted">{formatBytes(totalBytes)}</p>
           </div>
           <button
             type="button"
             onClick={() => setShareSheetOpen(false)}
             aria-label="Close Share Sheet"
-            className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-kn-xl transition-all duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-blue-500 kn-surface-tonal kn-surface-hover kn-text-secondary"
+            className={`flex h-12 w-12 cursor-pointer items-center justify-center rounded-full transition-colors duration-(--kn-duration-150) active:scale-(--kn-press-95) kn-sys-notif-action ${FOCUS_RING}`}
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
 
         <div className="mt-4">
-          <div className="mb-2.5 text-kn-xs font-kn-bold kn-text-muted">
-            Direct Share via Keynear
-          </div>
+          <SectionHeading>Direct Share via Keynear</SectionHeading>
           <div className="grid grid-cols-2 gap-3">
             {pairedDevices.map((dev) => (
               <button
                 key={dev.deviceId}
                 type="button"
-                onClick={() =>
-                  startOutgoingTransfer(dev, sendQueue.length ? sendQueue : INITIAL_SEND_QUEUE)
-                }
-                className="flex min-h-(--kn-size-116px) flex-col items-center justify-center rounded-kn-2xl p-4 text-center transition-all duration-(--kn-duration-150) active:scale-(--kn-press-95) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-blue-500 kn-surface-tonal kn-surface-hover"
+                onClick={() => startOutgoingTransfer(dev, items)}
+                className={`flex min-h-(--kn-size-116px) cursor-pointer flex-col items-center justify-center rounded-kn-3xl p-4 text-center transition-colors duration-(--kn-duration-150) active:scale-(--kn-press-95) kn-sys-notif ${FOCUS_RING}`}
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-kn-xl kn-loading-tonal">
-                  <Laptop className="h-6 w-6" aria-hidden="true" />
+                <div className="flex h-11 w-11 items-center justify-center rounded-full kn-sys-accent-tonal">
+                  <Laptop className="h-5 w-5" aria-hidden="true" />
                 </div>
-                <span className="mt-2.5 w-full truncate text-kn-sm font-kn-bold">{dev.displayName}</span>
-                <span className="text-kn-xs kn-text-muted">
-                  {dev.isOnline ? 'Wi-Fi ready' : 'Bluetooth'}
-                </span>
+                <span className="mt-2.5 w-full truncate text-kn-sm font-kn-semibold">{dev.displayName}</span>
+                <span className="text-kn-xs kn-text-muted">{dev.isOnline ? 'Wi-Fi ready' : 'Bluetooth'}</span>
               </button>
             ))}
           </div>

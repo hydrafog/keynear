@@ -3,7 +3,9 @@ import { useId } from 'react';
 type StopSpec = readonly [string, string, number?];
 
 type MarkPalette = {
-  bg: readonly StopSpec[];
+  base: string;
+  sheen: readonly StopSpec[];
+  shift: readonly StopSpec[];
   rim: readonly StopSpec[];
   botPillar: readonly StopSpec[];
   topWing: readonly StopSpec[];
@@ -15,39 +17,17 @@ type MarkPalette = {
 };
 
 const BRAND_PALETTE: MarkPalette = {
-  bg: [['0%', '#1E7CFA'], ['52%', '#0656E8'], ['100%', '#0038B8']],
-  rim: [['0%', '#80BAFF', 0.45], ['100%', '#002B8F', 0.35]],
-  botPillar: [['0%', '#3E82F7'], ['100%', '#7EB2FF']],
-  topWing: [['0%', '#6CA6FF'], ['100%', '#C8E2FF']],
-  frontRibbon: [['0%', '#FFFFFF'], ['55%', '#EEF5FF'], ['100%', '#C8E0FF']],
-  w1: [['0%', '#F2F7FF'], ['100%', '#B8D8FF']],
-  w2: [['0%', '#B4D4FF', 0.72], ['100%', '#7EB0FF', 0.45]],
-  ambientMatrix: '0 0 0 0 0.00  0 0 0 0 0.08  0 0 0 0 0.32  0 0 0 0.24 0',
-  foldMatrix: '0 0 0 0 0.00  0 0 0 0 0.08  0 0 0 0 0.32  0 0 0 0.38 0',
-};
-
-const LIGHT_PALETTE: MarkPalette = {
-  bg: [['0%', '#F7FAFF'], ['100%', '#E1EBF8']],
-  rim: [['0%', '#FFFFFF', 0.9], ['100%', '#C5D6EE', 0.7]],
-  botPillar: [['0%', '#002C8F'], ['100%', '#0044CC']],
-  topWing: [['0%', '#1458DC'], ['100%', '#5E9EFF']],
-  frontRibbon: [['0%', '#68ADFF'], ['48%', '#1E74F6'], ['100%', '#004CED']],
-  w1: [['0%', '#5296F7'], ['100%', '#1A66E8']],
-  w2: [['0%', '#8AB6F9', 0.85], ['100%', '#5A92EE', 0.55]],
-  ambientMatrix: '0 0 0 0 0.02  0 0 0 0 0.08  0 0 0 0 0.24  0 0 0 0.16 0',
-  foldMatrix: '0 0 0 0 0.02  0 0 0 0 0.08  0 0 0 0 0.24  0 0 0 0.28 0',
-};
-
-const DARK_PALETTE: MarkPalette = {
-  bg: [['0%', '#13223D'], ['100%', '#0A1324']],
-  rim: [['0%', '#4A74B8', 0.3], ['100%', '#1A3260', 0.2]],
-  botPillar: [['0%', '#102C6E'], ['100%', '#1E4DB8']],
-  topWing: [['0%', '#1948AD'], ['100%', '#4C8DFF']],
-  frontRibbon: [['0%', '#8EC0FF'], ['50%', '#458DFF'], ['100%', '#1B64E8']],
-  w1: [['0%', '#78B0FF'], ['100%', '#3578F0']],
-  w2: [['0%', '#4C84E0', 0.65], ['100%', '#2452B0', 0.4]],
-  ambientMatrix: '0 0 0 0 0.01  0 0 0 0 0.02  0 0 0 0 0.07  0 0 0 0.45 0',
-  foldMatrix: '0 0 0 0 0.01  0 0 0 0 0.02  0 0 0 0 0.07  0 0 0 0.58 0',
+  base: '#4ABBD5',
+  sheen: [['0%', '#8AE8F5', 0.85], ['100%', '#8AE8F5', 0]],
+  shift: [['0%', '#4BA6DF', 0.75], ['100%', '#4BA6DF', 0]],
+  rim: [['0%', '#C3F4FB', 0.55], ['100%', '#0E748A', 0.30]],
+  botPillar: [['0%', '#2F9FBC'], ['100%', '#8ADCEC']],
+  topWing: [['0%', '#7FD4E8'], ['100%', '#D6F3FA']],
+  frontRibbon: [['0%', '#FFFFFF'], ['100%', '#FFFFFF']],
+  w1: [['0%', '#F4FCFE'], ['100%', '#C4EBF4']],
+  w2: [['0%', '#D9F2F8', 0.78], ['100%', '#A8DFEC', 0.5]],
+  ambientMatrix: '0 0 0 0 0.00  0 0 0 0 0.17  0 0 0 0 0.24  0 0 0 0.24 0',
+  foldMatrix: '0 0 0 0 0.00  0 0 0 0 0.17  0 0 0 0 0.24  0 0 0 0.36 0',
 };
 
 function renderStops(stops: readonly StopSpec[]) {
@@ -59,9 +39,12 @@ function renderStops(stops: readonly StopSpec[]) {
 function PaletteDefs({ prefix, palette }: { prefix: string; palette: MarkPalette }) {
   return (
     <>
-      <linearGradient id={`${prefix}-bg`} x1="0.15" y1="0" x2="0.85" y2="1">
-        {renderStops(palette.bg)}
-      </linearGradient>
+      <radialGradient id={`${prefix}-sheen`} cx="0.2" cy="0.1" r="0.75">
+        {renderStops(palette.sheen)}
+      </radialGradient>
+      <radialGradient id={`${prefix}-shift`} cx="0.9" cy="0.95" r="0.7">
+        {renderStops(palette.shift)}
+      </radialGradient>
       <linearGradient id={`${prefix}-rim`} x1="0" y1="0" x2="0" y2="1">
         {renderStops(palette.rim)}
       </linearGradient>
@@ -102,10 +85,12 @@ function PaletteDefs({ prefix, palette }: { prefix: string; palette: MarkPalette
   );
 }
 
-function MarkGeometry({ prefix, className }: { prefix: string; className?: string }) {
+function MarkGeometry({ prefix, palette }: { prefix: string; palette: MarkPalette }) {
   return (
-    <g className={className}>
-      <rect x="24" y="24" width="464" height="464" rx="112" fill={`url(#${prefix}-bg)`} />
+    <g>
+      <rect x="24" y="24" width="464" height="464" rx="112" fill={palette.base} />
+      <rect x="24" y="24" width="464" height="464" rx="112" fill={`url(#${prefix}-sheen)`} />
+      <rect x="24" y="24" width="464" height="464" rx="112" fill={`url(#${prefix}-shift)`} />
       <rect x="25.5" y="25.5" width="461" height="461" rx="110.5" fill="none" stroke={`url(#${prefix}-rim)`} strokeWidth="3" />
       <g filter={`url(#${prefix}-amb)`}>
         <path d="M 336 202 A 72 72 0 0 1 336 310" fill="none" stroke={`url(#${prefix}-w1)`} strokeWidth="22" strokeLinecap="round" />
@@ -147,13 +132,10 @@ export function KeynearMark({
   className = '',
 }: {
   size?: number;
-  variant?: 'brand' | 'adaptive' | 'symbolic';
+  variant?: 'brand' | 'symbolic';
   className?: string;
 }) {
-  const uid = useId().replace(/:/g, '');
-  const brandPrefix = `${uid}-b`;
-  const lightPrefix = `${uid}-l`;
-  const darkPrefix = `${uid}-d`;
+  const prefix = `${useId().replace(/:/g, '')}-b`;
 
   if (variant === 'symbolic') {
     return (
@@ -161,7 +143,7 @@ export function KeynearMark({
         xmlns="http://www.w3.org/2000/svg"
         width={size}
         height={size}
-        viewBox="116 96 300 316"
+        viewBox="108 96 316 316"
         aria-hidden="true"
         className={className}
       >
@@ -180,23 +162,9 @@ export function KeynearMark({
       className={className}
     >
       <defs>
-        {variant === 'brand' ? (
-          <PaletteDefs prefix={brandPrefix} palette={BRAND_PALETTE} />
-        ) : (
-          <>
-            <PaletteDefs prefix={lightPrefix} palette={LIGHT_PALETTE} />
-            <PaletteDefs prefix={darkPrefix} palette={DARK_PALETTE} />
-          </>
-        )}
+        <PaletteDefs prefix={prefix} palette={BRAND_PALETTE} />
       </defs>
-      {variant === 'brand' ? (
-        <MarkGeometry prefix={brandPrefix} />
-      ) : (
-        <>
-          <MarkGeometry prefix={lightPrefix} className="kn-when-light" />
-          <MarkGeometry prefix={darkPrefix} className="kn-when-dark" />
-        </>
-      )}
+      <MarkGeometry prefix={prefix} palette={BRAND_PALETTE} />
     </svg>
   );
 }

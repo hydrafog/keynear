@@ -5,24 +5,24 @@ export function BottomNav() {
   const { activeTab, setActiveTab, subScreen, setSubScreen, missingPermissionsCount } = useApp();
   return (
         <footer className="shrink-0">
-          <nav aria-label="Android app navigation" className="grid grid-cols-3 px-2 pt-2 pb-1.5">
+          <nav aria-label="Android app navigation" className="grid grid-cols-3 px-4 pt-2 pb-1.5">
             {[
               { id: 'receive' as const, label: 'Receive', icon: Inbox },
               { id: 'send' as const, label: 'Send', icon: Send },
               { id: 'settings' as const, label: 'Settings', icon: SlidersHorizontal, badge: missingPermissionsCount },
             ].map((tab) => {
               const Icon = tab.icon;
-              const active = !subScreen && activeTab === tab.id;
+              const active = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   type="button"
-                  aria-current={active ? 'page' : undefined}
+                  aria-current={active ? (subScreen ? 'true' : 'page') : undefined}
                   onClick={() => {
                     setSubScreen(null);
                     setActiveTab(tab.id);
                   }}
-                  className="flex min-h-(--kn-size-58px) flex-col items-center justify-center gap-1.5 rounded-kn-xl transition-transform duration-(--kn-duration-150) active:scale-(--kn-press-95) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-blue-500"
+                  className="flex min-h-(--kn-size-58px) flex-col items-center justify-center gap-1.5 rounded-kn-xl transition-transform duration-(--kn-duration-150) active:scale-(--kn-press-95) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-focus"
                 >
                   <span
                     className={`relative flex h-9 items-center justify-center rounded-full transition-all duration-(--kn-duration-morph) ease-(--ease-kn-spring) ${

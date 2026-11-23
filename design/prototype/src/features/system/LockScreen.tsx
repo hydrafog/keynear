@@ -1,9 +1,12 @@
 import { useEffect } from 'react';
 import { useApp } from '../../state/AppProvider';
-import { KeynearMark } from '../../design-system/KeynearMark';
-import { Shield, Lock, Unlock } from 'lucide-react';
+import { NotificationHeader } from '../../design-system/Notifications';
+import { VISIBILITY_LABELS } from '../../lib/format';
+import { Lock, Unlock } from 'lucide-react';
 
-export function LockScreen() {
+const FOCUS_RING = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-focus';
+
+export function LockScreen({ closing }: { closing: boolean }) {
   const { setLockScreenOpen, setPendingUnlockAction, handleUnlockDevice } = useApp();
 
   useEffect(() => {
@@ -22,7 +25,8 @@ export function LockScreen() {
       role="dialog"
       aria-modal="true"
       aria-label="Android Lock Screen"
-      className="animate-kn-fade-in absolute inset-0 z-50 flex flex-col justify-between p-6 kn-canvas"
+      aria-hidden={closing || undefined}
+      className={`${closing ? 'animate-kn-fade-out pointer-events-none' : 'animate-kn-fade-in'} absolute inset-0 z-50 flex flex-col justify-between p-4 kn-sys-shade`}
     >
       <div className="flex justify-end">
         <button
@@ -31,37 +35,36 @@ export function LockScreen() {
             setPendingUnlockAction(null);
             setLockScreenOpen(false);
           }}
-          className="min-h-(--kn-size-48px) rounded-kn-xl px-5 text-kn-sm font-kn-bold transition-colors duration-(--kn-duration-150) active:scale-(--kn-press-95) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-blue-500 kn-surface"
+          className={`min-h-(--kn-size-48px) cursor-pointer rounded-full px-5 text-kn-sm font-kn-bold transition-colors duration-(--kn-duration-150) active:scale-(--kn-press-95) kn-sys-notif-action ${FOCUS_RING}`}
         >
           Dismiss
         </button>
       </div>
 
       <div className="text-center">
-        <KeynearMark size={36} variant="brand" className="mx-auto mb-3" />
         <Lock className="mx-auto h-6 w-6 kn-text-muted" aria-hidden="true" />
         <div className="mt-3 text-kn-5xl font-kn-bold tracking-kn-tight tabular-nums">22:54</div>
         <div className="mt-1 text-kn-sm kn-text-muted">Thursday, November 12</div>
       </div>
 
-      <div className="space-y-3.5 rounded-kn-2xl p-5 kn-surface">
-        <div className="flex items-center gap-2 text-kn-sm font-kn-bold text-kn-amber-500">
-          <Shield className="h-5 w-5 shrink-0" aria-hidden="true" />
-          <span>Unlock required for Everyone nearby</span>
+      <section aria-label="Keynear unlock request" className="space-y-3 rounded-kn-3xl p-4 kn-sys-notif">
+        <NotificationHeader label="Keynear · Locked" />
+        <div className="text-kn-sm font-kn-bold">
+          Unlock required for {VISIBILITY_LABELS.everyoneNearby.full}
         </div>
         <p className="text-kn-xs leading-kn-relaxed kn-text-secondary">
-          While locked, the Quick Settings tile can switch between Off and Paired only. Unlock your
-          phone to allow discovery by unpaired devices.
+          While locked, the Quick Settings tile can switch between {VISIBILITY_LABELS.hidden.full} and{' '}
+          {VISIBILITY_LABELS.pairedOnly.full}. Unlock your phone to allow discovery by unpaired devices.
         </p>
         <button
           type="button"
           onClick={handleUnlockDevice}
-          className="flex min-h-(--kn-size-54px) w-full items-center justify-center gap-2.5 rounded-kn-xl px-5 text-kn-sm font-kn-bold transition-colors duration-(--kn-duration-150) active:scale-(--kn-press-98) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-blue-500 kn-loading-bg"
+          className={`flex min-h-(--kn-size-54px) w-full cursor-pointer items-center justify-center gap-2.5 rounded-full px-5 text-kn-sm font-kn-bold transition-colors duration-(--kn-duration-150) active:scale-(--kn-press-98) kn-sys-accent ${FOCUS_RING}`}
         >
           <Unlock className="h-5 w-5" aria-hidden="true" />
           <span>Unlock with fingerprint</span>
         </button>
-      </div>
+      </section>
     </div>
   );
 }

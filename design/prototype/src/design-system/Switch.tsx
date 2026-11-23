@@ -71,7 +71,7 @@ export function Switch({ checked, onChange, label }: SwitchProps) {
       aria-checked={checked}
       aria-label={label}
       {...handlers}
-      className="flex min-h-(--kn-size-52px) min-w-(--kn-size-62px) shrink-0 cursor-pointer touch-pan-y select-none items-center justify-end rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-blue-500"
+      className="flex min-h-(--kn-size-52px) min-w-(--kn-size-62px) shrink-0 cursor-pointer touch-pan-y select-none items-center justify-end rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-focus"
     >
       <span
         className={`relative inline-flex h-(--kn-size-34px) w-(--kn-size-58px) items-center rounded-full p-(--kn-size-4px) transition-[background-color,background-image,box-shadow] duration-(--kn-duration-switch) ease-(--ease-kn-spring) ${

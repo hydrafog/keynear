@@ -21,6 +21,10 @@ const WAVE = {
   moteDrift: 6,
   moteRadius: 1.5,
   cycleMs: 120_000,
+  /** Time for the radar to ramp between hidden and active. */
+  fadeMs: 800,
+  /** Spokes and motes dim to this share of their alpha while hidden. */
+  idleAlpha: 0.4,
   ratios: [78 / 196, 136 / 196, 1] as const,
 } as const;
 
@@ -32,17 +36,17 @@ interface WavePalette {
 }
 
 const LIGHT_PALETTE: WavePalette = {
-  spoke: 'rgba(30, 116, 246, 0.13)',
-  ring: 'rgba(6, 86, 232, 0.24)',
-  echo: 'rgba(104, 173, 255, 0.22)',
-  mote: 'rgba(30, 124, 250, 0.36)',
+  spoke: 'rgba(14, 116, 138, 0.12)',
+  ring: 'rgba(14, 116, 138, 0.22)',
+  echo: 'rgba(74, 187, 213, 0.28)',
+  mote: 'rgba(14, 116, 138, 0.36)',
 };
 
 const DARK_PALETTE: WavePalette = {
-  spoke: 'rgba(120, 176, 255, 0.14)',
-  ring: 'rgba(69, 141, 255, 0.34)',
-  echo: 'rgba(142, 192, 255, 0.22)',
-  mote: 'rgba(142, 192, 255, 0.44)',
+  spoke: 'rgba(155, 230, 245, 0.12)',
+  ring: 'rgba(74, 187, 213, 0.38)',
+  echo: 'rgba(155, 230, 245, 0.22)',
+  mote: 'rgba(155, 230, 245, 0.44)',
 };
 
 function drawRingWave(
@@ -67,17 +71,24 @@ function drawRingWave(
   ctx.stroke();
 }
 
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+const smoothstep = (t: number) => t * t * (3 - 2 * t);
+
+/** `intensity` runs from 0 (hidden, calm) to 1 (listening, lively) and is eased before use. */
 function drawWaveFrame(
   ctx: CanvasRenderingContext2D, w: number, h: number, t: number,
-  active: boolean, palette: WavePalette
+  intensity: number, palette: WavePalette
 ) {
+  const e = smoothstep(intensity);
   ctx.clearRect(0, 0, w, h);
   const cx = w / 2;
   const cy = h / 2;
   const maxR = Math.max(110, Math.min(w, h) * 0.46);
   const guideRadii = WAVE.ratios.map((ratio) => maxR * ratio);
   const twoPi = Math.PI * 2;
+  const ambientAlpha = lerp(WAVE.idleAlpha, 1, e);
 
+  ctx.globalAlpha = ambientAlpha;
   ctx.strokeStyle = palette.spoke;
   ctx.lineWidth = 1;
   for (let s = 0; s < WAVE.spokes; s += 1) {
@@ -90,18 +101,21 @@ function drawWaveFrame(
 
   guideRadii.forEach((baseR, idx) => {
     const lobes = WAVE.baseLobes + idx * WAVE.lobeStep;
-    const amp = active ? WAVE.baseAmp + idx * WAVE.ampStep : WAVE.hiddenAmp;
+    const amp = lerp(WAVE.hiddenAmp, WAVE.baseAmp + idx * WAVE.ampStep, e);
     const phase = t * WAVE.waveRate * (idx % 2 === 0 ? 1 : -1) + idx;
+    ctx.globalAlpha = 1;
     ctx.strokeStyle = palette.ring;
     ctx.lineWidth = 2;
     drawRingWave(ctx, cx, cy, baseR, lobes, amp, phase, false);
-    if (active) {
+    if (e > 0.01) {
+      ctx.globalAlpha = e;
       ctx.strokeStyle = palette.echo;
       ctx.lineWidth = 4.5;
       drawRingWave(ctx, cx, cy, baseR, lobes, amp, phase, true);
     }
   });
 
+  ctx.globalAlpha = ambientAlpha;
   ctx.fillStyle = palette.mote;
   guideRadii.forEach((baseR, idx) => {
     for (let s = 0; s < WAVE.moteCount; s += 1) {
@@ -112,10 +126,20 @@ function drawWaveFrame(
       ctx.fill();
     }
   });
+  ctx.globalAlpha = 1;
 }
 
 export function WaveMapCanvas({ active, darkMode }: { active: boolean; darkMode: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const activeRef = useRef(active);
+  const wakeRef = useRef<(() => void) | null>(null);
+  const startRef = useRef(0);
+
+  // Visibility changes only retarget the intensity; the loop below eases toward it.
+  useEffect(() => {
+    activeRef.current = active;
+    wakeRef.current?.();
+  }, [active]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -124,10 +148,15 @@ export function WaveMapCanvas({ active, darkMode }: { active: boolean; darkMode:
 
     const palette = darkMode ? DARK_PALETTE : LIGHT_PALETTE;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (startRef.current === 0) startRef.current = performance.now();
+    const startTime = startRef.current;
+    const target = () => (activeRef.current ? 1 : 0);
+
     let rafId: number | null = null;
     let width = 1;
     let height = 1;
-    let startTime = performance.now();
+    let intensity = target();
+    let lastNow = performance.now();
 
     const syncSize = () => {
       const rect = canvas.getBoundingClientRect();
@@ -139,38 +168,49 @@ export function WaveMapCanvas({ active, darkMode }: { active: boolean; darkMode:
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
-    const renderLoop = (now: number) => {
-      drawWaveFrame(ctx, width, height, (now - startTime) % WAVE.cycleMs, active, palette);
-      rafId = requestAnimationFrame(renderLoop);
+    const draw = (now: number) =>
+      drawWaveFrame(ctx, width, height, (now - startTime) % WAVE.cycleMs, intensity, palette);
+
+    const frame = (now: number) => {
+      const goal = target();
+      const step = Math.min(64, now - lastNow) / WAVE.fadeMs;
+      lastNow = now;
+      intensity = goal > intensity ? Math.min(goal, intensity + step) : Math.max(goal, intensity - step);
+      draw(now);
+      // Keep animating while listening or while easing down; settle on a still frame when hidden.
+      rafId = goal === 1 || intensity > 0 ? requestAnimationFrame(frame) : null;
     };
 
-    const startOrDrawStatic = () => {
-      if (rafId !== null) cancelAnimationFrame(rafId);
-      rafId = null;
+    const wake = () => {
       if (reducedMotion.matches) {
-        drawWaveFrame(ctx, width, height, 0, active, palette);
+        intensity = target();
+        draw(performance.now());
         return;
       }
-      startTime = performance.now();
-      rafId = requestAnimationFrame(renderLoop);
+      if (rafId !== null) return;
+      lastNow = performance.now();
+      rafId = requestAnimationFrame(frame);
     };
+    wakeRef.current = wake;
 
     syncSize();
-    startOrDrawStatic();
+    if (reducedMotion.matches || target() === 0) draw(performance.now());
+    else wake();
 
     const observer = new ResizeObserver(() => {
       syncSize();
-      if (reducedMotion.matches) drawWaveFrame(ctx, width, height, 0, active, palette);
+      if (rafId === null) draw(performance.now());
     });
     observer.observe(canvas);
-    reducedMotion.addEventListener('change', startOrDrawStatic);
+    reducedMotion.addEventListener('change', wake);
 
     return () => {
       if (rafId !== null) cancelAnimationFrame(rafId);
+      wakeRef.current = null;
       observer.disconnect();
-      reducedMotion.removeEventListener('change', startOrDrawStatic);
+      reducedMotion.removeEventListener('change', wake);
     };
-  }, [active, darkMode]);
+  }, [darkMode]);
 
   return <canvas ref={canvasRef} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" />;
 }

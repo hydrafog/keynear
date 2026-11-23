@@ -1,10 +1,12 @@
 import { useEffect, type FormEvent } from 'react';
 import { useApp } from '../../state/AppProvider';
 import { SelectionTile } from '../../design-system/Controls';
+import { Card, ListGroup } from '../../design-system/Card';
 import { SectionHeading } from '../../design-system/Setting';
-import { Laptop, X, Folder, FileText, Clipboard, Send, Plus } from 'lucide-react';
+import { joinMeta, pluralize } from '../../lib/format';
+import { Laptop, X, Folder, FileText, Clipboard, Send, Plus, Share2 } from 'lucide-react';
 
-const FOCUS_RING = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-blue-500';
+const FOCUS_RING = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-focus';
 
 export function SendScreen() {
   const {
@@ -14,6 +16,7 @@ export function SendScreen() {
     setSendQueue,
     showTextComposer,
     setShowTextComposer,
+    setShareSheetOpen,
     customTextSnippet,
     setCustomTextSnippet,
     formatBytes,
@@ -112,7 +115,7 @@ export function SendScreen() {
         </div>
       </section>
 
-      <section className="rounded-kn-2xl p-4 kn-surface">
+      <Card>
         {sendQueue.length === 0 ? (
           <div className="flex flex-col items-center gap-2 px-4 py-5 text-center">
             <span className="flex h-11 w-11 items-center justify-center rounded-kn-xl kn-loading-tonal">
@@ -125,15 +128,25 @@ export function SendScreen() {
           <>
             <div className="mb-2.5 flex items-center justify-between px-0.5">
               <span className="text-kn-sm font-kn-bold tabular-nums">
-                {sendQueue.length} {sendQueue.length === 1 ? 'item' : 'items'} · {formatBytes(totalBytes)}
+                {joinMeta(pluralize(sendQueue.length, 'item'), formatBytes(totalBytes))}
               </span>
-              <button
-                type="button"
-                onClick={() => setSendQueue([])}
-                className={`min-h-(--kn-size-38px) cursor-pointer rounded-kn-xl px-3.5 text-kn-xs font-kn-bold transition-all duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) ${FOCUS_RING} kn-surface-tonal kn-surface-hover kn-text-secondary`}
-              >
-                Clear all
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShareSheetOpen(true)}
+                  aria-label="Share queued items"
+                  className={`flex h-11 w-11 cursor-pointer items-center justify-center rounded-kn-xl transition-all duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) ${FOCUS_RING} kn-surface-tonal kn-surface-hover kn-text-secondary`}
+                >
+                  <Share2 className="h-5 w-5" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSendQueue([])}
+                  className={`min-h-(--kn-size-44px) cursor-pointer rounded-kn-xl px-3.5 text-kn-xs font-kn-bold transition-all duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) ${FOCUS_RING} kn-surface-tonal kn-surface-hover kn-text-secondary`}
+                >
+                  Clear all
+                </button>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -158,7 +171,7 @@ export function SendScreen() {
                       type="button"
                       onClick={() => setSendQueue((prev) => prev.filter((q) => q.id !== item.id))}
                       aria-label={`Remove ${item.name}`}
-                      className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-kn-xl transition-all duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) ${FOCUS_RING} kn-surface kn-surface-hover kn-text-secondary`}
+                      className={`flex h-11 w-11 cursor-pointer items-center justify-center rounded-kn-xl transition-all duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) ${FOCUS_RING} kn-surface kn-surface-hover kn-text-secondary`}
                     >
                       <X className="h-5 w-5" aria-hidden="true" />
                     </button>
@@ -168,11 +181,11 @@ export function SendScreen() {
             </div>
           </>
         )}
-      </section>
+      </Card>
 
       <section>
         <SectionHeading>Send to</SectionHeading>
-        <div className="space-y-1.5 rounded-kn-2xl p-2 kn-surface">
+        <ListGroup>
           {[
             ...pairedDevices.map((d) => ({
               id: d.deviceId,
@@ -182,19 +195,19 @@ export function SendScreen() {
             ...nearbyPeers.map((p) => ({
               id: p.presenceToken,
               displayName: p.displayName,
-              subtitle: `Nearby (${p.rssi} dBm)`,
+              subtitle: joinMeta('Nearby', `${p.rssi} dBm`),
             })),
           ].map((target, idx) => (
             <div
               key={target.id}
-              className="flex min-h-(--kn-size-68px) items-center justify-between gap-3 rounded-kn-xl px-3.5 py-3"
+              className="flex min-h-(--kn-size-68px) items-center justify-between gap-3 rounded-kn-xl px-4 py-3"
             >
-              <div className="flex min-w-0 items-center gap-3.5">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-kn-xl kn-loading-tonal">
-                  <Laptop className="h-6 w-6" aria-hidden="true" />
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-kn-xl kn-loading-tonal">
+                  <Laptop className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div className="min-w-0">
-                  <div className="truncate text-kn-base font-kn-bold">{target.displayName}</div>
+                  <div className="truncate text-kn-base font-kn-semibold">{target.displayName}</div>
                   <div className="truncate text-kn-xs kn-text-muted">{target.subtitle}</div>
                 </div>
               </div>
@@ -215,7 +228,7 @@ export function SendScreen() {
               </button>
             </div>
           ))}
-        </div>
+        </ListGroup>
       </section>
 
       {showTextComposer && (
@@ -226,11 +239,11 @@ export function SendScreen() {
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowTextComposer(false);
           }}
-          className="animate-kn-fade-in absolute inset-0 z-50 flex items-center justify-center p-5 kn-scrim"
+          className="animate-kn-fade-in absolute inset-0 z-50 flex items-center justify-center p-4 kn-scrim"
         >
           <form
             onSubmit={handleAddText}
-            className="animate-kn-modal-in w-full space-y-3.5 rounded-kn-2xl p-5 kn-surface"
+            className="animate-kn-modal-in w-full space-y-3.5 rounded-kn-2xl p-4 kn-surface"
           >
             <h2 id="add-text-dialog-title" className="text-kn-lg font-kn-bold">
               Add text

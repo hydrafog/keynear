@@ -94,8 +94,9 @@ export function useCarinaState({ showSnackbar, notificationMirrorEnabled }: Cari
   const declineCall = () => {
     if (!callAlert) return;
     const caller = callAlert.callerName;
+    const wasRinging = callAlert.state === 'ringing';
     setCallAlert(null);
-    showSnackbar(`Declined call from ${caller}.`);
+    showSnackbar(wasRinging ? `Declined call from ${caller}.` : `Ended call with ${caller}.`);
   };
 
   const toggleMuteCall = () => {

@@ -1,4 +1,5 @@
 import { useApp } from '../../state/AppProvider';
+import { usePresence } from '../../lib/usePresence';
 import { StatusBar } from './StatusBar';
 import { TopAppBar } from './TopAppBar';
 import { BottomNav } from './BottomNav';
@@ -14,6 +15,11 @@ import { SettingsScreen } from '../settings/Settings';
 
 export function AppShell() {
   const { activeTab, subScreen, shadeOpen, shareSheetOpen, lockScreenOpen, snackbarMessage, selectedDevice } = useApp();
+  // Overlays stay mounted briefly after closing so they can play their exit animation.
+  const shade = usePresence(shadeOpen, 220);
+  const share = usePresence(shareSheetOpen, 220);
+  const lock = usePresence(lockScreenOpen, 180);
+  const snack = usePresence(snackbarMessage, 220);
   return (
     <div className="min-h-(--kn-size-100svh) w-full flex justify-center transition-colors duration-(--kn-duration-200) kn-backdrop">
       <div className="relative flex h-(--kn-size-100svh) w-full max-w-(--kn-size-430px) flex-col overflow-hidden isolate transition-colors duration-(--kn-duration-200) kn-canvas">
@@ -47,23 +53,15 @@ export function AppShell() {
           )}
         </main>
 
-        {snackbarMessage && (
-          <Snackbar />
-        )}
+        {snack.mounted && <Snackbar message={snack.value} closing={snack.closing} />}
 
         <BottomNav />
 
-        {shadeOpen && (
-          <Shade />
-        )}
+        {shade.mounted && <Shade closing={shade.closing} />}
 
-        {shareSheetOpen && (
-          <ShareSheet />
-        )}
+        {share.mounted && <ShareSheet closing={share.closing} />}
 
-        {lockScreenOpen && (
-          <LockScreen />
-        )}
+        {lock.mounted && <LockScreen closing={lock.closing} />}
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 
 @theme {
   --font-kn-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-kn-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
 
   --font-weight-kn-semibold: 600;
   --font-weight-kn-bold: 700;
@@ -43,6 +44,9 @@
   --animate-kn-modal-in: kn-modal-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-kn-shade-down: kn-shade-down 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-kn-sheet-up: kn-sheet-up 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-kn-fade-out: kn-fade-out 180ms cubic-bezier(0.4, 0, 1, 1) both;
+  --animate-kn-shade-up: kn-shade-up 220ms cubic-bezier(0.4, 0, 1, 1) both;
+  --animate-kn-sheet-down: kn-sheet-down 220ms cubic-bezier(0.4, 0, 1, 1) both;
   --animate-kn-pin-enter: kn-pin-enter 340ms cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-kn-map-beacon: kn-map-beacon 6s ease-in-out infinite;
   --animate-kn-map-drift: kn-map-drift 8s ease-in-out infinite;
@@ -70,6 +74,18 @@
   @keyframes kn-sheet-up {
     from { opacity: 0; transform: translateY(24px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes kn-fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+  @keyframes kn-shade-up {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-18px); }
+  }
+  @keyframes kn-sheet-down {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(24px); }
   }
   @keyframes kn-pin-enter {
     from { opacity: 0; transform: scale(0.92) translateY(4px); }
@@ -99,22 +115,22 @@
 
 :root {
 
-  --kn-backdrop: #E2E8F2;
-  --kn-canvas: #F0F4FA;
-  --kn-on-canvas: #07132B;
-  --kn-map-ground: #E7EEF9;
-  --kn-map-ring: color-mix(in oklab, #051131 6%, transparent);
-  --kn-surface: #FAFBFD;
-  --kn-surface-tonal: #E7EDF8;
-  --kn-surface-hover: #F4F7FD;
-  --kn-text-primary: #07132B;
-  --kn-text-secondary: #283950;
-  --kn-text-muted: #3B4B5E;
-  --kn-loading: #0656E8;
-  --kn-loading-hover: #0656E8;
-  --kn-loading-ink: #0656E8;
-  --kn-loading-tonal: #DCE9FF;
-  --kn-on-loading-tonal: #0038B8;
+  --kn-backdrop: #E0EBEE;
+  --kn-canvas: #EEF5F7;
+  --kn-on-canvas: #071A21;
+  --kn-map-ground: #E3EEF1;
+  --kn-map-ring: color-mix(in oklab, #05222B 6%, transparent);
+  --kn-surface: #F9FCFD;
+  --kn-surface-tonal: #E4F0F3;
+  --kn-surface-hover: #F1F8FA;
+  --kn-text-primary: #071A21;
+  --kn-text-secondary: #26404A;
+  --kn-text-muted: #3A525C;
+  --kn-loading: #4ABBD5;
+  --kn-loading-hover: #5CC4DC;
+  --kn-loading-ink: #0E748A;
+  --kn-loading-tonal: #D8F3F8;
+  --kn-on-loading-tonal: #084B5B;
   --kn-warning-tonal: #FFF6D3;
   --kn-on-warning-tonal: #863300;
   --kn-error: #CA244D;
@@ -124,31 +140,29 @@
   --kn-on-danger-action: #64172B;
   --kn-error-action-hover: #FFCED6;
   --kn-error-ink: #CA244D;
-  --kn-input: #E8EEFA;
-  --kn-switch-track-off: #DEE6F6;
+  --kn-input: #E5F0F4;
+  --kn-switch-track-off: #D7E6EC;
   --kn-switch-thumb: #FFFFFE;
-  --kn-notif-sub-card: #E9EFFB;
-  --kn-qs-on: #07132B;
-  --kn-qs-hover: #F3F7FD;
-  --kn-snackbar: #0F223E;
+  --kn-notif-sub-card: #E6F1F4;
+  --kn-qs-on: #071A21;
+  --kn-qs-hover: #F1F8FA;
+  --kn-snackbar: #0F2229;
   --kn-on-snackbar: #FFFFFE;
-  --kn-track-well: #E7EDF8;
-  --kn-scrim: color-mix(in oklab, #00021E 45%, transparent);
-  --kn-sheet-handle: #CADBEE;
-  --kn-gesture-pill: #819BBB;
-  --kn-map-contour: color-mix(in oklab, #004CED 20%, transparent);
-  --kn-map-contour-far: color-mix(in oklab, #004CED 15%, transparent);
-  --kn-map-aura: radial-gradient(circle, rgba(0, 61, 207, 0.16) 0%, rgba(0, 61, 207, 0.04) 45%, transparent 72%);
-  --kn-map-glow: radial-gradient(circle at 50% 54%, rgba(255, 255, 254, 0.65) 0%, rgba(231, 238, 249, 0) 68%);
+  --kn-track-well: #E1EDF1;
+  --kn-scrim: color-mix(in oklab, #00101A 45%, transparent);
+  --kn-sheet-handle: #C5DAE0;
+  --kn-gesture-pill: #7F9AA4;
+  --kn-map-contour: color-mix(in oklab, #2B9DB8 22%, transparent);
+  --kn-map-contour-far: color-mix(in oklab, #2B9DB8 16%, transparent);
+  --kn-map-aura: radial-gradient(circle, rgba(43, 157, 184, 0.18) 0%, rgba(43, 157, 184, 0.05) 45%, transparent 72%);
+  --kn-map-glow: radial-gradient(circle at 50% 54%, rgba(255, 255, 254, 0.65) 0%, rgba(227, 238, 241, 0) 68%);
 
-  --kn-depth-surface: inset 0 1.5px 1px rgba(255, 255, 254, 0.95), inset 0 -2px 3px rgba(5, 17, 47, 0.06), 0 5px 12px -3px rgba(5, 17, 47, 0.08), 0 2px 4px -1px rgba(5, 17, 47, 0.04);
-  --kn-depth-tonal: inset 0 1.5px 1px rgba(255, 255, 254, 0.8), inset 0 -1.5px 2.5px rgba(5, 17, 47, 0.08), 0 3px 8px -2px rgba(5, 17, 47, 0.07);
-  --kn-depth-accent: inset 0 1.5px 1.5px rgba(255, 255, 254, 0.38), inset 0 -2.5px 4px rgba(0, 2, 105, 0.38), 0 6px 14px -3px rgba(0, 61, 207, 0.34);
-  --kn-depth-accent-pressed: inset 0 2.5px 5px rgba(0, 2, 105, 0.45), inset 0 -1px 1px rgba(255, 255, 254, 0.2);
-  --kn-depth-inset: inset 0 2px 4px rgba(5, 17, 47, 0.1), inset 0 -1px 1px rgba(255, 255, 254, 0.85);
-  --kn-depth-thumb: inset 0 1.5px 1px rgba(255, 255, 254, 1), inset 0 -1.5px 2px rgba(5, 17, 47, 0.12), 0 2px 5px rgba(5, 17, 47, 0.22);
-  --kn-depth-sheet: inset 0 2px 1.5px rgba(255, 255, 254, 0.95), 0 -6px 20px -4px rgba(5, 17, 47, 0.08);
-  --kn-depth-snackbar: inset 0 1.5px 1px rgba(255, 255, 254, 0.08), inset 0 -2px 4px rgba(0, 0, 0, 0.5), 0 6px 14px -3px rgba(0, 0, 0, 0.55), 0 2px 4px -1px rgba(0, 0, 0, 0.35);
+  --kn-depth-surface: 0 2px 8px -2px rgba(7, 35, 46, 0.07), 0 1px 2px rgba(7, 35, 46, 0.04);
+  --kn-depth-tonal: 0 1px 3px rgba(7, 35, 46, 0.05);
+  --kn-depth-inset: inset 0 1px 2px rgba(7, 35, 46, 0.10);
+  --kn-depth-thumb: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 3px rgba(7, 35, 46, 0.28);
+  --kn-depth-sheet: 0 -6px 20px -4px rgba(7, 35, 46, 0.08);
+  --kn-depth-snackbar: 0 6px 18px -6px rgba(5, 31, 39, 0.45);
 
   --kn-duration-150: 150ms;
   --kn-duration-200: 200ms;
@@ -164,66 +178,74 @@
   --kn-size-24px: 24px;
   --kn-ripple-width: 18px;
 
-  --kn-brand-ink: #0656E8;
-  --kn-brand-accent-border: rgba(128, 186, 255, 0.42);
-  --kn-brand-surface-rim: inset 0 0 0 1px rgba(197, 214, 238, 0.48);
-  --kn-brand-tonal-rim: inset 0 0 0 1px rgba(181, 204, 236, 0.46);
-  --kn-brand-accent-rim: inset 0 0 0 1px rgba(128, 186, 255, 0.40);
-  --kn-grad-backdrop: linear-gradient(155deg, #E6ECF6 0%, #D9E2F1 100%);
-  --kn-grad-canvas: linear-gradient(180deg, #F5F8FD 0%, #EEF3FA 55%, #E8EFF8 100%);
-  --kn-grad-surface: linear-gradient(165deg, #FFFFFF 0%, #F8FAFE 58%, #EFF4FC 100%);
-  --kn-grad-surface-hover: linear-gradient(165deg, #FFFFFF 0%, #F2F6FE 58%, #E6EFFC 100%);
-  --kn-grad-surface-tonal: linear-gradient(165deg, #F1F6FE 0%, #E3ECFA 100%);
-  --kn-grad-sheet: linear-gradient(180deg, #FFFFFF 0%, #F6F9FE 42%, #EEF3FB 100%);
-  --kn-grad-well: linear-gradient(180deg, #DCE6F7 0%, #E8EFFB 100%);
-  --kn-grad-accent: linear-gradient(145deg, #176FF0 0%, #0656E8 54%, #0038B8 100%);
-  --kn-grad-accent-hover: linear-gradient(145deg, #1E77F8 0%, #0A5EF0 54%, #0040C9 100%);
-  --kn-grad-accent-tonal: linear-gradient(160deg, #EDF4FF 0%, #DCE9FF 100%);
-  --kn-on-brand-tonal: #0038B8;
-  --kn-grad-thumb: linear-gradient(160deg, #FFFFFF 0%, #EDF3FC 100%);
+  --kn-on-accent: #FFFFFF;
+  --kn-brand-ink: #0E748A;
+  --kn-focus-ring: #0E748A;
+  --kn-brand-accent-border: rgba(158, 226, 240, 0.55);
+  --kn-brand-surface-rim: inset 0 0 0 1px rgba(10, 44, 56, 0.08);
+  --kn-brand-tonal-rim: inset 0 0 0 1px rgba(10, 44, 56, 0.09);
+  --kn-brand-accent-rim: inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 0 0 1px rgba(14, 116, 138, 0.22);
+  --kn-grad-backdrop: radial-gradient(90% 60% at 15% 0%, rgba(74, 187, 213, 0.14) 0%, transparent 65%), radial-gradient(70% 55% at 88% 100%, rgba(92, 178, 232, 0.12) 0%, transparent 62%);
+  --kn-grad-surface: radial-gradient(120% 75% at 50% 0%, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0) 68%);
+  --kn-grad-surface-hover: radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.96) 0%, rgba(74, 187, 213, 0.07) 100%);
+  --kn-grad-surface-tonal: radial-gradient(110% 80% at 25% 0%, rgba(255, 255, 255, 0.55) 0%, transparent 72%);
+  --kn-grad-sheet: radial-gradient(100% 45% at 50% 0%, rgba(255, 255, 255, 0.95) 0%, transparent 75%);
+  --kn-grad-well: none;
+  --kn-grad-accent: radial-gradient(95% 110% at 18% -10%, rgba(205, 250, 255, 0.58) 0%, transparent 56%), radial-gradient(85% 110% at 88% 115%, rgba(96, 178, 240, 0.42) 0%, transparent 60%);
+  --kn-grad-accent-hover: radial-gradient(100% 115% at 20% -10%, rgba(224, 252, 255, 0.72) 0%, transparent 58%), radial-gradient(85% 110% at 88% 115%, rgba(114, 198, 248, 0.45) 0%, transparent 62%);
+  --kn-grad-accent-tonal: radial-gradient(110% 90% at 15% 0%, rgba(255, 255, 255, 0.65) 0%, transparent 68%);
+  --kn-on-brand-tonal: #084B5B;
+  --kn-grad-thumb: radial-gradient(110% 90% at 30% 0%, rgba(255, 255, 255, 0.9) 0%, transparent 70%);
   --kn-brand-danger-ink: #CA244D;
   --kn-brand-on-danger-tonal: #64172B;
-  --kn-grad-danger: linear-gradient(145deg, #DC3B5D 0%, #CA244D 54%, #A5163B 100%);
-  --kn-grad-danger-hover: linear-gradient(145deg, #E54666 0%, #D32A54 54%, #B21A41 100%);
-  --kn-grad-danger-tonal: linear-gradient(160deg, #FFF0F3 0%, #FFDCE1 100%);
-  --kn-grad-danger-tonal-hover: linear-gradient(160deg, #FFE4EA 0%, #FFCED6 100%);
+  --kn-grad-danger: radial-gradient(95% 110% at 18% -10%, rgba(255, 214, 222, 0.45) 0%, transparent 56%);
+  --kn-grad-danger-hover: radial-gradient(95% 110% at 18% -10%, rgba(255, 224, 230, 0.60) 0%, transparent 58%);
+  --kn-grad-danger-tonal: radial-gradient(110% 90% at 15% 0%, rgba(255, 255, 255, 0.60) 0%, transparent 68%);
+  --kn-grad-danger-tonal-hover: radial-gradient(110% 90% at 15% 0%, rgba(255, 255, 255, 0.85) 0%, transparent 70%);
   --kn-brand-danger-rim: inset 0 0 0 1px rgba(202, 36, 77, 0.16);
-  --kn-grad-snackbar: linear-gradient(160deg, #162B4E 0%, #0B1931 100%);
-  --kn-brand-aura: radial-gradient(circle, rgba(6, 86, 232, 0.14) 0%, rgba(30, 124, 250, 0.05) 44%, transparent 72%);
-  --kn-brand-depth-accent: inset 0 1.5px 1.5px rgba(255, 255, 254, 0.40), inset 0 -2.5px 4px rgba(0, 26, 98, 0.42), 0 6px 14px -3px rgba(6, 86, 232, 0.36);
-  --kn-brand-depth-accent-pressed: inset 0 2.5px 5px rgba(0, 26, 98, 0.50), inset 0 -1px 1px rgba(255, 255, 254, 0.22);
-  --kn-sys-shade-bg: #E7ECF5;
-  --kn-sys-notif-bg: #F8FAFE;
-  --kn-sys-notif-border: rgba(7, 19, 43, 0.08);
-  --kn-sys-notif-action: #DCE6F7;
-  --kn-sys-notif-action-hover: #CEDDF4;
-  --kn-sys-qs-off: #F8FAFE;
-  --kn-sys-qs-on: #0656E8;
-  --kn-sys-media-bg: linear-gradient(145deg, #162442 0%, #0E172B 100%);
-  --kn-sys-call-accept: #1B873F;
+  --kn-grad-snackbar: radial-gradient(110% 90% at 20% 0%, rgba(190, 240, 250, 0.10) 0%, transparent 70%);
+  --kn-brand-aura: radial-gradient(circle, rgba(74, 187, 213, 0.24) 0%, rgba(92, 190, 232, 0.07) 46%, transparent 72%);
+  --kn-brand-depth-accent: 0 6px 18px -6px rgba(74, 187, 213, 0.52), 0 1px 2px rgba(5, 31, 39, 0.08);
+  --kn-brand-depth-accent-pressed: 0 2px 6px -2px rgba(74, 187, 213, 0.35);
+  --kn-sys-shade-bg: #E3ECEF;
+  --kn-sys-notif-bg: #F8FCFD;
+  --kn-sys-notif-border: rgba(7, 26, 33, 0.08);
+  --kn-sys-notif-action: #D7E7EC;
+  --kn-sys-notif-action-hover: #C8DEE6;
+  --kn-sys-qs-off: #F8FCFD;
+  --kn-sys-accent: #4ABBD5;
+  --kn-sys-on-accent: #FFFFFF;
+  --kn-sys-accent-ink: #0E748A;
+  --kn-sys-accent-tonal: #CDEEF6;
+  --kn-sys-on-accent-tonal: #084B5B;
+  --kn-sys-success: #1B873F;
+  --kn-sys-media-bg: linear-gradient(145deg, #162B33 0%, #0E1B22 100%);
+  --kn-sys-call-accept: var(--kn-sys-success);
   --kn-sys-call-decline: #CA244D;
-  --kn-fog-well-bg: linear-gradient(180deg, rgba(226, 234, 246, 0.94) 0%, rgba(235, 241, 250, 0.90) 100%);
-  --kn-fog-surface-bg: linear-gradient(165deg, rgba(255, 255, 255, 0.95) 0%, rgba(244, 248, 253, 0.92) 100%);
-  --kn-fog-sheet-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(242, 246, 252, 0.93) 100%);
+  --kn-fog-well-bg: linear-gradient(180deg, rgba(224, 237, 241, 0.82) 0%, rgba(233, 243, 246, 0.78) 100%);
+  --kn-fog-surface-bg: linear-gradient(165deg, rgba(255, 255, 255, 0.84) 0%, rgba(243, 249, 251, 0.80) 100%);
+  --kn-fog-surface-hover-bg: linear-gradient(165deg, rgba(255, 255, 255, 0.94) 0%, rgba(238, 247, 250, 0.90) 100%);
+  --kn-fog-sheet-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.84) 0%, rgba(240, 247, 250, 0.80) 100%);
+  --kn-accent-fill: #4ABBD5;
 }
 
 [data-kn-theme='dark'] {
-  --kn-backdrop: #050608;
-  --kn-canvas: #0F1014;
-  --kn-on-canvas: #F7F6F7;
-  --kn-map-ground: #0F1014;
-  --kn-map-ring: color-mix(in oklab, #FFFFFE 6%, transparent);
-  --kn-surface: #17181E;
-  --kn-surface-tonal: #22242C;
-  --kn-surface-hover: #25262F;
-  --kn-text-primary: #F7F6F7;
-  --kn-text-secondary: #DBD8DB;
-  --kn-text-muted: #9A9AA6;
-  --kn-loading: #0B52DC;
-  --kn-loading-hover: #135CE8;
-  --kn-loading-ink: #6BAEFF;
-  --kn-loading-tonal: #162847;
-  --kn-on-loading-tonal: #9CC6FF;
+  --kn-backdrop: #06090B;
+  --kn-canvas: #0D1115;
+  --kn-on-canvas: #F4F8F9;
+  --kn-map-ground: #0D1115;
+  --kn-map-ring: color-mix(in oklab, #F4FAFC 6%, transparent);
+  --kn-surface: #141A20;
+  --kn-surface-tonal: #1C242C;
+  --kn-surface-hover: #212B35;
+  --kn-text-primary: #F4F8F9;
+  --kn-text-secondary: #D6DEE1;
+  --kn-text-muted: #97A5AD;
+  --kn-loading: #4ABBD5;
+  --kn-loading-hover: #5CC4DC;
+  --kn-loading-ink: #4ABBD5;
+  --kn-loading-tonal: #132C35;
+  --kn-on-loading-tonal: #9BE6F5;
   --kn-warning-tonal: #381C00;
   --kn-on-warning-tonal: #FFEAA5;
   --kn-error: #B81D46;
@@ -233,71 +255,78 @@
   --kn-on-danger-action: #FED2E1;
   --kn-error-action-hover: #4A1826;
   --kn-error-ink: #FF949D;
-  --kn-input: #0D0E13;
-  --kn-switch-track-off: #12131A;
-  --kn-switch-thumb: #F7F6F7;
-  --kn-notif-sub-card: #12131A;
-  --kn-qs-on: #E9E9EC;
-  --kn-qs-hover: #1E1F27;
-  --kn-snackbar: #1E2028;
-  --kn-on-snackbar: #F7F6F7;
-  --kn-track-well: #0D0E13;
+  --kn-input: #0A0E12;
+  --kn-switch-track-off: #10161C;
+  --kn-switch-thumb: #F4F8F9;
+  --kn-notif-sub-card: #0E1318;
+  --kn-qs-on: #E9EEF0;
+  --kn-qs-hover: #1B232A;
+  --kn-snackbar: #1B2229;
+  --kn-on-snackbar: #F4F8F9;
+  --kn-track-well: #0A0E12;
   --kn-scrim: color-mix(in oklab, theme(--color-black) 60%, transparent);
-  --kn-sheet-handle: #474954;
-  --kn-gesture-pill: #474954;
-  --kn-map-contour: color-mix(in oklab, #4199FF 20%, transparent);
-  --kn-map-contour-far: color-mix(in oklab, #4199FF 15%, transparent);
-  --kn-map-aura: radial-gradient(circle, rgba(0, 83, 226, 0.22) 0%, rgba(0, 83, 226, 0.06) 45%, transparent 72%);
-  --kn-map-glow: radial-gradient(circle at 50% 54%, rgba(0, 83, 226, 0.08) 0%, rgba(8, 12, 18, 0) 68%);
+  --kn-sheet-handle: #3F4D56;
+  --kn-gesture-pill: #3F4D56;
+  --kn-map-contour: color-mix(in oklab, #4ABBD5 22%, transparent);
+  --kn-map-contour-far: color-mix(in oklab, #4ABBD5 16%, transparent);
+  --kn-map-aura: radial-gradient(circle, rgba(74, 187, 213, 0.20) 0%, rgba(74, 187, 213, 0.05) 45%, transparent 72%);
+  --kn-map-glow: radial-gradient(circle at 50% 54%, rgba(74, 187, 213, 0.08) 0%, rgba(8, 12, 18, 0) 68%);
 
-  --kn-depth-surface: inset 0 1.5px 1px rgba(255, 255, 254, 0.08), inset 0 -2px 4px rgba(0, 0, 0, 0.5), 0 6px 14px -3px rgba(0, 0, 0, 0.55), 0 2px 4px -1px rgba(0, 0, 0, 0.35);
-  --kn-depth-tonal: inset 0 1.5px 1px rgba(255, 255, 254, 0.07), inset 0 -1.5px 3px rgba(0, 0, 0, 0.45), 0 4px 10px -2px rgba(0, 0, 0, 0.45);
-  --kn-depth-accent: inset 0 1.5px 1.5px rgba(255, 255, 254, 0.28), inset 0 -2.5px 4px rgba(0, 0, 0, 0.5), 0 6px 16px -3px rgba(0, 83, 226, 0.42);
-  --kn-depth-accent-pressed: inset 0 2.5px 5px rgba(0, 0, 0, 0.55), inset 0 -1px 1px rgba(255, 255, 254, 0.15);
-  --kn-depth-inset: inset 0 2px 5px rgba(0, 0, 0, 0.55), inset 0 -1px 1px rgba(255, 255, 254, 0.06);
-  --kn-depth-thumb: inset 0 1.5px 1px rgba(255, 255, 254, 0.9), inset 0 -1.5px 2px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.55);
-  --kn-depth-sheet: inset 0 1.5px 1px rgba(255, 255, 254, 0.09), 0 -8px 24px -4px rgba(0, 0, 0, 0.6);
+  --kn-depth-surface: 0 6px 18px -6px rgba(0, 0, 0, 0.55);
+  --kn-depth-tonal: 0 2px 8px -2px rgba(0, 0, 0, 0.42);
+  --kn-depth-inset: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+  --kn-depth-thumb: 0 1px 4px rgba(0, 0, 0, 0.55);
+  --kn-depth-sheet: 0 -8px 24px -4px rgba(0, 0, 0, 0.6);
 
-  --kn-brand-ink: #6BAEFF;
-  --kn-brand-accent-border: rgba(128, 186, 255, 0.28);
-  --kn-brand-surface-rim: inset 0 0 0 1px rgba(255, 255, 254, 0.08);
-  --kn-brand-tonal-rim: inset 0 0 0 1px rgba(255, 255, 254, 0.10);
-  --kn-brand-accent-rim: inset 0 0 0 1px rgba(142, 192, 255, 0.28);
-  --kn-grad-backdrop: linear-gradient(155deg, #090A0E 0%, #050608 100%);
-  --kn-grad-canvas: linear-gradient(180deg, #101116 0%, #0D0E12 60%, #0A0B0F 100%);
-  --kn-grad-surface: linear-gradient(165deg, #1E1F26 0%, #17181E 58%, #13141A 100%);
-  --kn-grad-surface-hover: linear-gradient(165deg, #25262F 0%, #1E1F27 58%, #181920 100%);
-  --kn-grad-surface-tonal: linear-gradient(165deg, #262831 0%, #1E2028 100%);
-  --kn-grad-sheet: linear-gradient(180deg, #1E1F27 0%, #16171E 45%, #121319 100%);
-  --kn-grad-well: linear-gradient(180deg, #0D0E13 0%, #12131A 100%);
-  --kn-grad-accent: linear-gradient(145deg, #1D6CF0 0%, #0B52DC 54%, #0538AE 100%);
-  --kn-grad-accent-hover: linear-gradient(145deg, #2876F7 0%, #135CE8 54%, #0741BF 100%);
-  --kn-grad-accent-tonal: linear-gradient(160deg, #162847 0%, #101E36 100%);
-  --kn-on-brand-tonal: #9CC6FF;
-  --kn-grad-thumb: linear-gradient(160deg, #FFFFFF 0%, #E5E7EE 100%);
+  --kn-on-accent: #FFFFFF;
+  --kn-brand-ink: #4ABBD5;
+  --kn-focus-ring: #4ABBD5;
+  --kn-brand-accent-border: rgba(158, 226, 240, 0.30);
+  --kn-brand-surface-rim: inset 0 1px 0 rgba(200, 242, 252, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --kn-brand-tonal-rim: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --kn-brand-accent-rim: inset 0 1px 0 rgba(255, 255, 255, 0.50), inset 0 0 0 1px rgba(170, 242, 255, 0.28);
+  --kn-grad-backdrop: radial-gradient(85% 55% at 18% 0%, rgba(74, 187, 213, 0.10) 0%, transparent 64%), radial-gradient(70% 50% at 85% 100%, rgba(56, 152, 208, 0.08) 0%, transparent 62%);
+  --kn-grad-surface: radial-gradient(110% 70% at 50% 0%, rgba(190, 240, 250, 0.05) 0%, transparent 68%);
+  --kn-grad-surface-hover: radial-gradient(110% 75% at 50% 0%, rgba(74, 187, 213, 0.11) 0%, transparent 72%);
+  --kn-grad-surface-tonal: radial-gradient(110% 80% at 30% 0%, rgba(190, 240, 250, 0.04) 0%, transparent 70%);
+  --kn-grad-sheet: radial-gradient(100% 45% at 50% 0%, rgba(190, 240, 250, 0.06) 0%, transparent 72%);
+  --kn-grad-well: none;
+  --kn-grad-accent: radial-gradient(95% 110% at 18% -10%, rgba(215, 252, 255, 0.48) 0%, transparent 56%), radial-gradient(85% 110% at 88% 115%, rgba(92, 182, 240, 0.36) 0%, transparent 60%);
+  --kn-grad-accent-hover: radial-gradient(100% 115% at 20% -10%, rgba(230, 254, 255, 0.62) 0%, transparent 58%), radial-gradient(85% 110% at 88% 115%, rgba(114, 202, 248, 0.42) 0%, transparent 62%);
+  --kn-grad-accent-tonal: radial-gradient(110% 85% at 20% 0%, rgba(74, 187, 213, 0.14) 0%, transparent 70%);
+  --kn-on-brand-tonal: #9BE6F5;
+  --kn-grad-thumb: radial-gradient(110% 90% at 30% 0%, rgba(255, 255, 255, 0.7) 0%, transparent 70%);
   --kn-brand-danger-ink: #FF949D;
   --kn-brand-on-danger-tonal: #FED2E1;
-  --kn-grad-danger: linear-gradient(145deg, #DC3B5D 0%, #B81D46 54%, #921235 100%);
-  --kn-grad-danger-hover: linear-gradient(145deg, #E54666 0%, #C6224D 54%, #A0163C 100%);
-  --kn-grad-danger-tonal: linear-gradient(160deg, #4E1325 0%, #3A141E 100%);
-  --kn-grad-danger-tonal-hover: linear-gradient(160deg, #5E1A2E 0%, #4A1826 100%);
+  --kn-grad-danger: radial-gradient(95% 110% at 18% -10%, rgba(255, 170, 182, 0.24) 0%, transparent 56%);
+  --kn-grad-danger-hover: radial-gradient(95% 110% at 18% -10%, rgba(255, 180, 192, 0.32) 0%, transparent 58%);
+  --kn-grad-danger-tonal: radial-gradient(110% 90% at 15% 0%, rgba(255, 148, 157, 0.10) 0%, transparent 68%);
+  --kn-grad-danger-tonal-hover: radial-gradient(110% 90% at 15% 0%, rgba(255, 148, 157, 0.17) 0%, transparent 70%);
   --kn-brand-danger-rim: inset 0 0 0 1px rgba(255, 148, 157, 0.22);
-  --kn-grad-snackbar: linear-gradient(160deg, #252730 0%, #1A1B22 100%);
-  --kn-brand-aura: radial-gradient(circle, rgba(30, 124, 250, 0.16) 0%, rgba(11, 82, 220, 0.05) 46%, transparent 72%);
-  --kn-brand-depth-accent: inset 0 1.5px 1.5px rgba(255, 255, 254, 0.30), inset 0 -2.5px 4px rgba(0, 0, 0, 0.52), 0 6px 16px -3px rgba(11, 82, 220, 0.45);
-  --kn-brand-depth-accent-pressed: inset 0 2.5px 5px rgba(0, 0, 0, 0.58), inset 0 -1px 1px rgba(255, 255, 254, 0.16);
-  --kn-sys-shade-bg: #0E0F13;
-  --kn-sys-notif-bg: #1B1C22;
-  --kn-sys-notif-border: rgba(255, 255, 254, 0.07);
-  --kn-sys-notif-action: #272830;
-  --kn-sys-notif-action-hover: #31333D;
-  --kn-sys-qs-off: #1D1E25;
-  --kn-sys-qs-on: #2974F6;
-  --kn-sys-media-bg: linear-gradient(145deg, #1E212B 0%, #14161D 100%);
-  --kn-sys-call-accept: #1E8E45;
+  --kn-grad-snackbar: radial-gradient(110% 90% at 20% 0%, rgba(190, 240, 250, 0.07) 0%, transparent 70%);
+  --kn-brand-aura: radial-gradient(circle, rgba(74, 187, 213, 0.20) 0%, rgba(74, 187, 213, 0.05) 48%, transparent 72%);
+  --kn-brand-depth-accent: 0 8px 24px -8px rgba(74, 187, 213, 0.48);
+  --kn-brand-depth-accent-pressed: 0 2px 8px -2px rgba(74, 187, 213, 0.32);
+  --kn-sys-shade-bg: #0B0F12;
+  --kn-sys-notif-bg: #151B21;
+  --kn-sys-notif-border: rgba(244, 250, 252, 0.07);
+  --kn-sys-notif-action: #212A32;
+  --kn-sys-notif-action-hover: #2A3540;
+  --kn-sys-qs-off: #182027;
+  --kn-sys-accent: #4ABBD5;
+  --kn-sys-on-accent: #FFFFFF;
+  --kn-sys-accent-ink: #4ABBD5;
+  --kn-sys-accent-tonal: #17363F;
+  --kn-sys-on-accent-tonal: #9BE6F5;
+  --kn-sys-success: #1E8E45;
+  --kn-sys-media-bg: linear-gradient(145deg, #1B2730 0%, #11181E 100%);
+  --kn-sys-call-accept: var(--kn-sys-success);
   --kn-sys-call-decline: #C4254E;
-  --kn-fog-well-bg: linear-gradient(180deg, rgba(16, 17, 22, 0.94) 0%, rgba(22, 23, 29, 0.91) 100%);
-  --kn-fog-surface-bg: linear-gradient(165deg, rgba(30, 31, 38, 0.95) 0%, rgba(21, 22, 28, 0.92) 100%);
-  --kn-fog-sheet-bg: linear-gradient(180deg, rgba(30, 31, 39, 0.96) 0%, rgba(20, 21, 27, 0.93) 100%);
-  --kn-dark-canvas-neutral: #0F1014;
+  --kn-fog-well-bg: linear-gradient(180deg, rgba(11, 15, 18, 0.82) 0%, rgba(17, 23, 28, 0.78) 100%);
+  --kn-fog-surface-bg: linear-gradient(165deg, rgba(24, 31, 38, 0.84) 0%, rgba(17, 23, 29, 0.80) 100%);
+  --kn-fog-surface-hover-bg: linear-gradient(165deg, rgba(33, 43, 53, 0.92) 0%, rgba(24, 31, 38, 0.88) 100%);
+  --kn-fog-sheet-bg: linear-gradient(180deg, rgba(26, 33, 40, 0.84) 0%, rgba(16, 22, 27, 0.80) 100%);
+  --kn-dark-canvas-neutral: #0D1115;
+  --kn-depth-snackbar: 0 6px 18px -6px rgba(0, 0, 0, 0.6);
+  --kn-accent-fill: #4ABBD5;
 }
