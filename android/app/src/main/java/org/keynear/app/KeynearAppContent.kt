@@ -17,6 +17,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableFloatState
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,6 +67,7 @@ internal fun KeynearAppContent(
 ) {
     val palette = LocalKeynearPalette.current
     val localName = remember { Build.MODEL?.takeIf { it.isNotBlank() } ?: "Android" }
+    val orbitPhase = remember { mutableFloatStateOf(0f) }
     val selectedDevice = snapshot?.pairedDevices?.firstOrNull {
         (subScreen as? KeynearSubScreen.DeviceDetail)?.deviceId == it.deviceId
     }
@@ -116,7 +119,7 @@ internal fun KeynearAppContent(
                     CurrentScreenContent(
                         snapshot, targetTab, targetSub, confirmUnpairDeviceId,
                         permissionsChecklist, actions, localName, sheetExpanded,
-                        onSetSheetExpanded, dismissedTransferIds, onDismissTransfers,
+                        onSetSheetExpanded, dismissedTransferIds, onDismissTransfers, orbitPhase,
                     )
                 }
             }
@@ -183,6 +186,7 @@ private fun CurrentScreenContent(
     onSetSheetExpanded: (Boolean) -> Unit,
     dismissedTransferIds: Set<String>,
     onDismissTransfers: (List<String>) -> Unit,
+    orbitPhase: MutableFloatState,
 ) {
     when (val currentSub = subScreen) {
         KeynearSubScreen.Permissions -> PermissionsScreen(
@@ -203,6 +207,7 @@ private fun CurrentScreenContent(
                 dismissedTransferIds = dismissedTransferIds,
                 onDismissTransfers = onDismissTransfers,
                 actions = actions,
+                orbitPhase = orbitPhase,
             )
             KeynearTab.SEND -> SendScreen(
                 snapshot = snapshot,

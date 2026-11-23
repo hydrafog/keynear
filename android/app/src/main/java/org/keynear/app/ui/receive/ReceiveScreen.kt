@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -69,6 +70,7 @@ fun ReceiveScreen(
     sheetExpanded: Boolean,
     onSetSheetExpanded: (Boolean) -> Unit,
     actions: KeynearActions,
+    orbitPhase: MutableFloatState,
     dismissedTransferIds: Set<String> = emptySet(),
     onDismissTransfers: (List<String>) -> Unit = {},
     modifier: Modifier = Modifier,
@@ -147,6 +149,7 @@ fun ReceiveScreen(
                     radarActive = radarActive,
                     layout = layout,
                     actions = actions,
+                    orbitPhase = orbitPhase,
                 )
             }
         }

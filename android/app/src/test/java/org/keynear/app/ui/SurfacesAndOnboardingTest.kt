@@ -23,7 +23,7 @@ import org.keynear.app.ui.model.VisibilityState
 import org.keynear.app.ui.model.RadarLayout
 import org.keynear.app.ui.model.computeTransferProgressModel
 import org.keynear.app.ui.model.formatBytes
-import org.keynear.app.ui.model.orbitFor
+import org.keynear.app.ui.model.orbitPlacementsFor
 import org.keynear.app.ui.model.radarLayoutFor
 import org.keynear.app.ui.model.validateDisplayNameInput
 import uniffi.keynear_core.FfiVisibilityMode
@@ -213,19 +213,45 @@ class SurfacesAndOnboardingTest {
     }
 
     @Test
-    fun orbitForMatchesPrototypeRadiusAndPhaseFormula() {
-        val near = orbitFor(rssi = -40, index = 0, count = 2)
-        assertEquals(128, near.radiusPx)
-        assertEquals(40, near.durationSec)
-        assertEquals(0f, near.phaseSec, 0.001f)
+    fun orbitPlacementsUseThreeRingsAndShareEvenly() {
+        val wide = radarLayoutFor(640f, 720f)
 
-        val far = orbitFor(rssi = -90, index = 1, count = 2)
-        assertEquals(176, far.radiusPx)
-        assertEquals(40, far.durationSec)
-        assertEquals(20f, far.phaseSec, 0.001f)
+        val single = orbitPlacementsFor(listOf("a"), wide)
+        assertEquals(155, single.single().radiusPx)
+        assertEquals(40, single.single().durationSec)
 
-        assertEquals(176, orbitFor(rssi = -120, index = 0, count = 1).radiusPx)
-        assertEquals(128, orbitFor(rssi = -10, index = 0, count = 1).radiusPx)
+        val two = orbitPlacementsFor(listOf("b", "a"), wide)
+        assertEquals(listOf(138, 172), two.map { it.radiusPx }.sorted())
+
+        val three = orbitPlacementsFor(listOf("a", "b", "c"), wide)
+        assertEquals(listOf(138, 155, 172), three.map { it.radiusPx })
+        assertEquals(0f, three[0].phaseSec, 0.001f)
+        assertEquals(40f / 3f, three[1].phaseSec, 0.001f)
+        assertEquals(80f / 3f, three[2].phaseSec, 0.001f)
+
+        val five = orbitPlacementsFor(listOf("a", "b", "c", "d", "e"), wide)
+        assertEquals(listOf(138, 155, 172, 138, 155), five.map { it.radiusPx })
+        assertEquals(20f, five[3].phaseSec, 0.001f)
+    }
+
+    @Test
+    fun orbitPlacementsStayStableWhenIdsReorder() {
+        val wide = radarLayoutFor(640f, 720f)
+        val sortedIds = listOf("a", "b", "c", "d", "e")
+        val expected = sortedIds.zip(orbitPlacementsFor(sortedIds, wide)).toMap()
+
+        val reversedIds = listOf("e", "d", "c", "b", "a")
+        val reversed = orbitPlacementsFor(reversedIds, wide)
+        reversedIds.forEachIndexed { idx, id ->
+            val placement = expected.getValue(id)
+            assertEquals(placement.radiusPx, reversed[idx].radiusPx)
+            assertEquals(placement.phaseSec, reversed[idx].phaseSec, 0.001f)
+        }
+    }
+
+    @Test
+    fun orbitPlacementsHandleEmptyList() {
+        assertTrue(orbitPlacementsFor(emptyList<String>(), radarLayoutFor(640f, 720f)).isEmpty())
     }
 
     @Test
@@ -245,12 +271,11 @@ class SurfacesAndOnboardingTest {
         assertEquals(1f, wide.scale, 0.001f)
         assertEquals(172f, wide.maxRadiusDp, 0.001f)
 
-        val layoutNear = orbitFor(rssi = -40, index = 0, count = 3, layout = wide)
-        val layoutFar = orbitFor(rssi = -90, index = 2, count = 3, layout = wide)
-        assertTrue(layoutNear.radiusPx in 116..172)
-        assertEquals(172, layoutFar.radiusPx)
-        assertEquals(0f, layoutNear.phaseSec, 0.001f)
-        assertEquals(40f * 2f / 3f, layoutFar.phaseSec, 0.001f)
+        val ringPlacements = orbitPlacementsFor(listOf("a", "b", "c"), wide)
+        assertEquals(listOf(138, 155, 172), ringPlacements.map { it.radiusPx })
+        assertEquals(0f, ringPlacements[0].phaseSec, 0.001f)
+        assertEquals(40f / 3f, ringPlacements[1].phaseSec, 0.001f)
+        assertEquals(80f / 3f, ringPlacements[2].phaseSec, 0.001f)
     }
 
     @Test

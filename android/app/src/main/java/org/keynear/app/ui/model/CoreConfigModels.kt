@@ -16,11 +16,12 @@ data class RadarLayout(
 
 private const val ORBIT_DURATION_SEC = 40
 private const val ORBIT_PIN_HALF_WIDTH_DP = 82f
-private const val ORBIT_PIN_HALF_HEIGHT_DP = 50f
+private const val ORBIT_PIN_HALF_HEIGHT_DP = 57f
 private const val ORBIT_MIN_RADIUS_DP = 116f
 private const val ORBIT_MAX_RADIUS_DP = 172f
 private const val ORBIT_MIN_SCALE = 0.62f
 private const val ORBIT_INNER_RATIO = 0.8f
+private const val ORBIT_RING_COUNT = 3
 private const val RSSI_MIN = -90
 private const val RSSI_MAX = -40
 private const val RSSI_RANGE = 50f
@@ -39,29 +40,33 @@ fun radarLayoutFor(widthDp: Float, heightDp: Float): RadarLayout {
     return RadarLayout(scale = scale, maxRadiusDp = maxRadiusDp)
 }
 
-fun orbitFor(rssi: Int, index: Int, count: Int): OrbitPlacement {
-    val clamped = rssi.coerceIn(RSSI_MIN, RSSI_MAX)
-    val strength = ((-clamped - 40f) / RSSI_RANGE).coerceIn(0f, 1f)
-    val radius = (128f + strength * 48f).roundToInt()
-    val safeCount = maxOf(1, count)
-    return OrbitPlacement(
-        radiusPx = radius,
-        durationSec = ORBIT_DURATION_SEC,
-        phaseSec = (index.toFloat() / safeCount.toFloat()) * ORBIT_DURATION_SEC.toFloat(),
-    )
-}
-
-fun orbitFor(rssi: Int, index: Int, count: Int, layout: RadarLayout): OrbitPlacement {
-    val clamped = rssi.coerceIn(RSSI_MIN, RSSI_MAX)
-    val strength = ((-clamped - 40f) / RSSI_RANGE).coerceIn(0f, 1f)
+fun orbitPlacementsFor(deviceIds: List<String>, layout: RadarLayout): List<OrbitPlacement> {
+    val count = deviceIds.size
+    if (count == 0) return emptyList()
+    val rankById = deviceIds.indices.sortedBy { deviceIds[it] }
+    val ringOf = IntArray(count)
+    rankById.forEachIndexed { rank, index ->
+        ringOf[index] = when {
+            count == 1 -> 1
+            count == 2 -> if (rank == 0) 0 else 2
+            else -> rank % ORBIT_RING_COUNT
+        }
+    }
+    val ringCounts = IntArray(ORBIT_RING_COUNT)
+    ringOf.forEach { ringCounts[it]++ }
+    val slotOf = IntArray(count)
+    val nextSlot = IntArray(ORBIT_RING_COUNT)
+    rankById.forEach { index ->
+        val ring = ringOf[index]
+        slotOf[index] = nextSlot[ring]++
+    }
     val inner = maxOf(ORBIT_MIN_RADIUS_DP, layout.maxRadiusDp * ORBIT_INNER_RATIO)
-    val radius = (inner + strength * (layout.maxRadiusDp - inner)).roundToInt()
-    val safeCount = maxOf(1, count)
-    return OrbitPlacement(
-        radiusPx = radius,
-        durationSec = ORBIT_DURATION_SEC,
-        phaseSec = (index.toFloat() / safeCount.toFloat()) * ORBIT_DURATION_SEC.toFloat(),
-    )
+    return deviceIds.indices.map { index ->
+        val ring = ringOf[index]
+        val radius = inner + (layout.maxRadiusDp - inner) * ring.toFloat() / (ORBIT_RING_COUNT - 1)
+        val phase = (((slotOf[index].toFloat() / ringCounts[ring]) + ring.toFloat() / ORBIT_RING_COUNT) % 1f) * ORBIT_DURATION_SEC
+        OrbitPlacement(radius.roundToInt(), ORBIT_DURATION_SEC, phase)
+    }
 }
 
 data class SendQueueItemUi(

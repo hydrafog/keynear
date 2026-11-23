@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -42,7 +43,7 @@ import kotlinx.coroutines.delay
 import org.keynear.app.ui.model.DeviceRoleUi
 import org.keynear.app.ui.model.OrbitPlacement
 import org.keynear.app.ui.model.RadarLayout
-import org.keynear.app.ui.model.orbitFor
+import org.keynear.app.ui.model.orbitPlacementsFor
 import org.keynear.app.ui.navigation.KeynearActions
 import org.keynear.app.ui.navigation.OrbitPinUi
 import org.keynear.designsystem.IconLaptop
@@ -81,7 +82,7 @@ private val PinLabelMaxWidth = 164.dp
 private val SkeletonBarHeight = 6.dp
 private val SkeletonLabelWidth = 56.dp
 private val SkeletonSubLabelWidth = 36.dp
-private val SkeletonRssis = listOf(-52, -68, -84)
+private val SkeletonIds = listOf("skeleton-inner", "skeleton-middle", "skeleton-outer")
 
 private fun nextOrbitRate(
     startRate: Float,
@@ -99,8 +100,8 @@ internal fun OrbitPinsLayer(
     radarActive: Boolean,
     layout: RadarLayout,
     actions: KeynearActions,
+    orbitPhase: MutableFloatState,
 ) {
-    var orbitPhase by remember { mutableFloatStateOf(0f) }
     var orbitRate by remember { mutableFloatStateOf(if (radarActive) 1f else 0f) }
     val currentActive by rememberUpdatedState(radarActive)
 
@@ -116,17 +117,18 @@ internal fun OrbitPinsLayer(
                 lastNanos = frameNanos
                 elapsedMs = minOf(KeynearMotion.RADAR_RAMP_MS.toFloat(), elapsedMs + deltaMs)
                 orbitRate = nextOrbitRate(startRate, targetRate, elapsedMs)
-                orbitPhase = (orbitPhase + (deltaMs / KeynearMotion.ORBIT_CYCLE_MS.toFloat()) * orbitRate) % 1f
+                orbitPhase.value = (orbitPhase.value + (deltaMs / KeynearMotion.ORBIT_CYCLE_MS.toFloat()) * orbitRate) % 1f
             }
         }
     }
 
     if (pins.isEmpty()) {
-        SkeletonPins(radarActive = radarActive, layout = layout, orbitPhase = orbitPhase)
+        SkeletonPins(radarActive = radarActive, layout = layout, orbitPhase = orbitPhase.value)
         return
     }
+    val placements = orbitPlacementsFor(pins.map { it.id }, layout)
     pins.forEachIndexed { idx, pin ->
-        OrbitPeerPin(pin, idx, orbitFor(pin.rssi, idx, pins.size, layout), orbitPhase, actions)
+        OrbitPeerPin(pin, idx, placements[idx], orbitPhase.value, actions)
     }
 }
 
@@ -185,18 +187,18 @@ private fun OrbitPeerPin(
         verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
     ) {
         TactileSurface(
-            modifier = Modifier.size(KeynearDimensions.Dp44),
+            modifier = Modifier.size(KeynearDimensions.Dp58),
             shape = CircleShape,
             containerColor = palette.surface.copy(alpha = FOG_SURFACE_ALPHA),
             tone = TactileTone.SURFACE,
-            cornerRadius = KeynearDimensions.Dp22,
+            cornerRadius = KeynearDimensions.Dp58 / 2,
             isCircle = true,
             contentAlignment = Alignment.Center,
         ) {
             if (pin.role == DeviceRoleUi.DESKTOP) {
-                IconLaptop(modifier = Modifier.size(KeynearDimensions.Dp20), tint = palette.loadingInk)
+                IconLaptop(modifier = Modifier.size(KeynearDimensions.Dp26), tint = palette.loadingInk)
             } else {
-                IconSmartphone(modifier = Modifier.size(KeynearDimensions.Dp20), tint = palette.loadingInk)
+                IconSmartphone(modifier = Modifier.size(KeynearDimensions.Dp26), tint = palette.loadingInk)
             }
         }
         TactileSurface(
@@ -237,9 +239,10 @@ private fun SkeletonPins(radarActive: Boolean, layout: RadarLayout, orbitPhase: 
         listOf(SKELETON_PULSE_IDLE, SKELETON_PULSE_IDLE, SKELETON_PULSE_IDLE)
     }
     val density = LocalDensity.current.density
-    SkeletonRssis.forEachIndexed { idx, rssi ->
+    val placements = orbitPlacementsFor(SkeletonIds, layout)
+    SkeletonIds.forEachIndexed { idx, _ ->
         val pulse = pulses[idx]
-        val (xPx, yPx) = orbitCoordinatesPx(orbitFor(rssi, idx, SkeletonRssis.size, layout), orbitPhase, density)
+        val (xPx, yPx) = orbitCoordinatesPx(placements[idx], orbitPhase, density)
         val scale = SKELETON_SCALE_MIN +
             ((pulse - SKELETON_PULSE_MIN) / (SKELETON_PULSE_MAX - SKELETON_PULSE_MIN)) * (SKELETON_SCALE_MAX - SKELETON_SCALE_MIN)
         Column(
@@ -249,14 +252,14 @@ private fun SkeletonPins(radarActive: Boolean, layout: RadarLayout, orbitPhase: 
         ) {
             Box(
                 modifier = Modifier
-                    .size(KeynearDimensions.Dp44)
+                    .size(KeynearDimensions.Dp58)
                     .clip(CircleShape)
                     .background(palette.surfaceTonal.copy(alpha = pulse))
-                    .tactileCushion(TactileTone.INSET, palette.isDark, KeynearDimensions.Dp22, isCircle = true),
+                    .tactileCushion(TactileTone.INSET, palette.isDark, KeynearDimensions.Dp58 / 2, isCircle = true),
                 contentAlignment = Alignment.Center,
             ) {
                 IconLaptop(
-                    modifier = Modifier.size(KeynearDimensions.Dp20),
+                    modifier = Modifier.size(KeynearDimensions.Dp26),
                     tint = palette.textMuted.copy(alpha = SKELETON_ICON_ALPHA * pulse),
                 )
             }
