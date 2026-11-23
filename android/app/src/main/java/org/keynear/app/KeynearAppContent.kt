@@ -56,6 +56,8 @@ internal fun KeynearAppContent(
     actions: KeynearActions,
     sheetExpanded: Boolean,
     onSetSheetExpanded: (Boolean) -> Unit,
+    dismissedTransferIds: Set<String>,
+    onDismissTransfers: (List<String>) -> Unit,
     onBack: () -> Unit,
     onSelectTab: (KeynearTab) -> Unit,
     scope: kotlinx.coroutines.CoroutineScope,
@@ -113,7 +115,8 @@ internal fun KeynearAppContent(
                     val targetTab = (target as? KeynearTab) ?: activeTab
                     CurrentScreenContent(
                         snapshot, targetTab, targetSub, confirmUnpairDeviceId,
-                        permissionsChecklist, actions, localName, sheetExpanded, onSetSheetExpanded,
+                        permissionsChecklist, actions, localName, sheetExpanded,
+                        onSetSheetExpanded, dismissedTransferIds, onDismissTransfers,
                     )
                 }
             }
@@ -178,6 +181,8 @@ private fun CurrentScreenContent(
     localName: String,
     sheetExpanded: Boolean,
     onSetSheetExpanded: (Boolean) -> Unit,
+    dismissedTransferIds: Set<String>,
+    onDismissTransfers: (List<String>) -> Unit,
 ) {
     when (val currentSub = subScreen) {
         KeynearSubScreen.Permissions -> PermissionsScreen(
@@ -195,6 +200,8 @@ private fun CurrentScreenContent(
                 localDeviceName = localName,
                 sheetExpanded = sheetExpanded,
                 onSetSheetExpanded = onSetSheetExpanded,
+                dismissedTransferIds = dismissedTransferIds,
+                onDismissTransfers = onDismissTransfers,
                 actions = actions,
             )
             KeynearTab.SEND -> SendScreen(

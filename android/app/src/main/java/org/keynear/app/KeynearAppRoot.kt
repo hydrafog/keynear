@@ -53,6 +53,7 @@ internal fun KeynearAppRoot(
     var activeTab by rememberSaveable { mutableStateOf(KeynearTab.RECEIVE) }
     var subScreen by remember { mutableStateOf<KeynearSubScreen?>(null) }
     var sheetExpanded by rememberSaveable { mutableStateOf(false) }
+    var dismissedTransferIds by remember { mutableStateOf(emptySet<String>()) }
 
     val snapshot = snapshotFromState(uiState)
     val darkTheme = snapshot?.daemonConfig?.darkTheme ?: isSystemInDarkTheme()
@@ -176,6 +177,8 @@ internal fun KeynearAppRoot(
             actions = actions,
             sheetExpanded = sheetExpanded,
             onSetSheetExpanded = { sheetExpanded = it },
+            dismissedTransferIds = dismissedTransferIds,
+            onDismissTransfers = { ids -> dismissedTransferIds = dismissedTransferIds + ids },
             onBack = ::clearSubScreen,
             onSelectTab = { tab ->
                 clearSubScreen()

@@ -21,7 +21,7 @@ pub(crate) async fn send_file_handle_stream(
     let offer_env = wrap_payload(v1::envelope::Payload::TransferOffer(offer.clone()));
     write_control_envelope(&mut send, &offer_env).await?;
 
-    await_transfer_consent(&mut recv, &offer.transfer_id).await?;
+    await_transfer_consent_with_cancel(&mut recv, &offer.transfer_id, cancel_flag).await?;
 
     let (chunk_tx, mut chunk_rx) =
         mpsc::channel::<Result<Vec<u8>, KeynearError>>(PIPE_CHANNEL_SLOTS);
@@ -68,7 +68,7 @@ pub(crate) async fn send_zip_stream(
     let offer_env = wrap_payload(v1::envelope::Payload::TransferOffer(offer.clone()));
     write_control_envelope(&mut send, &offer_env).await?;
 
-    await_transfer_consent(&mut recv, &offer.transfer_id).await?;
+    await_transfer_consent_with_cancel(&mut recv, &offer.transfer_id, cancel_flag).await?;
 
     let (chunk_tx, mut chunk_rx) =
         mpsc::channel::<Result<Vec<u8>, KeynearError>>(PIPE_CHANNEL_SLOTS);

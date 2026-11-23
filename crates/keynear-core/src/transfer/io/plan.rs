@@ -66,7 +66,7 @@ fn plan_single_file(path: &Path) -> Result<Option<SendPlan>, KeynearError> {
     let size = meta.len();
     let item = TransferItem {
         name: clean_name.to_string_lossy().to_string(),
-        mime_type: "application/octet-stream".to_string(),
+        mime_type: infer_mime_type(path),
         size_bytes: size,
         is_directory: false,
         target_path: None,
@@ -77,6 +77,39 @@ fn plan_single_file(path: &Path) -> Result<Option<SendPlan>, KeynearError> {
         total_bytes: size,
         payload: OutboundPayload::SingleFile(path.to_path_buf()),
     }))
+}
+
+fn infer_mime_type(path: &Path) -> String {
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_ascii_lowercase());
+    match ext.as_deref() {
+        Some("apk") => "application/vnd.android.package-archive",
+        Some("pdf") => "application/pdf",
+        Some("png") => "image/png",
+        Some("jpg" | "jpeg") => "image/jpeg",
+        Some("gif") => "image/gif",
+        Some("webp") => "image/webp",
+        Some("svg") => "image/svg+xml",
+        Some("mp4") => "video/mp4",
+        Some("mkv") => "video/x-matroska",
+        Some("webm") => "video/webm",
+        Some("mp3") => "audio/mpeg",
+        Some("ogg" | "opus") => "audio/ogg",
+        Some("wav") => "audio/wav",
+        Some("flac") => "audio/flac",
+        Some("txt" | "log" | "md" | "csv") => "text/plain",
+        Some("html" | "htm") => "text/html",
+        Some("json") => "application/json",
+        Some("xml") => "application/xml",
+        Some("zip") => "application/zip",
+        Some("tar") => "application/x-tar",
+        Some("gz") => "application/gzip",
+        Some("7z") => "application/x-7z-compressed",
+        _ => "application/octet-stream",
+    }
+    .to_string()
 }
 
 fn add_path_to_plan(
@@ -125,7 +158,7 @@ fn add_path_to_plan(
         });
         items.push(TransferItem {
             name: rel_str,
-            mime_type: "application/octet-stream".to_string(),
+            mime_type: infer_mime_type(path),
             size_bytes: size,
             is_directory: false,
             target_path: None,

@@ -189,8 +189,13 @@ object TransferRepo {
                     changed = true
                 }
             }
+            val completedUri = if (uiState == TransferStateUi.COMPLETED) {
+                tracker?.getPending(session.transferId)
+            } else {
+                null
+            }
             tracker?.reconcileState(session.transferId, uiState)
-            if (ctx.handleTerminalState(session, uiState)) {
+            if (ctx.handleTerminalState(session, uiState, completedUri)) {
                 changed = true
             }
         }
@@ -236,6 +241,7 @@ object TransferRepo {
     private fun SyncContext.handleTerminalState(
         session: FfiTransferSession,
         uiState: TransferStateUi,
+        completedUri: Uri? = null,
     ): Boolean {
         if (!uiState.isTerminal()) return false
         PairingNotifier.cancelTransferNotification(app, session.transferId)
@@ -246,9 +252,9 @@ object TransferRepo {
                 ?.autoAcceptFiles == true
             PairingNotifier.showTransferCompleted(
                 context = app,
-                peerName = peerNames[session.peerDeviceId] ?: session.peerDeviceId,
-                summary = summarizeTransferItems(session),
+                transfer = mapTransferSessionToUi(session, peerNames),
                 autoAccepted = autoAccepted,
+                completedUri = completedUri,
             )
         } else if (uiState == TransferStateUi.FAILED) {
             PairingNotifier.showTransferError(

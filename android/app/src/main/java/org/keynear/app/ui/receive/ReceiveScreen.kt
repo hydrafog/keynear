@@ -69,13 +69,16 @@ fun ReceiveScreen(
     sheetExpanded: Boolean,
     onSetSheetExpanded: (Boolean) -> Unit,
     actions: KeynearActions,
+    dismissedTransferIds: Set<String> = emptySet(),
+    onDismissTransfers: (List<String>) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val palette = LocalKeynearPalette.current
     val pins = ReceiveStateHolder.buildMapPins(snapshot)
     val radarActive = snapshot.visibility != VisibilityState.HIDDEN
+    val visibleTransfers = snapshot.activeTransfers.filter { it.transferId !in dismissedTransferIds }
     val hasBanner = snapshot.pendingPairing != null ||
-        snapshot.activeTransfers.any {
+        visibleTransfers.any {
             it.state == TransferStateUi.PENDING_CONSENT || it.state == TransferStateUi.ACTIVE
         }
     val auraAlpha by animateFloatAsState(
@@ -89,7 +92,12 @@ fun ReceiveScreen(
             .fillMaxSize()
             .background(palette.canvas),
     ) {
-        ReceiveHeaderOverlay(snapshot = snapshot, actions = actions)
+        ReceiveHeaderOverlay(
+            snapshot = snapshot,
+            dismissedTransferIds = dismissedTransferIds,
+            onDismissTransfers = onDismissTransfers,
+            actions = actions,
+        )
 
         BoxWithConstraints(
             modifier = Modifier
@@ -156,11 +164,12 @@ fun ReceiveScreen(
 @Composable
 private fun ReceiveHeaderOverlay(
     snapshot: CoreSnapshot,
+    dismissedTransferIds: Set<String>,
+    onDismissTransfers: (List<String>) -> Unit,
     actions: KeynearActions,
 ) {
     var lastPairing by remember { mutableStateOf<PendingPairingUi?>(null) }
     var lastTransfers by remember { mutableStateOf<List<TransferUi>>(emptyList()) }
-    var dismissedTransferIds by remember { mutableStateOf(emptySet<String>()) }
     val visibleTransfers = snapshot.activeTransfers.filter { it.transferId !in dismissedTransferIds }
     if (snapshot.pendingPairing != null) lastPairing = snapshot.pendingPairing
     if (visibleTransfers.isNotEmpty()) lastTransfers = visibleTransfers
@@ -192,7 +201,7 @@ private fun ReceiveHeaderOverlay(
                 SwipeableTransferBanner(
                     transfers = lastTransfers,
                     actions = actions,
-                    onDismiss = { ids -> dismissedTransferIds = dismissedTransferIds + ids },
+                    onDismiss = onDismissTransfers,
                 )
             }
         }

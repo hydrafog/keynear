@@ -17,9 +17,9 @@ use keynear_protocol::{
 };
 
 use super::framing::{
-    await_transfer_consent, read_data_chunk, send_cancel_frame, send_completion_and_wait_ack,
-    verify_completion_envelope, wrap_payload, write_data_chunk, ChannelChunkWriter,
-    CompletionDetails, PIPE_CHANNEL_SLOTS,
+    await_transfer_consent_with_cancel, read_data_chunk, send_cancel_frame,
+    send_completion_and_wait_ack, verify_completion_envelope, wrap_payload, write_data_chunk,
+    ChannelChunkWriter, CompletionDetails, PIPE_CHANNEL_SLOTS,
 };
 use super::state::TransferRegistry;
 

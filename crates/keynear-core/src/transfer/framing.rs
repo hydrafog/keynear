@@ -159,17 +159,45 @@ pub(crate) async fn verify_completion_envelope(
     Ok(())
 }
 
+const TRANSFER_CONSENT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(120);
+const CANCEL_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_millis(250);
+
+#[cfg(test)]
 pub(crate) async fn await_transfer_consent(
     recv: &mut RecvStream,
     transfer_id: &str,
 ) -> Result<(), KeynearError> {
-    let env = read_control_envelope(recv).await?;
+    handle_consent_envelope(read_control_envelope(recv).await?, transfer_id)
+}
+
+pub(crate) async fn await_transfer_consent_with_cancel(
+    recv: &mut RecvStream,
+    transfer_id: &str,
+    cancel_flag: &std::sync::atomic::AtomicBool,
+) -> Result<(), KeynearError> {
+    let deadline = tokio::time::Instant::now() + TRANSFER_CONSENT_TIMEOUT;
+    let mut read_fut = std::pin::pin!(read_control_envelope(recv));
+    loop {
+        if cancel_flag.load(std::sync::atomic::Ordering::Acquire) {
+            return Err(KeynearError::TransferCancelled("cancelled by sender".to_string()));
+        }
+        let now = tokio::time::Instant::now();
+        if now >= deadline {
+            return Err(KeynearError::Transfer("transfer consent timed out".to_string()));
+        }
+        let step = (deadline - now).min(CANCEL_POLL_INTERVAL);
+        tokio::select! {
+            res = &mut read_fut => return handle_consent_envelope(res?, transfer_id),
+            _ = tokio::time::sleep(step) => {}
+        }
+    }
+}
+
+fn handle_consent_envelope(env: v1::Envelope, transfer_id: &str) -> Result<(), KeynearError> {
     match env.payload {
         Some(v1::envelope::Payload::TransferConsent(consent)) => {
             if consent.transfer_id != transfer_id {
-                return Err(KeynearError::Protocol(
-                    "TransferConsent transfer_id mismatch".to_string(),
-                ));
+                return Err(KeynearError::Protocol("TransferConsent transfer_id mismatch".to_string()));
             }
             if consent.accepted {
                 Ok(())
@@ -180,9 +208,7 @@ pub(crate) async fn await_transfer_consent(
         Some(v1::envelope::Payload::TransferCancel(cancel)) => {
             Err(KeynearError::TransferCancelled(cancel.reason))
         }
-        _ => Err(KeynearError::Protocol(
-            "expected TransferConsent response".to_string(),
-        )),
+        _ => Err(KeynearError::Protocol("expected TransferConsent response".to_string())),
     }
 }
 

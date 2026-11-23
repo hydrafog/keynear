@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Environment
 import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
+import android.webkit.MimeTypeMap
 import org.keynear.app.ui.model.BluetoothStatus
 import org.keynear.app.ui.model.CoreSnapshot
 import org.keynear.app.ui.model.CoreState
@@ -67,6 +68,8 @@ class PendingMediaStoreTracker<T>(
 
     fun hasPending(transferId: String): Boolean = pendingRows.containsKey(transferId)
 
+    fun getPending(transferId: String): T? = pendingRows[transferId]
+
     fun cleanupAllPending() {
         val keys = pendingRows.keys.toList()
         for (key in keys) {
@@ -80,9 +83,10 @@ internal class AndroidMediaStoreOps(
 ) : PendingRowOps<Uri> {
     override fun createPending(fileName: String, mimeType: String): Uri? {
         val cleanName = sanitizeFileName(fileName)
+        val resolvedMime = resolveDownloadMimeType(cleanName, mimeType)
         val values = ContentValues().apply {
             put(MediaStore.Downloads.DISPLAY_NAME, cleanName)
-            put(MediaStore.Downloads.MIME_TYPE, mimeType.ifBlank { "application/octet-stream" })
+            put(MediaStore.Downloads.MIME_TYPE, resolvedMime)
             put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
             put(MediaStore.Downloads.IS_PENDING, 1)
         }
@@ -115,5 +119,20 @@ internal class AndroidMediaStoreOps(
     private fun sanitizeFileName(raw: String): String {
         val base = raw.substringAfterLast('/').substringAfterLast('\\').trim()
         return base.ifEmpty { "keynear-download.bin" }
+    }
+}
+
+internal fun resolveDownloadMimeType(fileName: String, rawMime: String): String {
+    val cleanRaw = rawMime.trim()
+    if (cleanRaw.isNotEmpty() && cleanRaw != "application/octet-stream") {
+        return cleanRaw
+    }
+    val ext = fileName.substringAfterLast('.', "").lowercase()
+    return when (ext) {
+        "apk" -> "application/vnd.android.package-archive"
+        "md", "log", "txt" -> "text/plain"
+        "json" -> "application/json"
+        "pdf" -> "application/pdf"
+        else -> MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: "application/octet-stream"
     }
 }

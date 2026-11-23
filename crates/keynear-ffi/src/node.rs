@@ -75,27 +75,32 @@ async fn accept_loop(
                 let clip = Arc::clone(&clipboard);
                 tokio::spawn(async move {
                     while let Ok((send, mut recv)) = conn.accept_bi().await {
-                        match read_stream_kind(&mut recv).await {
-                            Ok(
-                                kind @ (QuicStreamKind::RawFileChunk
-                                | QuicStreamKind::StoredZipArchive),
-                            ) => {
-                                let _ = eng
-                                    .handle_incoming_stream_with_kind(&peer_id, kind, send, recv)
-                                    .await;
+                        let eng = Arc::clone(&eng);
+                        let clip = Arc::clone(&clip);
+                        let peer = peer_id.clone();
+                        tokio::spawn(async move {
+                            match read_stream_kind(&mut recv).await {
+                                Ok(
+                                    kind @ (QuicStreamKind::RawFileChunk
+                                    | QuicStreamKind::StoredZipArchive),
+                                ) => {
+                                    let _ = eng
+                                        .handle_incoming_stream_with_kind(&peer, kind, send, recv)
+                                        .await;
+                                }
+                                Ok(
+                                    kind @ (QuicStreamKind::Control | QuicStreamKind::ClipboardBlob),
+                                ) => {
+                                    let _ = clip
+                                        .handle_incoming_stream_with_kind(&peer, kind, send, recv)
+                                        .await;
+                                }
+                                Ok(QuicStreamKind::VfsRead) => {
+                                    crate::vfs_read::serve_vfs_read(&eng, send, recv).await;
+                                }
+                                Err(_) => {}
                             }
-                            Ok(
-                                kind @ (QuicStreamKind::Control | QuicStreamKind::ClipboardBlob),
-                            ) => {
-                                let _ = clip
-                                    .handle_incoming_stream_with_kind(&peer_id, kind, send, recv)
-                                    .await;
-                            }
-                            Ok(QuicStreamKind::VfsRead) => {
-                                crate::vfs_read::serve_vfs_read(&eng, send, recv).await;
-                            }
-                            Err(_) => break,
-                        }
+                        });
                     }
                 });
             }

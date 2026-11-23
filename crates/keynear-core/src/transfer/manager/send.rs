@@ -14,8 +14,13 @@ impl TransferEngine {
             });
         }
         let conn = node.connect_peer(peer_device_id).await?;
-        self.send_paths_on_connection(&conn, peer_device_id, paths)
-            .await
+        let res = self
+            .send_paths_on_connection(&conn, peer_device_id, paths)
+            .await;
+        if matches!(res, Err(KeynearError::Transport(_))) {
+            node.invalidate_peer_connection(peer_device_id).await;
+        }
+        res
     }
 
     pub async fn send_paths_on_connection(

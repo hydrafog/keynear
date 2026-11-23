@@ -9,23 +9,33 @@ import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import org.keynear.app.MainActivity
 import org.keynear.app.R
+import org.keynear.app.bridge.resolveDownloadMimeType
+import org.keynear.app.ui.model.TransferUi
 
 internal fun PairingNotifier.showTransferCompleted(
     context: Context,
-    peerName: String,
-    summary: String,
+    transfer: TransferUi,
     autoAccepted: Boolean,
+    completedUri: Uri? = null,
 ) {
     if (!hasPostNotificationsPermission(context)) return
     ensureTransferChannel(context)
     val manager = context.getSystemService(NotificationManager::class.java) ?: return
 
+    val mimeType = resolveDownloadMimeType(transfer.summaryName, transfer.mimeType)
+    val viewIntent = completedUri?.let { uri ->
+        Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, mimeType)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+        }.takeIf { it.resolveActivity(context.packageManager) != null }
+    }
+    val openIntent = viewIntent ?: Intent(context, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+    }
     val openPending = PendingIntent.getActivity(
         context,
         301,
-        Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-        },
+        openIntent,
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
@@ -33,7 +43,7 @@ internal fun PairingNotifier.showTransferCompleted(
     val notification = NotificationCompat.Builder(context, TRANSFER_CHANNEL_ID)
         .setSmallIcon(android.R.drawable.stat_sys_download_done)
         .setContentTitle(context.getString(R.string.transfer_complete_title))
-        .setContentText("$peerName: $summary$suffix")
+        .setContentText("${transfer.peerDisplayName}: ${transfer.summaryName}$suffix")
         .setPriority(NotificationCompat.PRIORITY_DEFAULT)
         .setContentIntent(openPending)
         .setAutoCancel(true)

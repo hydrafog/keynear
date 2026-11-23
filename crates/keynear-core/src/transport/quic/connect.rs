@@ -56,6 +56,22 @@ impl OrionQuicNode {
         Ok(conn)
     }
 
+    pub async fn invalidate_peer_connection(&self, device_id: &str) {
+        let Ok(clean_id) = sanitize_device_id(device_id) else {
+            return;
+        };
+        let endpoint_id = {
+            let Ok(peers) = self.peers_by_device.read() else {
+                return;
+            };
+            peers.get(&clean_id).map(|p| p.endpoint_id)
+        };
+        if let Some(eid) = endpoint_id {
+            let mut cache = self.connections.lock().await;
+            cache.remove(&eid);
+        }
+    }
+
     pub async fn accept_authenticated(&self) -> Result<Option<(String, Connection)>, KeynearError> {
         let mut outbound_rx = self.outbound_rx.lock().await;
         tokio::select! {
