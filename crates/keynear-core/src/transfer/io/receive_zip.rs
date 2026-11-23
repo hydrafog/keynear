@@ -43,7 +43,7 @@ pub(crate) async fn receive_zip_stream(
 
     match stream_result {
         Ok((wire_bytes, digest, extracted_paths)) => {
-            let promoted = finalize_zip_receive(&dir, &staging_dir, extracted_paths)?;
+            let promoted = finalize_zip_receive(&dir, &staging_dir, extracted_paths, offer)?;
             Ok((wire_bytes, promoted, hex::encode(digest)))
         }
         Err(err) => {
@@ -117,17 +117,25 @@ async fn extract_archive(
             extracted_bytes: 0,
             max_extracted,
         };
-        let mut extracted_rel_paths = Vec::new();
+        let mut top_level_entries = Vec::new();
         for idx in 0..archive.len() {
             let mut entry = archive.by_index(idx).map_err(zip_err)?;
-            if let Some(safe_rel) = extract_one_entry(&mut entry, &mut state)? {
-                extracted_rel_paths.push(safe_rel);
-            }
+            let safe_rel = extract_one_entry(&mut entry, &mut state)?;
+            record_top_level(&mut top_level_entries, &safe_rel);
         }
-        Ok(extracted_rel_paths)
+        Ok(top_level_entries)
     })
     .await
     .map_err(|err| KeynearError::Transfer(format!("zip extract task failed: {err}")))?
+}
+
+fn record_top_level(top_entries: &mut Vec<PathBuf>, safe_rel: &Path) {
+    if let Some(Component::Normal(first)) = safe_rel.components().next() {
+        let top = PathBuf::from(first);
+        if !top_entries.contains(&top) {
+            top_entries.push(top);
+        }
+    }
 }
 
 struct ExtractState<'a> {
@@ -140,7 +148,7 @@ struct ExtractState<'a> {
 fn extract_one_entry<R: Read>(
     entry: &mut zip::read::ZipFile<'_, R>,
     state: &mut ExtractState<'_>,
-) -> Result<Option<PathBuf>, KeynearError> {
+) -> Result<PathBuf, KeynearError> {
     validate_zip_entry(entry)?;
     let Some(enclosed) = entry.enclosed_name() else {
         return Err(KeynearError::Transfer(
@@ -150,7 +158,7 @@ fn extract_one_entry<R: Read>(
     let safe_rel = sanitize_relative_path(&enclosed.to_string_lossy())?;
     if entry.is_dir() {
         fs::create_dir_all(state.staging_dir.join(&safe_rel))?;
-        return Ok(None);
+        return Ok(safe_rel);
     }
     if entry.compressed_size() != entry.size() {
         return Err(KeynearError::Transfer(
@@ -181,18 +189,43 @@ fn extract_one_entry<R: Read>(
         writer.write_all(&state.buf[..n])?;
     }
     writer.flush()?;
-    Ok(Some(safe_rel))
+    Ok(safe_rel)
+}
+
+fn order_top_entries(top_entries: Vec<PathBuf>, offer: &v1::TransferOffer) -> Vec<PathBuf> {
+    let mut ordered = Vec::with_capacity(top_entries.len());
+    for item in &offer.items {
+        if let Ok(clean) = sanitize_relative_path(&item.name) {
+            if let Some(Component::Normal(first)) = clean.components().next() {
+                let top = PathBuf::from(first);
+                if top_entries.contains(&top) && !ordered.contains(&top) {
+                    ordered.push(top);
+                }
+            }
+        }
+    }
+    for entry in top_entries {
+        if !ordered.contains(&entry) {
+            ordered.push(entry);
+        }
+    }
+    ordered
 }
 
 fn finalize_zip_receive(
     dir: &Path,
     staging_dir: &Path,
-    extracted_paths: Vec<PathBuf>,
+    top_entries: Vec<PathBuf>,
+    offer: &v1::TransferOffer,
 ) -> Result<Vec<String>, KeynearError> {
-    let mut promoted = Vec::with_capacity(extracted_paths.len());
-    for rel in extracted_paths {
-        let src = staging_dir.join(&rel);
-        let dest = unique_target_path(dir, &rel);
+    let ordered = order_top_entries(top_entries, offer);
+    let mut promoted = Vec::with_capacity(ordered.len());
+    for top in ordered {
+        let src = staging_dir.join(&top);
+        if !src.exists() {
+            continue;
+        }
+        let dest = unique_target_path(dir, &top, src.is_dir());
         if let Some(parent) = dest.parent() {
             fs::create_dir_all(parent)?;
         }

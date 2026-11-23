@@ -177,6 +177,7 @@ val x86Lib = jniLibsDir.file("x86_64/libkeynear_core.so").asFile
 val buildFfiLibraries = tasks.register<BuildFfiLibrariesTask>("buildFfiLibraries") {
     description = "Cross-compile keynear-ffi with cargo ndk for arm64-v8a and x86_64"
     rustSources.from(
+        fileTree(workspaceRoot.resolve("crates/keynear-core/src")),
         fileTree(workspaceRoot.resolve("crates/keynear-ffi/src")),
         fileTree(workspaceRoot.resolve("crates/keynear-protocol/src")),
     )
@@ -189,6 +190,7 @@ val generateUniffiBindings = tasks.register<GenerateUniffiBindingsTask>("generat
     dependsOn(buildFfiLibraries)
     jniLibFiles.from(arm64Lib, x86Lib)
     rustSources.from(
+        fileTree(workspaceRoot.resolve("crates/keynear-core/src")),
         fileTree(workspaceRoot.resolve("crates/keynear-ffi/src")),
         fileTree(workspaceRoot.resolve("crates/keynear-protocol/src")),
     )

@@ -208,8 +208,10 @@ async fn send_chunks(
         hasher.update(&chunk);
         write_data_chunk(&mut *ctx.send, &chunk).await?;
         bytes_sent = bytes_sent.saturating_add(chunk.len() as u64);
-        ctx.registry
-            .update_progress(&ctx.offer.transfer_id, bytes_sent);
+        ctx.registry.update_progress(
+            &ctx.offer.transfer_id,
+            bytes_sent.min(ctx.offer.total_bytes),
+        );
     }
     let digest: [u8; 32] = hasher.finalize().into();
     Ok((bytes_sent, digest))

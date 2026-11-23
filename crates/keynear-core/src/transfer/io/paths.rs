@@ -10,16 +10,25 @@ pub(crate) fn expand_tilde(path: &Path) -> PathBuf {
     path.to_path_buf()
 }
 
-pub(super) fn unique_target_path(base_dir: &Path, rel: &Path) -> PathBuf {
+pub(super) fn unique_target_path(base_dir: &Path, rel: &Path, is_dir: bool) -> PathBuf {
     let candidate = base_dir.join(rel);
     if !candidate.exists() {
         return candidate;
     }
-    let stem = candidate
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("file");
-    let ext = candidate.extension().and_then(|s| s.to_str());
+    let (stem, ext) = if is_dir {
+        let name = candidate
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("folder");
+        (name, None)
+    } else {
+        let stem = candidate
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("file");
+        let ext = candidate.extension().and_then(|s| s.to_str());
+        (stem, ext)
+    };
     let parent = candidate.parent().unwrap_or(base_dir);
     for idx in 1..10_000 {
         let name = match ext {

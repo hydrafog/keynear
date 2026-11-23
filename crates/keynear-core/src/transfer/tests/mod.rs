@@ -25,4 +25,5 @@ use super::framing::{
 use super::*;
 
 mod cases;
+mod folders;
 mod setup;

@@ -16,7 +16,7 @@ pub(crate) async fn receive_raw_file_stream(
         (None, None, None, file)
     } else {
         fs::create_dir_all(&incoming_dir)?;
-        let final_target = unique_target_path(&incoming_dir, &rel_name);
+        let final_target = unique_target_path(&incoming_dir, &rel_name, false);
         let tmp = unique_temp_path(&incoming_dir, &offer.transfer_id);
         if let Some(parent) = tmp.parent() {
             fs::create_dir_all(parent)?;

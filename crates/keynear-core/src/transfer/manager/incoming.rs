@@ -204,7 +204,7 @@ impl TransferEngine {
         self.registry.finish_transfer(
             &ctx.offer.transfer_id,
             TransferState::Completed,
-            bytes_received,
+            bytes_received.min(ctx.offer.total_bytes),
             Some(&target_paths),
             Some(&digest_hex),
         );
