@@ -8,7 +8,6 @@ publish = false
 cargo-fuzz = true
 
 [dependencies]
-arbitrary = "1"
 libfuzzer-sys = "0.4"
 
 [dependencies.keynear-ipc]

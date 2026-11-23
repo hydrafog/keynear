@@ -42,6 +42,23 @@ jobs:
       - name: Coverage report
         run: cargo llvm-cov --workspace --all-features --summary-only
 
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-fuzz
+      - name: Install system build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler libdbus-1-dev pkg-config g++
+      - name: Fuzz IPC codec
+        run: cargo fuzz run ipc_codec -- -max_total_time=30 -rss_limit_mb=2048
+      - name: Fuzz proto decode
+        run: cargo fuzz run proto_decode -- -max_total_time=30 -rss_limit_mb=2048
+
   nix:
     runs-on: ubuntu-latest
     steps:
