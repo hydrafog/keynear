@@ -57,7 +57,6 @@ internal fun KeynearAppRoot(
 
     val snapshot = snapshotFromState(uiState)
     val darkTheme = snapshot?.daemonConfig?.darkTheme ?: isSystemInDarkTheme()
-    val dynamicAccent = snapshot?.daemonConfig?.dynamicAccent ?: true
 
     val showSnackbar: (String) -> Unit = { msg ->
         snackbarMessage = msg
@@ -176,7 +175,7 @@ internal fun KeynearAppRoot(
         confirmUnpairDeviceId = null
     }
 
-    KeynearTheme(darkTheme = darkTheme, dynamicAccent = dynamicAccent) {
+    KeynearTheme(darkTheme = darkTheme) {
         KeynearAppContent(
             snapshot = snapshot,
             uiState = uiState,

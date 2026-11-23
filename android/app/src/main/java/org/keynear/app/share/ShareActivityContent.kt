@@ -32,7 +32,6 @@ var loadedSnapshot by remember { mutableStateOf<CoreSnapshot?>(null) }
 var totalSizeBytes by remember { mutableLongStateOf(0L) }
 val systemDark = isSystemInDarkTheme()
 val darkTheme = loadedSnapshot?.daemonConfig?.darkTheme ?: systemDark
-val dynamicAccent = loadedSnapshot?.daemonConfig?.dynamicAccent ?: true
 
 LaunchedEffect(Unit) {
     val state = withContext(Dispatchers.IO) { client.loadState() }
@@ -50,7 +49,7 @@ LaunchedEffect(Unit) {
     }
 }
 
-KeynearTheme(darkTheme = darkTheme, dynamicAccent = dynamicAccent) {
+KeynearTheme(darkTheme = darkTheme) {
     SharePickerScreen(
         validation = validation,
         totalSizeBytes = totalSizeBytes,

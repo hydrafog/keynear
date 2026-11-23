@@ -161,16 +161,5 @@ SettingsSection(title = "Appearance") {
             },
         )
     }
-    SettingRow(
-        title = "Material accent colors",
-        subtitle = "Match system wallpaper accent color",
-    ) {
-        KeynearSwitch(
-            checked = config.dynamicAccent,
-            onCheckedChange = { checked ->
-                actions.onUpdateConfig { it.copy(dynamicAccent = checked) }
-            },
-        )
-    }
 }
 }

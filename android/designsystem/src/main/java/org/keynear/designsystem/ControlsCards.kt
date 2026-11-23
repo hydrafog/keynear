@@ -1,8 +1,9 @@
 package org.keynear.designsystem
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,12 +14,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -35,20 +38,40 @@ fun TactileSurface(
     onClick: (() -> Unit)? = null,
     enabled: Boolean = true,
     contentAlignment: Alignment = Alignment.TopStart,
+    pressScale: Float = KeynearPressScale.PRESS_98,
+    interactionSource: MutableInteractionSource? = null,
     content: @Composable () -> Unit,
 ) {
     val palette = LocalKeynearPalette.current
     val isDark = palette.isDark
     val effectiveTone = if (isAccent) TactileTone.ACCENT else tone
     val rimColor = tactileSurfaceRimColor(effectiveTone, palette)
+    val resolvedInteraction = if (onClick != null && enabled) {
+        interactionSource ?: remember { MutableInteractionSource() }
+    } else {
+        null
+    }
     Box(
         modifier = modifier
+            .let { m ->
+                if (resolvedInteraction != null) m.tactilePressScale(resolvedInteraction, pressScale) else m
+            }
             .tactileShadow(effectiveTone, isDark, cornerRadius, isCircle)
             .clip(shape)
-            .background(tactileSurfaceBrush(effectiveTone, containerColor, palette))
+            .tactileSurfaceBackground(effectiveTone, containerColor, palette)
             .let { m -> if (rimColor != null) m.border(KeynearDimensions.Dp1, rimColor, shape) else m }
             .tactileCushion(effectiveTone, isDark, cornerRadius, isCircle)
-            .let { m -> if (onClick != null && enabled) m.clickable(onClick = onClick) else m },
+            .let { m ->
+                if (onClick != null && enabled && resolvedInteraction != null) {
+                    m.clickable(
+                        interactionSource = resolvedInteraction,
+                        indication = LocalIndication.current,
+                        onClick = onClick,
+                    )
+                } else {
+                    m
+                }
+            },
         contentAlignment = contentAlignment,
     ) { content() }
 }
@@ -57,6 +80,7 @@ fun TactileSurface(
 fun SectionHeading(
     title: String,
     modifier: Modifier = Modifier,
+    textAlign: TextAlign = TextAlign.Start,
 ) {
     val palette = LocalKeynearPalette.current
     Text(
@@ -65,6 +89,7 @@ fun SectionHeading(
         fontSize = KeynearTypeSizes.Caption,
         fontWeight = FontWeight.Bold,
         letterSpacing = KeynearTypeSizes.Micro,
+        textAlign = textAlign,
         modifier = modifier.padding(horizontal = KeynearSpacing.Xs),
     )
 }

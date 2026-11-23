@@ -3,7 +3,6 @@
 package org.keynear.designsystem
 
 import android.app.Activity
-import android.content.Context
 import android.os.Build
 import android.view.View
 import androidx.compose.foundation.IndicationNodeFactory
@@ -12,12 +11,9 @@ import androidx.compose.foundation.interaction.FocusInteraction
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -32,7 +28,6 @@ import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.node.DrawModifierNode
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
@@ -180,17 +175,6 @@ private class KeynearIndication(private val focusColor: Color) : IndicationNodeF
     override fun equals(other: Any?): Boolean = other is KeynearIndication && other.focusColor == focusColor
 }
 
-private fun dynamicSchemeFor(
-    context: Context,
-    darkTheme: Boolean,
-    dynamicAccent: Boolean,
-): ColorScheme? {
-    if (!dynamicAccent || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
-    return runCatching {
-        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-    }.getOrNull()
-}
-
 private fun applySystemBars(view: View, darkTheme: Boolean) {
     val window = (view.context as? Activity)?.window ?: return
     val controller = WindowCompat.getInsetsController(window, view)
@@ -204,21 +188,10 @@ private fun applySystemBars(view: View, darkTheme: Boolean) {
 @Composable
 fun KeynearTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicAccent: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    val context = LocalContext.current
-    val basePalette = if (darkTheme) DarkKeynearPalette else LightKeynearPalette
-    val dynamicScheme = remember(context, darkTheme, dynamicAccent) {
-        dynamicSchemeFor(context, darkTheme, dynamicAccent)
-    }
-    val palette = if (dynamicScheme != null) {
-        basePalette.withMaterialAccent(dynamicScheme)
-    } else {
-        basePalette
-    }
-    val baseColorScheme = if (darkTheme) KeynearDarkColorScheme else KeynearLightColorScheme
-    val colorScheme = dynamicScheme ?: baseColorScheme
+    val palette = if (darkTheme) DarkKeynearPalette else LightKeynearPalette
+    val colorScheme = if (darkTheme) KeynearDarkColorScheme else KeynearLightColorScheme
     val indication = remember(palette) { KeynearIndication(palette.focusRing) }
     val view = LocalView.current
     if (!view.isInEditMode) {

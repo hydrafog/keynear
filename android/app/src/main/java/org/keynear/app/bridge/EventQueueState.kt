@@ -59,7 +59,7 @@ internal fun EventQueue.buildState(): CoreState = try {
     syncShortcutSnapshotIfNeeded(paired)
     val transfers = collectActiveTransfers(peerNames)
     decrementPendingPairing()
-    val activeConfig = cachedDaemonConfig.copy(darkTheme = cachedDarkTheme, dynamicAccent = cachedDynamicAccent)
+    val activeConfig = cachedDaemonConfig.copy(darkTheme = cachedDarkTheme)
     val queue = sendQueueStore.snapshot()
     val snapshot = CoreSnapshot(
         version = status.version,
@@ -115,7 +115,6 @@ private fun EventQueue.decrementPendingPairing() {
 
 private const val UI_PREFS_NAME = "keynear_ui_prefs"
 private const val PREF_DARK_THEME = "dark_theme"
-private const val PREF_DYNAMIC_ACCENT = "dynamic_accent"
 
 internal fun readDarkThemePref(context: Context): Boolean =
     context.getSharedPreferences(UI_PREFS_NAME, Context.MODE_PRIVATE)
@@ -125,17 +124,6 @@ internal fun writeDarkThemePref(context: Context, enabled: Boolean) {
     context.getSharedPreferences(UI_PREFS_NAME, Context.MODE_PRIVATE)
         .edit()
         .putBoolean(PREF_DARK_THEME, enabled)
-        .apply()
-}
-
-internal fun readDynamicAccentPref(context: Context): Boolean =
-    context.getSharedPreferences(UI_PREFS_NAME, Context.MODE_PRIVATE)
-        .getBoolean(PREF_DYNAMIC_ACCENT, true)
-
-internal fun writeDynamicAccentPref(context: Context, enabled: Boolean) {
-    context.getSharedPreferences(UI_PREFS_NAME, Context.MODE_PRIVATE)
-        .edit()
-        .putBoolean(PREF_DYNAMIC_ACCENT, enabled)
         .apply()
 }
 
@@ -149,16 +137,14 @@ private fun EventQueue.isSnapshotEmpty(
 internal fun EventQueue.updateDaemonConfigImpl(transform: (DaemonConfigUi) -> DaemonConfigUi): CoreState = try {
     val updated = transform(cachedDaemonConfig)
     cachedDarkTheme = updated.darkTheme
-    cachedDynamicAccent = updated.dynamicAccent
     appContext?.let {
         writeDarkThemePref(it, updated.darkTheme)
-        writeDynamicAccentPref(it, updated.dynamicAccent)
     }
     val currentVisibility = VisibilityState.fromFfi(handle.visibilityMode())
     val path = configPath
     cachedDaemonConfig = if (path != null) {
         val saved = handle.saveDaemonConfig(path, updated.toFfi(currentVisibility))
-        DaemonConfigUi.fromFfi(saved, updated.darkTheme, updated.dynamicAccent)
+        DaemonConfigUi.fromFfi(saved, updated.darkTheme)
     } else {
         updated
     }

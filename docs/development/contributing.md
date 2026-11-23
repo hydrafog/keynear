@@ -21,9 +21,9 @@ On non-Nix Ubuntu hosts, install `protobuf-compiler`, `libdbus-1-dev`, and `pkg-
 
 ## Design System Tokens
 
-Shared visual tokens (`Plus Jakarta Sans`, light and dark palettes, typography scale, radii, spacing, and motion timings) live in `design/tokens.json`. The Android module at `android/designsystem/src/main/java/org/keynear/designsystem/Tokens.kt` defines the equivalent Kotlin token objects.
+Shared visual tokens (`Plus Jakarta Sans`, light and dark palettes, radial lighting and rim colors, typography scale, radii, spacing, elevation, press scales, and motion timings) live in `design/tokens.json`. It feeds both the web prototype stylesheet at `design/prototype/src/design-system/tokens.css` (paired with `scales.css`) and the Android token definitions at `android/designsystem/src/main/java/org/keynear/designsystem/Tokens.kt`.
 
-The script `python3 scripts/validation/token-check.py` checks that `Tokens.kt`, `Theme.kt`, and the bundled `plus_jakarta_sans.ttf` font asset match `design/tokens.json` and that no raw visual literals leak into `Controls*.kt` or `KeynearIcons.kt`. It runs in the project quality script and CI.
+The script `python3 scripts/validation/token-check.py` checks CSS (`tokens.css` and `scales.css`), JSON (`design/tokens.json`), and Kotlin (`Tokens.kt`, `Theme.kt`, and `plus_jakarta_sans.ttf`) parity across colors, shadows, typography, motion durations, press scales, and dimensions, and verifies that no raw visual literals leak into `Controls*.kt` or `KeynearIcons.kt`. It runs in the project quality script and CI.
 
 ## Structure and Size Caps
 

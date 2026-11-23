@@ -41,9 +41,10 @@ fun SelectionTile(
         modifier = modifier.heightIn(min = KeynearLayout.SelectionTileMinHeight),
         shape = KeynearShapes.Card,
         containerColor = bg,
-        tone = if (active) TactileTone.TONAL else TactileTone.SURFACE,
+        tone = if (active) TactileTone.ACCENT_TONAL else TactileTone.SURFACE,
         cornerRadius = KeynearRadii.TwoXl,
         onClick = onClick,
+        pressScale = KeynearPressScale.PRESS_97,
     ) {
         Column(
             modifier = Modifier
@@ -65,37 +66,57 @@ fun SelectionTile(
     }
 }
 
-private fun actionContainerColor(
-    palette: KeynearPalette,
+private enum class ActionButtonStyle {
+    DANGER,
+    DANGER_TONAL,
+    TONAL_SURFACE,
+    PRIMARY,
+    ACCENT_TONAL,
+}
+
+private data class ActionButtonAppearance(
+    val container: Color,
+    val content: Color,
+    val tone: TactileTone,
+)
+
+private fun resolveActionStyle(
     danger: Boolean,
     errorTonal: Boolean,
     tonalSurface: Boolean,
     primary: Boolean,
-): Color = when {
-    danger -> palette.error
-    errorTonal -> palette.errorAction
-    tonalSurface -> palette.surfaceTonal
-    primary -> palette.loading
-    else -> palette.loadingTonal
+): ActionButtonStyle = when {
+    danger -> ActionButtonStyle.DANGER
+    errorTonal -> ActionButtonStyle.DANGER_TONAL
+    tonalSurface -> ActionButtonStyle.TONAL_SURFACE
+    primary -> ActionButtonStyle.PRIMARY
+    else -> ActionButtonStyle.ACCENT_TONAL
 }
 
-private fun actionContentColor(
+private fun actionButtonAppearance(
+    style: ActionButtonStyle,
     palette: KeynearPalette,
-    danger: Boolean,
-    errorTonal: Boolean,
-    tonalSurface: Boolean,
-    primary: Boolean,
-): Color = when {
-    danger || primary -> palette.onAccent
-    errorTonal -> palette.onDangerAction
-    tonalSurface -> palette.textPrimary
-    else -> palette.onLoadingTonal
-}
-
-private fun actionTone(enabled: Boolean, primary: Boolean): TactileTone = when {
-    !enabled -> TactileTone.NONE
-    primary -> TactileTone.ACCENT
-    else -> TactileTone.TONAL
+    enabled: Boolean,
+): ActionButtonAppearance {
+    val base = when (style) {
+        ActionButtonStyle.DANGER -> ActionButtonAppearance(palette.error, palette.onAccent, TactileTone.DANGER)
+        ActionButtonStyle.DANGER_TONAL ->
+            ActionButtonAppearance(palette.errorAction, palette.onDangerAction, TactileTone.DANGER_TONAL)
+        ActionButtonStyle.TONAL_SURFACE ->
+            ActionButtonAppearance(palette.surfaceTonal, palette.textPrimary, TactileTone.TONAL)
+        ActionButtonStyle.PRIMARY -> ActionButtonAppearance(palette.loading, palette.onAccent, TactileTone.ACCENT)
+        ActionButtonStyle.ACCENT_TONAL ->
+            ActionButtonAppearance(palette.loadingTonal, palette.onLoadingTonal, TactileTone.ACCENT_TONAL)
+    }
+    return if (enabled) {
+        base
+    } else {
+        ActionButtonAppearance(
+            base.container.copy(alpha = KeynearOpacity.DISABLED_CONTAINER),
+            base.content.copy(alpha = KeynearOpacity.DISABLED_CONTENT),
+            TactileTone.NONE,
+        )
+    }
 }
 
 @Composable
@@ -112,21 +133,19 @@ fun ActionButton(
     leadingIcon: (@Composable (Color) -> Unit)? = null,
 ) {
     val palette = LocalKeynearPalette.current
-    val container = actionContainerColor(palette, danger, errorTonal, tonalSurface, primary)
-    val content = actionContentColor(palette, danger, errorTonal, tonalSurface, primary)
-    val effectiveContainer = if (enabled) container else container.copy(alpha = KeynearOpacity.DISABLED_CONTAINER)
-    val effectiveContent = if (enabled) content else content.copy(alpha = KeynearOpacity.DISABLED_CONTENT)
-    val buttonTone = actionTone(enabled, primary)
+    val style = resolveActionStyle(danger, errorTonal, tonalSurface, primary)
+    val appearance = actionButtonAppearance(style, palette, enabled)
 
     TactileSurface(
         modifier = modifier.heightIn(min = minHeight),
         shape = KeynearShapes.Xl,
-        containerColor = effectiveContainer,
-        tone = buttonTone,
+        containerColor = appearance.container,
+        tone = appearance.tone,
         cornerRadius = KeynearRadii.Xl,
         onClick = onClick,
         enabled = enabled,
         contentAlignment = Alignment.Center,
+        pressScale = KeynearPressScale.PRESS_95,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = KeynearLayout.ActionButtonHorizontalPadding),
@@ -134,12 +153,12 @@ fun ActionButton(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (leadingIcon != null) {
-                leadingIcon(effectiveContent)
+                leadingIcon(appearance.content)
                 Spacer(modifier = Modifier.width(KeynearSpacing.Sm))
             }
             Text(
                 text = label,
-                color = effectiveContent,
+                color = appearance.content,
                 fontSize = KeynearTypeSizes.Description,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
@@ -192,4 +211,3 @@ fun RecessedInput(
         )
     }
 }
-

@@ -7,8 +7,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 
 @Composable
 fun PairingPromptCard(
@@ -30,31 +33,44 @@ fun PairingPromptCard(
         cornerRadius = KeynearRadii.TwoXl,
     ) {
         Column(
-            modifier = Modifier.padding(KeynearLayout.CardPadding),
-            verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(KeynearLayout.CardPadding),
+            verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Md),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                text = heading,
-                color = palette.textMuted,
-                fontSize = KeynearTypeSizes.Caption,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = KeynearTypeSizes.Micro,
+            SectionHeading(
+                title = heading,
+                textAlign = TextAlign.Center,
             )
-            Text(
-                text = verificationCode,
-                color = palette.textPrimary,
-                fontSize = KeynearTypeSizes.Title,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = KeynearTypeSizes.Sp4,
-            )
+            TactileSurface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = KeynearShapes.Xl,
+                containerColor = palette.trackWell,
+                tone = TactileTone.INSET,
+                cornerRadius = KeynearRadii.Xl,
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = verificationCode,
+                    color = palette.textPrimary,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = KeynearTypeSizes.Title,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = KeynearTypeSizes.Sp4,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(vertical = KeynearLayout.ContentGap),
+                )
+            }
             Text(
                 text = countdownText,
                 color = palette.textMuted,
                 fontSize = KeynearTypeSizes.Caption,
+                textAlign = TextAlign.Center,
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
+                horizontalArrangement = Arrangement.spacedBy(KeynearLayout.ContentGap),
             ) {
                 ActionButton(
                     label = declineLabel,
@@ -72,4 +88,3 @@ fun PairingPromptCard(
         }
     }
 }
-

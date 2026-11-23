@@ -351,9 +351,8 @@ class SurfacesAndOnboardingTest {
         assertEquals(listOf("x-kde-passwordManagerHint", "application/x-custom"), ffi.ignoredMimeTypes)
         assertTrue(ffi.notifyAutoAcceptComplete)
 
-        assertTrue(DaemonConfigUi().dynamicAccent)
-        val roundTripped = DaemonConfigUi.fromFfi(ffi, darkTheme = true, dynamicAccent = false)
-        assertEquals(customConfig.copy(dynamicAccent = false), roundTripped)
+        val roundTripped = DaemonConfigUi.fromFfi(ffi, darkTheme = true)
+        assertEquals(customConfig, roundTripped)
 
         val missingOne = PermissionsChecklistState(
             nearbyGranted = true,

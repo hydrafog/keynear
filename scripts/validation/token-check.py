@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 TOKENS = json.loads((ROOT / "design/tokens.json").read_text())
 CSS = ROOT / "design/prototype/src/design-system/tokens.css"
+SCALES_CSS = ROOT / "design/prototype/src/design-system/scales.css"
 TOKENS_KT = ROOT / "android/designsystem/src/main/java/org/keynear/designsystem/Tokens.kt"
 CONTROL_FILES = sorted(
     (ROOT / "android/designsystem/src/main/java/org/keynear/designsystem").glob("Controls*.kt")
@@ -25,9 +26,63 @@ LINE_HEIGHTS = [
 DEPTH_SHADOWS = [
     ("surface", "--kn-depth-surface"),
     ("tonal", "--kn-depth-tonal"),
-    ("accent", "--kn-depth-accent"),
+    ("accent", "--kn-brand-depth-accent"),
     ("sheet", "--kn-depth-sheet"),
     ("thumb", "--kn-depth-thumb"),
+]
+CSS_COLOR_KEYS = [
+    ("backdrop", "--kn-backdrop"),
+    ("canvas", "--kn-canvas"),
+    ("onCanvas", "--kn-on-canvas"),
+    ("mapGround", "--kn-map-ground"),
+    ("surface", "--kn-surface"),
+    ("surfaceTonal", "--kn-surface-tonal"),
+    ("surfaceHover", "--kn-surface-hover"),
+    ("textPrimary", "--kn-text-primary"),
+    ("textSecondary", "--kn-text-secondary"),
+    ("textMuted", "--kn-text-muted"),
+    ("loading", "--kn-loading"),
+    ("loadingHover", "--kn-loading-hover"),
+    ("loadingInk", "--kn-loading-ink"),
+    ("loadingTonal", "--kn-loading-tonal"),
+    ("onLoadingTonal", "--kn-on-loading-tonal"),
+    ("warningTonal", "--kn-warning-tonal"),
+    ("onWarningTonal", "--kn-on-warning-tonal"),
+    ("error", "--kn-error"),
+    ("errorTonal", "--kn-error-tonal"),
+    ("onDangerTonal", "--kn-on-danger-tonal"),
+    ("errorAction", "--kn-error-action"),
+    ("onDangerAction", "--kn-on-danger-action"),
+    ("errorActionHover", "--kn-error-action-hover"),
+    ("errorInk", "--kn-error-ink"),
+    ("input", "--kn-input"),
+    ("switchTrackOff", "--kn-switch-track-off"),
+    ("switchThumb", "--kn-switch-thumb"),
+    ("notifSubCard", "--kn-notif-sub-card"),
+    ("qsOn", "--kn-qs-on"),
+    ("qsHover", "--kn-qs-hover"),
+    ("snackbar", "--kn-snackbar"),
+    ("onSnackbar", "--kn-on-snackbar"),
+    ("trackWell", "--kn-track-well"),
+    ("sheetHandle", "--kn-sheet-handle"),
+    ("gesturePill", "--kn-gesture-pill"),
+    ("onAccent", "--kn-on-accent"),
+    ("focusRing", "--kn-focus-ring"),
+    ("accent", "--kn-accent-fill"),
+]
+MOTION_PARITY = [
+    ("shortDurationMs", "--kn-duration-150", "SHORT_DURATION_MS"),
+    ("pressDurationMs", "--kn-duration-press", "PRESS_DURATION_MS"),
+    ("duration200Ms", "--kn-duration-200", "FADE_IN_DURATION_MS"),
+    ("morphDurationMs", "--kn-duration-morph", "MORPH_DURATION_MS"),
+    ("switchDurationMs", "--kn-duration-switch", "SWITCH_DURATION_MS"),
+    ("duration500Ms", "--kn-duration-500", "DURATION_500_MS"),
+]
+PRESS_SCALE_PARITY = [
+    ("press95", "--kn-press-95", "PRESS_95"),
+    ("press97", "--kn-press-97", "PRESS_97"),
+    ("press98", "--kn-press-98", "PRESS_98"),
+    ("press99", "--kn-press-99", "PRESS_99"),
 ]
 
 failures = []
@@ -70,9 +125,9 @@ def check_leaves():
     print(f"token-check: validated {len(leaves)} token values")
 
 
-def css_properties():
+def css_properties(path=CSS):
     props = {}
-    for name, value in re.findall(r"(--[\w-]+)\s*:\s*([^;]+);", read_text(CSS)):
+    for name, value in re.findall(r"(--[\w-]+)\s*:\s*([^;]+);", read_text(path)):
         props.setdefault(name, []).append(value.strip())
     return props
 
@@ -122,7 +177,8 @@ def outer_blurs(value):
 
 
 def check_css_mirrors():
-    props = css_properties()
+    props = css_properties(CSS)
+    scales_props = css_properties(SCALES_CSS)
     for key, prop in TRACKING:
         expected = css_value(props, prop)
         actual = nested(TOKENS, "tracking", key)
@@ -144,13 +200,32 @@ def check_css_mirrors():
                 if actual != expected:
                     fail(f"elevation.outer.{family}.{theme} blurRadius: JSON {actual} diverges from CSS {expected}")
 
+    for key, prop in CSS_COLOR_KEYS:
+        for theme, index in (("light", 0), ("dark", 1)):
+            expected = css_value(props, prop, index)
+            actual = nested(TOKENS, theme, key)
+            if expected is not None and actual is not None and expected.upper() != actual.upper():
+                fail(f"{theme}.{key}: JSON {actual} diverges from CSS {prop} ({expected})")
+
+    for key, prop, _ in MOTION_PARITY:
+        expected = css_value(props, prop)
+        actual = nested(TOKENS, "motion", key)
+        if expected is not None and actual is not None and expected != f"{actual}ms":
+            fail(f"motion.{key}: JSON {actual}ms diverges from CSS {prop} ({expected})")
+
+    for key, prop, _ in PRESS_SCALE_PARITY:
+        expected = css_value(scales_props, prop)
+        actual = nested(TOKENS, "pressScale", key)
+        if expected is not None and actual is not None and float(expected) != float(actual):
+            fail(f"pressScale.{key}: JSON {actual} diverges from scales.css {prop} ({expected})")
+
 
 def check_one_sided():
     listed = TOKENS.get("oneSidedFamilies", [])
     if not isinstance(listed, list) or not listed:
         fail("oneSidedFamilies must list the one-sided token families")
         return
-    mirrored = {"tracking", "typeScale", "elevation"}
+    mirrored = {"tracking", "typeScale", "elevation", "light", "dark", "motion", "pressScale"}
     for family in listed:
         if family not in TOKENS:
             fail(f"oneSidedFamilies names missing family {family}")
@@ -168,7 +243,6 @@ def argb(value):
 
 
 def check_android_palette(kt):
-    alias = {"waveSpoke": ("wave", "spoke"), "waveRing": ("wave", "ring"), "waveEcho": ("wave", "echo")}
     for theme in ("light", "dark"):
         name = "Light" if theme == "light" else "Dark"
         section = re.search(rf"val {name}KeynearPalette = KeynearPalette\((.*?)\n\)", kt, re.DOTALL)
@@ -176,8 +250,7 @@ def check_android_palette(kt):
             fail(f"Android {theme} palette is missing")
             continue
         for field, literal in re.findall(r"(\w+)\s*=\s*Color\((0x[0-9A-Fa-f]{8})\)", section.group(1)):
-            group, key = alias.get(field, (theme, field))
-            source = TOKENS.get(group, {}).get(key) if isinstance(TOKENS.get(group), dict) else None
+            source = TOKENS.get(theme, {}).get(field) if isinstance(TOKENS.get(theme), dict) else None
             if source is None:
                 continue
             expected = argb(source)
@@ -187,9 +260,11 @@ def check_android_palette(kt):
 
 def check_android_numbers(kt):
     dimensions = {
-        "Dp2": "dp2", "Dp5": "dp5", "Dp6": "dp6", "Dp10": "dp10", "Dp13": "dp13",
-        "Dp17": "dp17", "Dp18": "dp18", "Dp20": "dp20", "Dp26": "dp26", "Dp34": "dp34",
-        "Dp52": "dp52", "Dp58": "dp58", "Dp62": "dp62", "Dp128": "dp128",
+        "Dp2": "dp2", "Dp4": "dp4", "Dp5": "dp5", "Dp6": "dp6", "Dp10": "dp10", "Dp11": "dp11",
+        "Dp12": "dp12", "Dp13": "dp13", "Dp16": "dp16", "Dp17": "dp17", "Dp18": "dp18",
+        "Dp20": "dp20", "Dp24": "dp24", "Dp26": "dp26", "Dp32": "dp32", "Dp34": "dp34",
+        "Dp46": "dp46", "Dp48": "dp48", "Dp52": "dp52", "Dp58": "dp58", "Dp62": "dp62",
+        "Dp128": "dp128", "Dp240": "dp240", "Dp290": "dp290",
     }
     for name, key in dimensions.items():
         expected = nested(TOKENS, "dimension", key)
@@ -206,6 +281,16 @@ def check_android_numbers(kt):
         expected = nested(TOKENS, "opacity", key)
         if expected is not None and not re.search(rf"\b{name}\s*=\s*{re.escape(str(expected))}f\b", kt):
             fail(f"Android opacity {name}: expected {expected}f")
+
+    for json_key, _, kt_name in MOTION_PARITY:
+        expected = nested(TOKENS, "motion", json_key)
+        if expected is not None and not re.search(rf"\b{kt_name}\s*=\s*{re.escape(str(expected))}\b", kt):
+            fail(f"Android motion {kt_name}: expected {expected}")
+
+    for json_key, _, kt_name in PRESS_SCALE_PARITY:
+        expected = nested(TOKENS, "pressScale", json_key)
+        if expected is not None and not re.search(rf"\b{kt_name}\s*=\s*{re.escape(str(expected))}f\b", kt):
+            fail(f"Android pressScale {kt_name}: expected {expected}f")
 
 
 def check_android_consumers():

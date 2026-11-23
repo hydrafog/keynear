@@ -58,12 +58,8 @@ class EventQueue(
     internal var cachedDarkTheme: Boolean = appContext?.let { readDarkThemePref(it) } ?: false
 
     @Volatile
-    internal var cachedDynamicAccent: Boolean = appContext?.let { readDynamicAccentPref(it) } ?: true
-
-    @Volatile
     internal var cachedDaemonConfig: DaemonConfigUi = DaemonConfigUi(
         darkTheme = cachedDarkTheme,
-        dynamicAccent = cachedDynamicAccent,
     )
 
     @Volatile
@@ -114,7 +110,6 @@ class EventQueue(
         }
         localDeviceId = DeviceRepo.resolveStableLocalDeviceId(app)
         cachedDarkTheme = readDarkThemePref(app)
-        cachedDynamicAccent = readDynamicAccentPref(app)
         refreshConfigFromDisk()
     }
 
@@ -123,7 +118,7 @@ class EventQueue(
         runCatching {
             val loaded = handle.loadDaemonConfig(path)
             handle.setVisibilityMode(loaded.visibilityMode)
-            cachedDaemonConfig = DaemonConfigUi.fromFfi(loaded, cachedDarkTheme, cachedDynamicAccent)
+            cachedDaemonConfig = DaemonConfigUi.fromFfi(loaded, cachedDarkTheme)
         }
     }
 
@@ -227,7 +222,7 @@ class EventQueue(
         val path = configPath ?: return
         runCatching {
             val saved = handle.saveDaemonConfig(path, cachedDaemonConfig.toFfi(visibility))
-            cachedDaemonConfig = DaemonConfigUi.fromFfi(saved, cachedDarkTheme, cachedDynamicAccent)
+            cachedDaemonConfig = DaemonConfigUi.fromFfi(saved, cachedDarkTheme)
         }
     }
 
