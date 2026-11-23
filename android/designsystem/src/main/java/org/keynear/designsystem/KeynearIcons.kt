@@ -13,7 +13,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
-import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.PathParser
 
 private const val DEFAULT_STROKE_WIDTH = 2f
@@ -449,36 +448,42 @@ fun IconKeynearSymbolic(
     modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,
 ) {
-    val layers = remember {
+    val fills = remember {
         listOf(
-            SYMBOLIC_STEM_ALPHA to "M 160,276 C 177.728,276 192,290.272 192,308 L 192,368 " +
-                "C 192,385.728 177.728,400 160,400 C 142.272,400 128,385.728 128,368 " +
-                "L 128,308 C 128,290.272 142.272,276 160,276 Z",
-            SYMBOLIC_ARM_ALPHA to "M 324.303,104.082 A 32,32 0 0 0 301.061,111.803 L 197.061,201.803 " +
-                "A 32,32 0 0 0 193.803,246.939 A 32,32 0 0 0 238.939,250.197 " +
-                "L 342.939,160.197 A 32,32 0 0 0 346.197,115.061 A 32,32 0 0 0 324.303,104.082 Z",
-            1.0f to "M 160,112 A 32,32 0 0 0 128,144 L 128,248 " +
-                "C 128,271.394 139.942,294.939 158.354,309.260 A 32.003,32.003 0 0 0 161.039,311.137 " +
-                "L 305.039,401.137 A 32,32 0 0 0 349.137,390.961 A 32,32 0 0 0 338.961,346.863 " +
-                "L 196.658,257.924 C 192.246,254.407 192,253.486 192,248 L 192,144 A 32,32 0 0 0 160,112 Z",
-            1.0f to "M 335.311,191.021 A 11,11 0 0 0 327.75,194.725 A 11,11 0 0 0 328.725,210.25 " +
-                "C 356.403,234.66 356.403,277.34 328.725,301.75 A 11,11 0 0 0 327.75,317.275 " +
-                "A 11,11 0 0 0 343.275,318.25 C 380.601,285.332 380.601,226.668 343.275,193.75 " +
-                "A 11,11 0 0 0 335.311,191.021 Z",
-            SYMBOLIC_OUTER_ARC_ALPHA to "M 375.498,164.016 A 8,8 0 0 0 370,166.709 A 8,8 0 0 0 370.709,178 " +
-                "C 417.76,219.495 417.76,292.505 370.709,334 A 8,8 0 0 0 370,345.291 " +
-                "A 8,8 0 0 0 381.291,346 C 435.357,298.318 435.357,213.682 381.291,166 " +
-                "A 8,8 0 0 0 375.498,164.016 Z",
+            0.08f to "M 144,290 a 88,88 0 1,0 176,0 a 88,88 0 1,0 -176,0",
+            0.22f to "M 357.6,335.8 a 34,34 0 1,0 68,0 a 34,34 0 1,0 -68,0",
+            0.96f to "M 373.6,335.8 a 18,18 0 1,0 36,0 a 18,18 0 1,0 -36,0",
         ).map { (alpha, pathData) -> alpha to PathParser().parsePathString(pathData).toPath() }
     }
+    val strokes = remember {
+        listOf(
+            Triple(0.18f, 5f, "M 60.4 146.0 A 224 224 0 0 1 330.2 88.7"),
+            Triple(0.18f, 5f, "M 452.6 251.1 A 224 224 0 0 1 393.1 445.6"),
+            Triple(0.24f, 6f, "M 389.9 238.7 A 166 166 0 0 1 398.0 287.1"),
+            Triple(0.24f, 6f, "M 371.2 380.4 A 166 166 0 0 1 86.8 209.5"),
+            Triple(0.30f, 6f, "M 339.6 246.5 A 116 116 0 1 1 118.5 265.9"),
+            Triple(0.68f, 18f, "M 101.2 187.8 A 166 166 0 0 1 272.2 128.9"),
+            Triple(0.88f, 22f, "M 127.7 239.1 A 116 116 0 0 1 267.8 179.7"),
+            Triple(1.0f, 42f, "M 178,290 a 54,54 0 1,0 108,0 a 54,54 0 1,0 -108,0"),
+            Triple(1.0f, 42f, "M 270.2 251.8 L 387.6 134.4 L 424.3 171.2"),
+            Triple(1.0f, 42f, "M 339.5 182.5 L 364.9 208.0"),
+        ).map { (alpha, width, pathData) ->
+            Triple(alpha, width, PathParser().parsePathString(pathData).toPath())
+        }
+    }
     Canvas(modifier = modifier) {
-        val sx = size.width / 316f
-        val sy = size.height / 328f
+        val sx = size.width / 512f
+        val sy = size.height / 512f
         scale(scaleX = sx, scaleY = sy, pivot = Offset.Zero) {
-            translate(left = -112f, top = -92f) {
-                layers.forEach { (alpha, path) ->
-                    drawPath(path = path, color = tint.copy(alpha = tint.alpha * alpha))
-                }
+            fills.forEach { (alpha, path) ->
+                drawPath(path = path, color = tint.copy(alpha = tint.alpha * alpha))
+            }
+            strokes.forEach { (alpha, width, path) ->
+                drawPath(
+                    path = path,
+                    color = tint.copy(alpha = tint.alpha * alpha),
+                    style = Stroke(width = width, cap = StrokeCap.Round, join = StrokeJoin.Round),
+                )
             }
         }
     }

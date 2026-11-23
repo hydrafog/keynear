@@ -22,10 +22,6 @@ private const val CUSHION_BLUR_THRESHOLD_PX = 0.4f
 private const val CUSHION_PADDING_MARGIN_PX = 8f
 private const val HALF_FRACTION = 0.5f
 
-internal const val SYMBOLIC_STEM_ALPHA = 0.55f
-internal const val SYMBOLIC_ARM_ALPHA = 0.75f
-internal const val SYMBOLIC_OUTER_ARC_ALPHA = 0.58f
-
 private data class ShadowSpec(
     val offsetY: Dp,
     val blurRadius: Dp,
