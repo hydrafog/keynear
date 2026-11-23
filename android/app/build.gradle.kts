@@ -1,3 +1,4 @@
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -5,6 +6,27 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("dev.detekt")
 }
+
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.isFile) {
+        keystorePropertiesFile.inputStream().use(::load)
+    }
+}
+
+fun signingValue(envName: String, propName: String): String? =
+    System.getenv(envName)?.takeIf { it.isNotBlank() }
+        ?: keystoreProperties.getProperty(propName)?.takeIf { it.isNotBlank() }
+
+val releaseStorePath = signingValue("KEYNEAR_KEYSTORE_PATH", "storeFile")
+val releaseStorePassword = signingValue("KEYNEAR_KEYSTORE_PASSWORD", "storePassword")
+val releaseKeyAlias = signingValue("KEYNEAR_KEY_ALIAS", "keyAlias")
+val releaseKeyPassword = signingValue("KEYNEAR_KEY_PASSWORD", "keyPassword")
+val hasReleaseSigning = !releaseStorePath.isNullOrBlank() &&
+    !releaseStorePassword.isNullOrBlank() &&
+    !releaseKeyAlias.isNullOrBlank() &&
+    !releaseKeyPassword.isNullOrBlank() &&
+    file(releaseStorePath).isFile
 
 android {
     namespace = "org.keynear.app"
@@ -32,6 +54,28 @@ android {
         }
         create("foss") {
             dimension = "distribution"
+        }
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseStorePath!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 

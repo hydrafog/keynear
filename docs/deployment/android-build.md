@@ -59,3 +59,34 @@ The compatibility aggregate tasks `testDebugUnitTest` and `lintDebug` exercise b
 nix develop .#android --command bash -c 'cd android && gradle testDebugUnitTest lintDebug detekt assembleDebug'
 nix develop .#android --command bash -c 'cd android && gradle assembleFossRelease'
 ```
+
+## Signed Release APKs
+
+The `android/app/build.gradle.kts` release build type signs `gms` and `foss` APKs when signing credentials are provided via either environment variables or `android/keystore.properties` (both ignored by git). When no credentials are present, release tasks still succeed and produce unsigned APKs for downstream signers such as F-Droid.
+
+1. Generate a release keystore (once, stored outside the repository):
+
+```bash
+keytool -genkeypair -v -keystore ~/keynear-release.jks -alias keynear \
+  -keyalg RSA -keysize 4096 -validity 10000
+```
+
+2. Configure credentials via environment variables or `android/keystore.properties`:
+
+```properties
+# android/keystore.properties
+storeFile=/path/to/keynear-release.jks
+storePassword=...
+keyAlias=keynear
+keyPassword=...
+```
+
+Or using environment variables: `KEYNEAR_KEYSTORE_PATH`, `KEYNEAR_KEYSTORE_PASSWORD`, `KEYNEAR_KEY_ALIAS`, and `KEYNEAR_KEY_PASSWORD`.
+
+3. Build and verify signed APKs into `out/apk/`:
+
+```bash
+bash scripts/packaging/build-signed-apks.sh
+```
+
+In GitHub Actions, `.github/workflows/release.yml` builds signed `gms` and `foss` release APKs on `v*` tags or manual dispatch using repository secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`.
