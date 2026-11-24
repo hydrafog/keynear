@@ -59,27 +59,23 @@ export const SLIDES: readonly SlideItem[] = [
 export const PRIVACY_ITEMS: readonly PrivacyItem[] = [
   {
     id: 'telemetry',
-    title: 'Zero telemetry or cloud',
-    detail:
-      'Keynear collects no analytics, usage metrics, or crash reports. Discovery and transfers stay on BLE and local Wi-Fi QUIC.',
+    title: 'No telemetry',
+    detail: 'No analytics, crash reports, or cloud relays.',
   },
   {
     id: 'keys',
-    title: 'Hardware-backed secrets',
-    detail:
-      'X25519, Ed25519, and pairing keys stay inside Android Keystore and Linux Secret Service. Unpairing wipes metadata and secrets.',
+    title: 'Local keys',
+    detail: 'Stored in Android Keystore and Linux Secret Service.',
   },
   {
     id: 'memory',
-    title: 'Memory-only continuity',
-    detail:
-      'Mirrored notifications, call numbers, media metadata, and OTP codes are never written to disk, config files, or logs.',
+    title: 'Memory only',
+    detail: 'Notifications, calls, and OTPs never hit disk.',
   },
   {
     id: 'permissions',
-    title: 'Minimal OS permissions',
-    detail:
-      'Never requests fine location, READ_SMS, or broad storage access. Password-manager and sensitive clipboard MIME types are skipped.',
+    title: 'Minimal permissions',
+    detail: 'No fine location, READ_SMS, or password sync.',
   },
 ];
 

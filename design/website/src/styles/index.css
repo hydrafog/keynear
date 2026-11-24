@@ -289,6 +289,10 @@
   transform: scaleX(1);
 }
 
+.kn-seg-active-text {
+  color: var(--kn-on-accent-tonal);
+}
+
 .kn-wheel-stage {
   perspective: 1400px;
 }
@@ -392,6 +396,13 @@
 @media (prefers-reduced-motion: no-preference) {
   .kn-root {
     transition: background-color 240ms ease, color 240ms ease;
+  }
+
+  .kn-seg-indicator {
+    transition:
+      transform 420ms var(--kn-ease-spring),
+      width 420ms var(--kn-ease-spring),
+      opacity 180ms ease;
   }
 
   .kn-wheel-panel {

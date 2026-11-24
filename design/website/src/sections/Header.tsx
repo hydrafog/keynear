@@ -1,7 +1,7 @@
-import { Download, Menu, Moon, Sun, X } from 'lucide-react';
-import { useState } from 'react';
+import { Moon, Sun } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { KeynearIcon } from '../components/KeynearIcon';
-import { LINKS, SLIDES } from '../data/site';
+import { SLIDES } from '../data/site';
 
 export interface HeaderProps {
   darkMode: boolean;
@@ -11,54 +11,53 @@ export interface HeaderProps {
 }
 
 export function Header({ darkMode, activeSlide, onToggleTheme, onSelectSlide }: HeaderProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [indicator, setIndicator] = useState({ x: 0, width: 0, ready: false });
 
-  const handleSelect = (index: number) => {
-    setMenuOpen(false);
-    onSelectSlide(index);
-  };
+  const measure = useCallback(() => {
+    const activeTab = tabRefs.current[activeSlide];
+    if (!activeTab) return;
+    setIndicator({
+      x: activeTab.offsetLeft,
+      width: activeTab.offsetWidth,
+      ready: true,
+    });
+  }, [activeSlide]);
+
+  useLayoutEffect(() => {
+    measure();
+  }, [measure]);
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => measure());
+    observer.observe(track);
+    return () => observer.disconnect();
+  }, [measure]);
 
   return (
     <header className="kn-nav-bar relative shrink-0">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
         <a
           href="#main-content"
           onClick={(e) => {
             e.preventDefault();
-            handleSelect(0);
+            onSelectSlide(0);
           }}
-          className="kn-interactive group flex items-center gap-2.5 rounded-xl py-1 pr-2 text-lg font-extrabold tracking-tight"
+          className="kn-interactive group flex shrink-0 items-center gap-2.5 rounded-xl py-1 pr-2 text-lg font-extrabold tracking-tight"
         >
           <KeynearIcon size={32} className="transition-transform duration-300 group-hover:scale-105" />
           <span>Keynear</span>
         </a>
 
-        <nav aria-label="Primary" className="hidden items-center gap-5 md:flex">
-          {SLIDES.map((slide) => {
-            const active = activeSlide === slide.index;
-            return (
-              <button
-                key={slide.id}
-                type="button"
-                aria-current={active ? 'page' : undefined}
-                data-active={active}
-                onClick={() => handleSelect(slide.index)}
-                className={`kn-nav-link kn-interactive cursor-pointer rounded-lg px-2 py-2 text-sm font-semibold transition-colors ${
-                  active ? 'kn-text-primary' : 'kn-text-secondary hover:kn-text-primary'
-                }`}
-              >
-                {slide.label}
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <button
             type="button"
             onClick={onToggleTheme}
             aria-label={darkMode ? 'Switch to light theme' : 'Switch to dark theme'}
-            className="kn-theme-btn kn-btn-tonal kn-interactive kn-press flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl"
+            className="kn-theme-btn kn-btn-tonal kn-interactive kn-press flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl"
           >
             {darkMode ? (
               <Sun className="kn-theme-icon h-4 w-4" aria-hidden="true" />
@@ -67,52 +66,45 @@ export function Header({ darkMode, activeSlide, onToggleTheme, onSelectSlide }: 
             )}
           </button>
 
-          <a
-            href={LINKS.releases}
-            target="_blank"
-            rel="noreferrer"
-            className="kn-btn-primary kn-interactive kn-press inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-4 text-sm font-bold"
+          <div
+            ref={trackRef}
+            role="tablist"
+            aria-label="Page sections"
+            className="kn-surface relative inline-flex items-center rounded-full p-1"
           >
-            <Download className="h-4 w-4" aria-hidden="true" />
-            <span>Download</span>
-          </a>
-
-          <button
-            type="button"
-            onClick={() => setMenuOpen((open) => !open)}
-            aria-label="Open navigation menu"
-            aria-expanded={menuOpen}
-            className="kn-btn-tonal kn-interactive kn-press flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl md:hidden"
-          >
-            {menuOpen ? (
-              <X className="h-5 w-5" aria-hidden="true" />
-            ) : (
-              <Menu className="h-5 w-5" aria-hidden="true" />
-            )}
-          </button>
+            <span
+              aria-hidden="true"
+              className="kn-seg-indicator kn-accent-tonal pointer-events-none absolute bottom-1 top-1 left-0 rounded-full"
+              style={{
+                width: `${indicator.width}px`,
+                transform: `translate3d(${indicator.x}px, 0, 0)`,
+                opacity: indicator.ready ? 1 : 0,
+              }}
+            />
+            {SLIDES.map((slide, idx) => {
+              const active = activeSlide === slide.index;
+              return (
+                <button
+                  key={slide.id}
+                  ref={(node) => {
+                    tabRefs.current[idx] = node;
+                  }}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => onSelectSlide(slide.index)}
+                  className={`kn-interactive relative z-10 inline-flex min-h-[36px] cursor-pointer items-center gap-1.5 rounded-full px-3 text-xs font-bold transition-colors sm:px-3.5 ${
+                    active ? 'kn-seg-active-text' : 'kn-text-muted hover:kn-text-primary'
+                  }`}
+                >
+                  <span className="font-mono tabular-nums">{slide.step}</span>
+                  <span className="hidden sm:inline">{slide.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
-
-      {menuOpen && (
-        <nav
-          aria-label="Mobile"
-          className="absolute inset-x-0 top-16 z-30 mx-auto max-w-6xl px-4 pb-4 pt-2 md:hidden"
-        >
-          <div className="kn-surface flex flex-col gap-1 rounded-2xl p-2">
-            {SLIDES.map((slide) => (
-              <button
-                key={slide.id}
-                type="button"
-                aria-current={activeSlide === slide.index ? 'page' : undefined}
-                onClick={() => handleSelect(slide.index)}
-                className="kn-interactive min-h-[44px] cursor-pointer rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold kn-text-secondary hover:kn-text-primary"
-              >
-                {slide.label}
-              </button>
-            ))}
-          </div>
-        </nav>
-      )}
     </header>
   );
 }

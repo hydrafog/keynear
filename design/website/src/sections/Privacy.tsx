@@ -17,19 +17,18 @@ export function Privacy() {
       <div className="grid w-full gap-8 lg:grid-cols-12 lg:items-center">
         <div className="min-w-0 lg:col-span-4">
           <h2 className="kn-title">Privacy policy</h2>
-          <p className="kn-desc mt-2.5 max-w-[34ch] kn-text-secondary">
-            Zero telemetry, no accounts, and no servers. Your devices talk directly and keep
-            secrets local.
+          <p className="kn-desc mt-2 max-w-[30ch] kn-text-secondary">
+            No telemetry, accounts, or servers.
           </p>
-          <p className="kn-caption mt-4 kn-text-muted">
-            Licensed under GPLv3.{' '}
+          <p className="kn-caption mt-3 kn-text-muted">
+            GPLv3 ·{' '}
             <a
               href={`${LINKS.github}/blob/main/docs/security-compliance/permissions-and-privacy.md`}
               target="_blank"
               rel="noreferrer"
               className="kn-interactive kn-accent-text underline underline-offset-4"
             >
-              Read full permissions spec
+              Permissions spec
             </a>
           </p>
         </div>
@@ -56,3 +55,4 @@ export function Privacy() {
     </section>
   );
 }
+

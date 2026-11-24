@@ -149,7 +149,7 @@ export default function App() {
         </div>
       </main>
 
-      <Footer activeSlide={activeSlide} onSelectSlide={setActiveSlide} />
+      <Footer />
     </div>
   );
 }
