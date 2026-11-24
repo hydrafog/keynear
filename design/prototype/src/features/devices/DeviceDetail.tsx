@@ -101,7 +101,7 @@ export function DeviceDetail() {
               <button
                 type="button"
                 onClick={() => unpairDevice(selectedDevice.deviceId)}
-                className={`min-h-(--kn-size-52px) flex-1 cursor-pointer rounded-kn-xl px-4 text-kn-sm font-kn-bold transition-all duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) ${FOCUS_RING} kn-loading-bg`}
+                className={`min-h-(--kn-size-52px) flex-1 cursor-pointer rounded-kn-xl px-4 text-kn-sm font-kn-bold transition-all duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) ${FOCUS_RING} kn-error-bg`}
               >
                 Remove device
               </button>

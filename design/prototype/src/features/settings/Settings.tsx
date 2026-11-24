@@ -3,7 +3,7 @@ import { useApp } from '../../state/AppProvider';
 import { Check, Palette, X, ChevronDown, ChevronRight, ChevronUp } from 'lucide-react';
 import { Switch } from '../../design-system/Switch';
 import { SettingRow, SettingsSection } from '../../design-system/Setting';
-import { ACCENT_PRESETS, DEFAULT_ACCENT } from '../../lib/accent';
+import { ACCENT_PRESETS, DEFAULT_ACCENT, getOnAccentColor } from '../../lib/accent';
 
 const FOCUS_RING = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-focus';
 
@@ -166,7 +166,7 @@ export function SettingsScreen() {
                         />
                         <button
                           type="submit"
-                          className={`min-h-(--kn-size-50px) rounded-kn-xl px-5 text-kn-sm font-kn-bold transition-all duration-(--kn-duration-150) active:scale-(--kn-press-95) kn-loading-tonal`}
+                          className={`min-h-(--kn-size-50px) rounded-kn-xl px-5 text-kn-sm font-kn-bold transition-all duration-(--kn-duration-150) active:scale-(--kn-press-95) kn-loading-bg`}
                         >
                           Add
                         </button>
@@ -236,9 +236,9 @@ export function SettingsScreen() {
                               ? 'ring-2 ring-[color:var(--kn-focus-ring)] ring-offset-2 ring-offset-[var(--kn-surface)]'
                               : ''
                           }`}
-                          style={{ backgroundColor: preset.hex }}
+                          style={{ backgroundColor: preset.hex, color: getOnAccentColor(preset.hex) }}
                         >
-                          {selected && <Check className="h-5 w-5 text-white" aria-hidden="true" />}
+                          {selected && <Check className="h-5 w-5" aria-hidden="true" />}
                         </button>
                       );
                     })}
@@ -247,19 +247,23 @@ export function SettingsScreen() {
                       onClick={() => colorInputRef.current?.click()}
                       aria-label="Custom accent color"
                       aria-pressed={isCustomAccent}
-                      className={`relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-kn-xl transition-transform duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) kn-switch-track-off ${FOCUS_RING} ${
+                      className={`relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-kn-xl transition-transform duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) ${
+                        isCustomAccent ? '' : 'kn-switch-track-off'
+                      } ${FOCUS_RING} ${
                         isCustomAccent
                           ? 'ring-2 ring-[color:var(--kn-focus-ring)] ring-offset-2 ring-offset-[var(--kn-surface)]'
                           : ''
                       }`}
+                      style={
+                        isCustomAccent
+                          ? { backgroundColor: accentColor, color: getOnAccentColor(accentColor) }
+                          : undefined
+                      }
                     >
-                      <Palette className="h-5 w-5 kn-loading-text" aria-hidden="true" />
-                      {isCustomAccent && (
-                        <span
-                          aria-hidden="true"
-                          className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-[var(--kn-surface)]"
-                          style={{ backgroundColor: accentColor }}
-                        />
+                      {isCustomAccent ? (
+                        <Check className="h-5 w-5" aria-hidden="true" />
+                      ) : (
+                        <Palette className="h-5 w-5 kn-loading-text" aria-hidden="true" />
                       )}
                       <input
                         ref={colorInputRef}

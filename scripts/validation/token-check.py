@@ -41,11 +41,6 @@ CSS_COLOR_KEYS = [
     ("textPrimary", "--kn-text-primary"),
     ("textSecondary", "--kn-text-secondary"),
     ("textMuted", "--kn-text-muted"),
-    ("loading", "--kn-loading"),
-    ("loadingHover", "--kn-loading-hover"),
-    ("loadingInk", "--kn-loading-ink"),
-    ("loadingTonal", "--kn-loading-tonal"),
-    ("onLoadingTonal", "--kn-on-loading-tonal"),
     ("warningTonal", "--kn-warning-tonal"),
     ("onWarningTonal", "--kn-on-warning-tonal"),
     ("error", "--kn-error"),
@@ -67,7 +62,6 @@ CSS_COLOR_KEYS = [
     ("sheetHandle", "--kn-sheet-handle"),
     ("gesturePill", "--kn-gesture-pill"),
     ("onAccent", "--kn-on-accent"),
-    ("focusRing", "--kn-focus-ring"),
     ("accent", "--kn-accent-fill"),
 ]
 MOTION_PARITY = [

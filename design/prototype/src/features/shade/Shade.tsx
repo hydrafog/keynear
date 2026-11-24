@@ -160,11 +160,11 @@ export function Shade({ closing }: { closing: boolean }) {
                           <div className="h-full kn-sys-accent transition-[width] duration-(--kn-duration-500) ease-out" style={{ width: `${pct <= 15 ? 0 : Math.min(100, ((pct - 15) / 75) * 100)}%` }} />
                         </div>
                         <div className="col-span-2 h-1.5 overflow-hidden rounded-full kn-sys-notif-action">
-                          <div className="h-full kn-sys-success transition-[width] duration-(--kn-duration-500) ease-out" style={{ width: `${pct <= 90 ? 0 : Math.min(100, ((pct - 90) / 10) * 100)}%` }} />
+                          <div className="h-full kn-sys-accent transition-[width] duration-(--kn-duration-500) ease-out" style={{ width: `${pct <= 90 ? 0 : Math.min(100, ((pct - 90) / 10) * 100)}%` }} />
                         </div>
                       </div>
                       <span aria-hidden="true" style={NOTIF_RING_STYLE} className={`pointer-events-none absolute left-[16.6%] h-2 w-2 -translate-x-1/2 rounded-full ${pct >= 15 ? 'kn-sys-accent' : 'kn-sys-notif-action'}`} />
-                      <span aria-hidden="true" style={NOTIF_RING_STYLE} className={`pointer-events-none absolute left-[83.3%] h-2 w-2 -translate-x-1/2 rounded-full ${pct >= 90 ? 'kn-sys-success' : 'kn-sys-notif-action'}`} />
+                      <span aria-hidden="true" style={NOTIF_RING_STYLE} className={`pointer-events-none absolute left-[83.3%] h-2 w-2 -translate-x-1/2 rounded-full ${pct >= 90 ? 'kn-sys-accent' : 'kn-sys-notif-action'}`} />
                       <span aria-hidden="true" style={{ left: `${pct}%`, ...NOTIF_RING_STYLE }} className="pointer-events-none absolute h-3.5 w-3.5 -translate-x-1/2 rounded-full kn-sys-accent transition-[left] duration-(--kn-duration-500) ease-out" />
                     </div>
                     <div className="mt-2 text-kn-xs tabular-nums kn-text-muted">

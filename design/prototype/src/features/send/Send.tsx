@@ -256,13 +256,15 @@ export function SendScreen() {
               id: d.deviceId,
               displayName: d.displayName,
               subtitle: d.connectionLabel,
+              isPrimary: d.isOnline,
             })),
             ...nearbyPeers.map((p) => ({
               id: p.presenceToken,
               displayName: p.displayName,
               subtitle: joinMeta('Nearby', `${p.rssi} dBm`),
+              isPrimary: false,
             })),
-          ].map((target, idx) => (
+          ].map((target) => (
             <div
               key={target.id}
               className="flex min-h-(--kn-size-68px) items-center justify-between gap-3 rounded-kn-xl px-4 py-3"
@@ -285,7 +287,7 @@ export function SendScreen() {
                   )
                 }
                 className={`inline-flex min-h-(--kn-size-48px) shrink-0 items-center gap-2 rounded-kn-xl px-5 text-kn-sm font-kn-bold transition-all duration-(--kn-duration-150) active:scale-(--kn-press-95) ${FOCUS_RING} ${
-                  idx === 0 ? 'kn-loading-bg' : 'kn-loading-tonal'
+                  target.isPrimary ? 'kn-loading-bg' : 'kn-loading-tonal'
                 }`}
               >
                 <Send className="h-4 w-4" aria-hidden="true" />

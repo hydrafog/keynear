@@ -159,7 +159,11 @@ export function ReceiveBanners() {
                       </span>
                     )}
                     {terminal && (
-                      <span className="shrink-0 text-kn-xs font-kn-bold kn-loading-text">
+                      <span
+                        className={`shrink-0 text-kn-xs font-kn-bold ${
+                          tx.state === 'completed' ? 'kn-loading-text' : 'kn-text-muted'
+                        }`}
+                      >
                         {tx.state === 'completed' ? 'Completed' : 'Cancelled'}
                       </span>
                     )}

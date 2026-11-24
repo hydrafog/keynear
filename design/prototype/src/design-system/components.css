@@ -102,7 +102,11 @@
   background-color: var(--kn-loading-tonal);
   background-image: var(--kn-grad-accent-tonal);
   color: var(--kn-on-brand-tonal);
-  box-shadow: var(--kn-depth-tonal), var(--kn-brand-accent-rim);
+  box-shadow: var(--kn-depth-tonal), var(--kn-brand-accent-tonal-rim);
+
+  @variant hover {
+    background-color: var(--kn-loading-tonal-hover);
+  }
 }
 
 @utility kn-error-tonal {
@@ -110,6 +114,11 @@
   background-image: var(--kn-grad-danger-tonal);
   color: var(--kn-brand-on-danger-tonal);
   box-shadow: var(--kn-depth-tonal), var(--kn-brand-danger-rim);
+
+  @variant hover {
+    background-color: var(--kn-error-tonal-hover);
+    background-image: var(--kn-grad-danger-tonal-hover);
+  }
 }
 
 @utility kn-error-action {
@@ -119,6 +128,7 @@
   box-shadow: var(--kn-depth-tonal), var(--kn-brand-danger-rim);
 
   @variant hover {
+    background-color: var(--kn-error-action-hover);
     background-image: var(--kn-grad-danger-tonal-hover);
   }
 }
@@ -265,11 +275,19 @@
 @utility kn-sys-accent {
   background-color: var(--kn-sys-accent);
   color: var(--kn-sys-on-accent);
+
+  @variant hover {
+    background-color: var(--kn-sys-accent-hover);
+  }
 }
 
 @utility kn-sys-accent-tonal {
   background-color: var(--kn-sys-accent-tonal);
   color: var(--kn-sys-on-accent-tonal);
+
+  @variant hover {
+    background-color: var(--kn-sys-accent-tonal-hover);
+  }
 }
 
 @utility kn-sys-accent-text {

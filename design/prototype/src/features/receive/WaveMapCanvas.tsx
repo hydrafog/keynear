@@ -59,7 +59,7 @@ const rgba = (rgb: Rgb, alpha: number) => `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]},
 function paletteFor(accent: string, dark: boolean): WavePalette {
   const base = parseHex(accent);
   const light = mixRgb(base, [255, 255, 255], 0.5);
-  const ink = mixRgb(base, [7, 26, 33], 0.45);
+  const ink = mixRgb(base, [18, 22, 26], 0.45);
   return dark
     ? { spoke: rgba(light, 0.12), ring: rgba(base, 0.38), echo: rgba(light, 0.22), mote: rgba(light, 0.44) }
     : { spoke: rgba(ink, 0.12), ring: rgba(ink, 0.22), echo: rgba(base, 0.28), mote: rgba(ink, 0.36) };
