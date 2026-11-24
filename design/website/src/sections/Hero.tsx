@@ -66,24 +66,26 @@ export function Hero({ theme }: HeroProps) {
           </p>
 
           <div
-            className="kn-hero-in mt-5 flex flex-wrap items-center gap-2.5 sm:mt-8 sm:gap-3.5"
+            className="kn-hero-in mt-5 flex flex-nowrap items-center gap-2.5 sm:mt-8 sm:gap-3.5"
             style={delayStyle(240)}
           >
             <a
               href={LINKS.releases}
               target="_blank"
               rel="noreferrer"
-              className="kn-btn-primary kn-interactive kn-press inline-flex min-h-[44px] items-center gap-2 rounded-xl px-4 text-sm font-bold sm:min-h-[48px] sm:px-6"
+              className="kn-btn-primary kn-interactive kn-press inline-flex min-h-[44px] shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-4 text-sm font-bold sm:min-h-[48px] sm:px-6"
             >
-              <Download className="h-4 w-4" aria-hidden="true" />
-              <span>Download Keynear</span>
+              <Download className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>
+                Download<span className="hidden sm:inline"> Keynear</span>
+              </span>
             </a>
 
             <a
               href={LINKS.github}
               target="_blank"
               rel="noreferrer"
-              className="kn-btn-tonal kn-interactive kn-press inline-flex min-h-[44px] items-center gap-2 rounded-xl px-4 text-sm font-bold sm:min-h-[48px] sm:px-6"
+              className="kn-btn-tonal kn-interactive kn-press inline-flex min-h-[44px] shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-4 text-sm font-bold sm:min-h-[48px] sm:px-6"
             >
               <GitHubMark />
               <span>Read source code</span>
