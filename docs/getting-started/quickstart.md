@@ -43,7 +43,7 @@ Use these steps to share files over direct Wi-Fi QUIC.
 Keynear handles clipboard and one-time-code continuity in the background.
 
 - Desktop clipboard changes sync in real time over Wayland (`ext-data-control-v1` / `zwlr-data-control-v1`) or X11 to the paired Android phone. Keynear skips password-manager MIME targets (`x-kde-passwordManagerHint`, `application/x-password`) and `ignoredMimeTypes`.
-- Use **Copy phone clipboard** on the Android continuity notification or Quick Settings tile (`ClipboardTileService`) to read the phone clipboard and send it to the desktop.
+- Use **Send phone clipboard** on the Android continuity notification or Quick Settings tile (`ClipboardTileService`) to read the phone clipboard and send it to the desktop.
 - Confirm Android SMS User Consent prompts to forward verified one-time codes to the desktop clipboard. The **Copy latest OTP** action in the Linux tray menu reads the most recent code.
 
 ## Audio Handoff and Fallbacks

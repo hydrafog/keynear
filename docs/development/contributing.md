@@ -23,6 +23,8 @@ On non-Nix Ubuntu hosts, install `protobuf-compiler`, `libdbus-1-dev`, and `pkg-
 
 Shared visual tokens (`Plus Jakarta Sans`, light and dark palettes, radial lighting and rim colors, typography scale, radii, spacing, elevation, press scales, and motion timings) live in `design/tokens.json`. It feeds both the web prototype stylesheet at `design/prototype/src/design-system/tokens.css` (paired with `scales.css`) and the Android token definitions at `android/designsystem/src/main/java/org/keynear/designsystem/Tokens.kt`.
 
+Use the web prototype at `design/prototype/` to iterate quickly before implementing visual changes in the actual project. Settle the design there, then carry it into the Android app and `design/tokens.json`, keeping both surfaces in parity through `scripts/validation/token-check.py`.
+
 The script `python3 scripts/validation/token-check.py` checks CSS (`tokens.css` and `scales.css`), JSON (`design/tokens.json`), and Kotlin (`Tokens.kt`, `Theme.kt`, and `plus_jakarta_sans.ttf`) parity across colors, shadows, typography, motion durations, press scales, and dimensions, and verifies that no raw visual literals leak into `Controls*.kt` or `KeynearIcons.kt`. It runs in the project quality script and CI.
 
 ## Structure and Size Caps

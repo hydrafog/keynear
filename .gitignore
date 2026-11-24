@@ -5,6 +5,8 @@ __pycache__/
 framework-context.txt
 design/prototype/node_modules/
 design/prototype/dist/
+design/website/node_modules/
+design/website/dist/
 target/
 android/.gradle/
 android/build/

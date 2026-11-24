@@ -20,7 +20,7 @@ The Linux daemon handles clipboard sync as follows.
 
 Android clipboard and one-time-code handling works as follows.
 
-- Clipboard items received from Linux land on the phone clipboard in the background through `KeynearForegroundService` (`CoreClient.syncClipboardStates`). Reading the phone clipboard respects Android 10+ input-focus rules. The **Copy phone clipboard** ongoing notification action or Quick Settings tile (`ClipboardTileService`) launches a focused translucent `ClipboardReadActivity`.
+- Clipboard items received from Linux land on the phone clipboard in the background through `KeynearForegroundService` (`CoreClient.syncClipboardStates`). Reading the phone clipboard respects Android 10+ input-focus rules. The **Send phone clipboard** ongoing notification action or Quick Settings tile (`ClipboardTileService`) launches a focused translucent `ClipboardReadActivity`.
 - One-time passwords on Android use Google Play Services SMS User Consent (`SmsRetrieverClient.startSmsUserConsent`). Four checks gate the feature.
   - `otpPassthroughEnabled`.
   - `SmsRetriever.SEND_PERMISSION`.

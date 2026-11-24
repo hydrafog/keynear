@@ -218,17 +218,19 @@ class KeynearForegroundService : Service() {
         val channel = NotificationChannel(
             CHANNEL_ID,
             getString(R.string.notification_channel_name),
-            NotificationManager.IMPORTANCE_LOW,
+            NotificationManager.IMPORTANCE_DEFAULT,
         ).apply {
             description = getString(R.string.notification_channel_description)
         }
         manager.createNotificationChannel(channel)
+        manager.deleteNotificationChannel(LEGACY_CHANNEL_ID)
     }
 
     companion object {
         private const val TAG = "KeynearForegroundSvc"
         private const val TRANSFER_POLL_INTERVAL_MS = 1000L
-        const val CHANNEL_ID = "keynear_continuity"
+        const val CHANNEL_ID = "keynear_continuity_v2"
+        private const val LEGACY_CHANNEL_ID = "keynear_continuity"
         const val NOTIFICATION_ID = 1001
         private const val CLIPBOARD_ACTION_REQUEST_CODE = 1002
         const val ACTION_SYNC_VISIBILITY = "org.keynear.app.action.SYNC_VISIBILITY"

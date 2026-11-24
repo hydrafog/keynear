@@ -57,3 +57,4 @@ mv "$tmp_file" "$output_path"
 trap - EXIT
 
 printf 'Exported %d files to %s\n' "${#files[@]}" "$output_path"
+
