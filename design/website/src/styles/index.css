@@ -143,8 +143,10 @@
 .kn-wireframe-grid {
   display: grid;
   grid-template-columns: 1fr;
-  border: 1px solid var(--kn-hairline);
+  gap: 1px;
+  background-color: var(--kn-hairline);
   border-radius: 16px;
+  box-shadow: var(--kn-shadow-surface), var(--kn-rim-surface);
   overflow: hidden;
 }
 
@@ -153,16 +155,12 @@
   flex-direction: column;
   justify-content: space-between;
   padding: 28px;
-  border-bottom: 1px solid var(--kn-hairline);
+  background-color: var(--kn-surface);
   transition: background-color 220ms ease;
 }
 
-.kn-wireframe-cell:last-child {
-  border-bottom: none;
-}
-
 .kn-wireframe-cell:hover {
-  background-color: color-mix(in srgb, var(--kn-surface) 55%, transparent);
+  background-color: var(--kn-surface-hover);
 }
 
 @media (min-width: 640px) {
@@ -173,25 +171,21 @@
   .kn-wireframe-cell {
     padding: 36px;
   }
-
-  .kn-wireframe-cell:nth-child(odd) {
-    border-right: 1px solid var(--kn-hairline);
-  }
-
-  .kn-wireframe-cell:nth-last-child(-n + 2) {
-    border-bottom: none;
-  }
 }
 
 .kn-wf-slot {
-  border: 1px dashed var(--kn-hairline);
-  transition: border-color 220ms ease, transform 320ms var(--kn-ease-spring);
+  background-color: var(--kn-surface-sunken);
+  box-shadow: var(--kn-rim-surface);
+  transition: box-shadow 220ms ease, transform 320ms var(--kn-ease-spring);
 }
 
-.kn-wireframe-cell:hover .kn-wf-slot,
+.kn-wireframe-cell:hover .kn-wf-slot {
+  transform: translateY(-4px);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--kn-accent) 45%, transparent);
+}
+
 .kn-wireframe-cell:hover .kn-wf-art {
   transform: translateY(-4px);
-  border-color: color-mix(in srgb, var(--kn-accent) 45%, var(--kn-hairline));
 }
 
 .kn-wf-art {

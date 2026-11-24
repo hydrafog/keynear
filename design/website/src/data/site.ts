@@ -41,11 +41,12 @@ export interface CapabilityItem {
   readonly detail: string;
 }
 
+const ASSET_BASE = import.meta.env.BASE_URL;
+
 export const LINKS = {
   github: 'https://github.com/hydrafog/keynear',
   issues: 'https://github.com/hydrafog/keynear/issues',
-  androidReleases: 'https://github.com/hydrafog/keynear/releases',
-  linuxReleases: 'https://github.com/hydrafog/keynear/releases',
+  releases: 'https://github.com/hydrafog/keynear/releases',
 } as const;
 
 export const NAV_ITEMS: readonly NavItem[] = [
@@ -77,8 +78,8 @@ export const PAIRING_STEPS: readonly PairingStep[] = [
 
 export const HERO_SCREENSHOT: HeroScreenshot = {
   src: {
-    light: '/screenshots/receive-light.png',
-    dark: '/screenshots/receive-dark.png',
+    light: `${ASSET_BASE}screenshots/receive-light.png`,
+    dark: `${ASSET_BASE}screenshots/receive-dark.png`,
   },
   alt: 'Keynear Android Receive screen showing nearby Linux computers',
   label: 'Hero screenshot',
@@ -88,8 +89,8 @@ export const SCREENSHOTS: readonly ScreenshotItem[] = [
   {
     id: 'receive',
     src: {
-      light: '/screenshots/receive-light.png',
-      dark: '/screenshots/receive-dark.png',
+      light: `${ASSET_BASE}screenshots/receive-light.png`,
+      dark: `${ASSET_BASE}screenshots/receive-dark.png`,
     },
     label: 'Receive screen',
     caption: 'Proximity discovery with Hidden, Paired, and Everyone nearby controls.',
@@ -98,8 +99,8 @@ export const SCREENSHOTS: readonly ScreenshotItem[] = [
   {
     id: 'send',
     src: {
-      light: '/screenshots/send-light.png',
-      dark: '/screenshots/send-dark.png',
+      light: `${ASSET_BASE}screenshots/send-light.png`,
+      dark: `${ASSET_BASE}screenshots/send-dark.png`,
     },
     label: 'Send screen',
     caption: 'Queue files, folders, clipboard contents, or text for paired computers.',
@@ -108,8 +109,8 @@ export const SCREENSHOTS: readonly ScreenshotItem[] = [
   {
     id: 'settings',
     src: {
-      light: '/screenshots/settings-light.png',
-      dark: '/screenshots/settings-dark.png',
+      light: `${ASSET_BASE}screenshots/settings-light.png`,
+      dark: `${ASSET_BASE}screenshots/settings-dark.png`,
     },
     label: 'Settings screen',
     caption: 'Permissions, save folder, clipboard sync, and appearance controls.',
