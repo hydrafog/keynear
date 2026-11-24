@@ -85,8 +85,8 @@
 }
 
 .kn-display {
-  font-size: clamp(2.5rem, 6.2vw, 4.5rem);
-  line-height: 1.04;
+  font-size: clamp(2rem, 6vw, 4.5rem);
+  line-height: 1.05;
   letter-spacing: -0.035em;
   font-weight: 800;
   text-wrap: balance;
@@ -300,7 +300,10 @@
 .kn-wheel-panel {
   position: absolute;
   inset: 0;
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   transform-origin: 50% 180%;
   will-change: transform, opacity;
@@ -333,7 +336,6 @@
 
 .kn-hero-stack {
   aspect-ratio: 9 / 19;
-  min-height: 320px;
 }
 
 .kn-stack-card {
@@ -352,14 +354,14 @@
 .kn-stack-card[data-slot='right'] {
   z-index: 20;
   cursor: pointer;
-  transform: translate3d(28px, 14px, 0) scale(0.94) rotate(3deg);
+  transform: translate3d(22px, 12px, 0) scale(0.94) rotate(3deg);
   filter: brightness(0.95);
 }
 
 .kn-stack-card[data-slot='left'] {
   z-index: 10;
   cursor: pointer;
-  transform: translate3d(-28px, 14px, 0) scale(0.94) rotate(-3deg);
+  transform: translate3d(-22px, 12px, 0) scale(0.94) rotate(-3deg);
   filter: brightness(0.95);
 }
 

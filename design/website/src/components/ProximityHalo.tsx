@@ -3,7 +3,7 @@ export function ProximityHalo() {
     <svg
       viewBox="0 0 420 420"
       aria-hidden="true"
-      className="kn-halo pointer-events-none absolute left-1/2 top-1/2 h-[340px] w-[340px] -translate-x-1/2 -translate-y-1/2 sm:h-[420px] sm:w-[420px]"
+      className="kn-halo pointer-events-none absolute left-1/2 top-1/2 h-[260px] w-[260px] -translate-x-1/2 -translate-y-1/2 sm:h-[360px] sm:w-[360px] lg:h-[420px] lg:w-[420px]"
     >
       <circle cx="210" cy="210" r="124" fill="none" stroke="var(--kn-accent)" strokeOpacity="0.24" strokeWidth="1.5" />
       <circle cx="210" cy="210" r="168" fill="none" stroke="var(--kn-accent)" strokeOpacity="0.18" strokeWidth="1.5" strokeDasharray="6 10" />

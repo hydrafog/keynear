@@ -2,8 +2,8 @@ import { LINKS } from '../data/site';
 
 export function Footer() {
   return (
-    <footer className="relative z-20 shrink-0">
-      <div className="mx-auto flex max-w-6xl items-center justify-center px-4 py-4 sm:px-6 lg:px-8">
+    <footer className="relative z-20 shrink-0 pb-[env(safe-area-inset-bottom)]">
+      <div className="mx-auto flex max-w-6xl items-center justify-center px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
         <div className="flex flex-wrap items-center justify-center gap-6 text-sm font-semibold kn-text-muted">
           <a
             href={LINKS.github}

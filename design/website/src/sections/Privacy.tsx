@@ -12,9 +12,9 @@ export function Privacy() {
   return (
     <section
       id="privacy"
-      className="mx-auto flex min-h-full w-full max-w-6xl items-center px-4 py-6 sm:px-6 lg:px-8"
+      className="mx-auto flex min-h-full w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8"
     >
-      <div className="grid w-full gap-8 lg:grid-cols-12 lg:items-center">
+      <div className="my-auto grid w-full gap-7 lg:grid-cols-12 lg:items-center lg:gap-8">
         <div className="min-w-0 lg:col-span-4">
           <h2 className="kn-title">Privacy policy</h2>
           <p className="kn-desc mt-2 max-w-[30ch] kn-text-secondary">

@@ -50,76 +50,78 @@ export function Hero({ theme }: HeroProps) {
   const [activeIndex, setActiveIndex] = useState(0);
 
   return (
-    <section className="mx-auto grid min-h-full w-full max-w-6xl items-center gap-8 px-4 py-6 sm:px-6 lg:grid-cols-12 lg:gap-10 lg:px-8">
-      <div className="min-w-0 lg:col-span-7">
-        <h1 className="kn-display kn-hero-in" style={delayStyle(40)}>
-          Android and Linux, right next door.
-        </h1>
+    <section className="mx-auto flex min-h-full w-full max-w-6xl items-center px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
+      <div className="my-auto grid w-full items-center gap-7 sm:gap-9 lg:grid-cols-12 lg:gap-10">
+        <div className="min-w-0 lg:col-span-7">
+          <h1 className="kn-display kn-hero-in" style={delayStyle(40)}>
+            Android and Linux, right next door.
+          </h1>
 
-        <p
-          className="kn-body kn-hero-in mt-5 max-w-[52ch] kn-text-secondary"
-          style={delayStyle(140)}
-        >
-          Send files, sync your clipboard, mirror notifications, and control desktop media
-          directly over Bluetooth and local Wi-Fi.
-        </p>
-
-        <div
-          className="kn-hero-in mt-8 flex flex-wrap items-center gap-3.5"
-          style={delayStyle(240)}
-        >
-          <a
-            href={LINKS.releases}
-            target="_blank"
-            rel="noreferrer"
-            className="kn-btn-primary kn-interactive kn-press inline-flex min-h-[48px] items-center gap-2 rounded-xl px-6 text-sm font-bold"
+          <p
+            className="kn-body kn-hero-in mt-4 max-w-[52ch] kn-text-secondary sm:mt-5"
+            style={delayStyle(140)}
           >
-            <Download className="h-4 w-4" aria-hidden="true" />
-            <span>Download Keynear</span>
-          </a>
+            Send files, sync your clipboard, mirror notifications, and control desktop media
+            directly over Bluetooth and local Wi-Fi.
+          </p>
 
-          <a
-            href={LINKS.github}
-            target="_blank"
-            rel="noreferrer"
-            className="kn-btn-tonal kn-interactive kn-press inline-flex min-h-[48px] items-center gap-2 rounded-xl px-6 text-sm font-bold"
+          <div
+            className="kn-hero-in mt-6 flex flex-wrap items-center gap-3 sm:mt-8 sm:gap-3.5"
+            style={delayStyle(240)}
           >
-            <GitHubMark />
-            <span>Read source code</span>
-          </a>
+            <a
+              href={LINKS.releases}
+              target="_blank"
+              rel="noreferrer"
+              className="kn-btn-primary kn-interactive kn-press inline-flex min-h-[44px] items-center gap-2 rounded-xl px-5 text-sm font-bold sm:min-h-[48px] sm:px-6"
+            >
+              <Download className="h-4 w-4" aria-hidden="true" />
+              <span>Download Keynear</span>
+            </a>
+
+            <a
+              href={LINKS.github}
+              target="_blank"
+              rel="noreferrer"
+              className="kn-btn-tonal kn-interactive kn-press inline-flex min-h-[44px] items-center gap-2 rounded-xl px-5 text-sm font-bold sm:min-h-[48px] sm:px-6"
+            >
+              <GitHubMark />
+              <span>Read source code</span>
+            </a>
+          </div>
         </div>
+
+        <figure
+          className="kn-hero-in relative mx-auto w-full max-w-[192px] py-2 sm:max-w-[236px] lg:col-span-5 lg:max-w-[248px]"
+          style={delayStyle(180)}
+        >
+          <ProximityHalo />
+          <div className="kn-hero-stack relative w-full">
+            {SCREENSHOTS.map((shot, idx) => {
+              const slot = slotFor(idx, activeIndex, SCREENSHOTS.length);
+              const isFront = slot === 'front';
+              return (
+                <button
+                  key={shot.id}
+                  type="button"
+                  data-slot={slot}
+                  aria-label={isFront ? `Keynear ${shot.label}` : `Show ${shot.label}`}
+                  aria-pressed={isFront}
+                  onClick={() => setActiveIndex(idx)}
+                  className="kn-stack-card kn-interactive block w-full rounded-3xl p-0 text-left"
+                >
+                  <ScreenshotFrame
+                    src={shot.src[theme]}
+                    alt={`Keynear ${shot.label}`}
+                    label={shot.label}
+                    icon={shot.icon}
+                  />
+                </button>
+              );
+            })}
+          </div>
+        </figure>
       </div>
-
-      <figure
-        className="kn-hero-in relative mx-auto w-full max-w-[228px] py-2 sm:max-w-[248px] lg:col-span-5"
-        style={delayStyle(180)}
-      >
-        <ProximityHalo />
-        <div className="kn-hero-stack relative w-full">
-          {SCREENSHOTS.map((shot, idx) => {
-            const slot = slotFor(idx, activeIndex, SCREENSHOTS.length);
-            const isFront = slot === 'front';
-            return (
-              <button
-                key={shot.id}
-                type="button"
-                data-slot={slot}
-                aria-label={isFront ? `Keynear ${shot.label}` : `Show ${shot.label}`}
-                aria-pressed={isFront}
-                onClick={() => setActiveIndex(idx)}
-                className="kn-stack-card kn-interactive block w-full rounded-3xl p-0 text-left"
-              >
-                <ScreenshotFrame
-                  src={shot.src[theme]}
-                  alt={`Keynear ${shot.label}`}
-                  label={shot.label}
-                  icon={shot.icon}
-                />
-              </button>
-            );
-          })}
-        </div>
-      </figure>
     </section>
   );
 }
