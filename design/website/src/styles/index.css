@@ -152,14 +152,13 @@
   justify-content: space-between;
   padding: 28px;
   border-radius: 16px;
-  background-color: var(--kn-canvas);
-  box-shadow: var(--kn-rim-surface);
-  transition: background-color 220ms ease, box-shadow 220ms ease;
+  background-color: var(--kn-surface);
+  box-shadow: var(--kn-shadow-surface), var(--kn-rim-surface);
+  transition: transform 320ms var(--kn-ease-spring), box-shadow 320ms var(--kn-ease-spring);
 }
 
 .kn-wireframe-cell:hover {
-  background-color: var(--kn-surface);
-  box-shadow: var(--kn-shadow-surface), var(--kn-rim-surface);
+  box-shadow: var(--kn-shadow-surface-hover), var(--kn-rim-surface);
 }
 
 @media (min-width: 640px) {
