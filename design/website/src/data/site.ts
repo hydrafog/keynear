@@ -121,7 +121,7 @@ export const SCREENSHOTS: readonly ScreenshotItem[] = [
 export const CAPABILITIES: readonly CapabilityItem[] = [
   {
     id: 'files',
-    src: '',
+    src: `${ASSET_BASE}wireframes/files.png`,
     alt: 'Wireframe illustration for direct file and folder drops',
     title: 'Direct file and folder drops',
     detail:
@@ -129,7 +129,7 @@ export const CAPABILITIES: readonly CapabilityItem[] = [
   },
   {
     id: 'clipboard',
-    src: '',
+    src: `${ASSET_BASE}wireframes/clipboard.png`,
     alt: 'Wireframe illustration for clipboard sync and 2FA pass-through',
     title: 'Clipboard and 2FA pass-through',
     detail:
@@ -137,7 +137,7 @@ export const CAPABILITIES: readonly CapabilityItem[] = [
   },
   {
     id: 'media',
-    src: '',
+    src: `${ASSET_BASE}wireframes/media.png`,
     alt: 'Wireframe illustration for mirrored notifications and desktop media controls',
     title: 'Mirrored notifications and media',
     detail:
@@ -145,7 +145,7 @@ export const CAPABILITIES: readonly CapabilityItem[] = [
   },
   {
     id: 'calls',
-    src: '',
+    src: `${ASSET_BASE}wireframes/calls.png`,
     alt: 'Wireframe illustration for call handoff and lock-screen safety',
     title: 'Call handoff and lock-screen safety',
     detail:
