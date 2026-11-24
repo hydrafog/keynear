@@ -56,6 +56,7 @@ export function applyAccent(hex: string, dark: boolean) {
 
   const ink = dark ? hex : `color-mix(in oklch, ${hex} 72%, #071A21)`;
   const tint = (percent: number, base: string) => `color-mix(in oklch, ${hex} ${percent}%, ${base})`;
+  const deeper = (percent: number) => `color-mix(in oklch, ${hex} ${percent}%, #000000)`;
   const alpha = (percent: number) => `color-mix(in oklch, ${hex} ${percent}%, transparent)`;
   const tonal = tint(14, dark ? '#132C35' : '#FFFFFF');
   const values: Record<string, string> = {
@@ -78,10 +79,10 @@ export function applyAccent(hex: string, dark: boolean) {
     '--kn-brand-aura': `radial-gradient(circle, ${alpha(24)} 0%, ${alpha(7)} 46%, transparent 72%)`,
     '--kn-grad-accent':
       `radial-gradient(in oklch 95% 110% at 18% -10%, ${tint(42, '#FFFFFF')} 0%, transparent 56%), ` +
-      `radial-gradient(in oklch 85% 110% at 88% 115%, ${tint(36, '#0080E8')} 0%, transparent 60%)`,
+      `radial-gradient(in oklch 85% 110% at 88% 115%, ${deeper(65)} 0%, transparent 60%)`,
     '--kn-grad-accent-hover':
       `radial-gradient(in oklch 100% 115% at 20% -10%, ${tint(54, '#FFFFFF')} 0%, transparent 58%), ` +
-      `radial-gradient(in oklch 85% 110% at 88% 115%, ${tint(40, '#00A0F0')} 0%, transparent 62%)`,
+      `radial-gradient(in oklch 85% 110% at 88% 115%, ${deeper(60)} 0%, transparent 62%)`,
     '--kn-grad-accent-tonal': `radial-gradient(in oklch 110% 90% at 15% 0%, ${tint(dark ? 14 : 65, dark ? hex : '#FFFFFF')} 0%, transparent 68%)`,
     '--kn-on-brand-tonal': ink,
     '--kn-grad-backdrop':

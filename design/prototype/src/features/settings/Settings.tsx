@@ -247,7 +247,7 @@ export function SettingsScreen() {
                       onClick={() => colorInputRef.current?.click()}
                       aria-label="Custom accent color"
                       aria-pressed={isCustomAccent}
-                      className={`relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-kn-xl border-2 border-[color:var(--kn-focus-ring)] bg-transparent transition-transform duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) ${FOCUS_RING} ${
+                      className={`relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-kn-xl transition-transform duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) kn-switch-track-off ${FOCUS_RING} ${
                         isCustomAccent
                           ? 'ring-2 ring-[color:var(--kn-focus-ring)] ring-offset-2 ring-offset-[var(--kn-surface)]'
                           : ''
