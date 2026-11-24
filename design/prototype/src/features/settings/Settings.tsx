@@ -1,10 +1,16 @@
+import { useRef } from 'react';
 import { useApp } from '../../state/AppProvider';
-import { X, ChevronDown, ChevronRight, ChevronUp } from 'lucide-react';
+import { Check, Palette, X, ChevronDown, ChevronRight, ChevronUp } from 'lucide-react';
 import { Switch } from '../../design-system/Switch';
 import { SettingRow, SettingsSection } from '../../design-system/Setting';
+import { ACCENT_PRESETS, DEFAULT_ACCENT } from '../../lib/accent';
+
+const FOCUS_RING = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kn-focus';
 
 export function SettingsScreen() {
-  const { darkMode, setDarkMode, setSubScreen, config, setConfig, showMimeEditor, setShowMimeEditor, newMimeInput, setNewMimeInput, showSnackbar, missingPermissionsCount, addIgnoredMime, removeIgnoredMime, renderStamp } = useApp();
+  const { darkMode, setDarkMode, accentColor, setAccentColor, setSubScreen, config, setConfig, showMimeEditor, setShowMimeEditor, newMimeInput, setNewMimeInput, showSnackbar, missingPermissionsCount, addIgnoredMime, removeIgnoredMime, renderStamp } = useApp();
+  const colorInputRef = useRef<HTMLInputElement | null>(null);
+  const isCustomAccent = !ACCENT_PRESETS.some((preset) => preset.hex.toLowerCase() === accentColor.toLowerCase());
   return (
             <div className=" space-y-6">
 
@@ -211,6 +217,62 @@ export function SettingsScreen() {
                     onChange={(val) => setDarkMode(val)}
                   />
                 </SettingRow>
+
+                <div className="rounded-kn-xl px-4 py-3.5">
+                  <div className="text-kn-base font-kn-semibold">Accent color</div>
+                  <div className="mt-0.5 text-kn-xs kn-text-muted">Choose the app accent color</div>
+                  <div role="group" aria-label="Accent color" className="mt-3 flex items-center gap-2.5">
+                    {ACCENT_PRESETS.map((preset) => {
+                      const selected = accentColor.toLowerCase() === preset.hex.toLowerCase();
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => setAccentColor(preset.hex)}
+                          aria-label={`${preset.name} accent color`}
+                          aria-pressed={selected}
+                          className={`relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-kn-xl transition-transform duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) ${FOCUS_RING} ${
+                            selected
+                              ? 'ring-2 ring-[color:var(--kn-focus-ring)] ring-offset-2 ring-offset-[var(--kn-surface)]'
+                              : ''
+                          }`}
+                          style={{ backgroundColor: preset.hex }}
+                        >
+                          {selected && <Check className="h-5 w-5 text-white" aria-hidden="true" />}
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => colorInputRef.current?.click()}
+                      aria-label="Custom accent color"
+                      aria-pressed={isCustomAccent}
+                      className={`relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-kn-xl border-2 border-[color:var(--kn-focus-ring)] bg-transparent transition-transform duration-(--kn-duration-press) ease-(--ease-kn-tactile) active:scale-(--kn-press-95) ${FOCUS_RING} ${
+                        isCustomAccent
+                          ? 'ring-2 ring-[color:var(--kn-focus-ring)] ring-offset-2 ring-offset-[var(--kn-surface)]'
+                          : ''
+                      }`}
+                    >
+                      <Palette className="h-5 w-5 kn-loading-text" aria-hidden="true" />
+                      {isCustomAccent && (
+                        <span
+                          aria-hidden="true"
+                          className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-[var(--kn-surface)]"
+                          style={{ backgroundColor: accentColor }}
+                        />
+                      )}
+                      <input
+                        ref={colorInputRef}
+                        type="color"
+                        value={isCustomAccent ? accentColor : DEFAULT_ACCENT}
+                        onChange={(e) => setAccentColor(e.target.value)}
+                        className="sr-only"
+                        tabIndex={-1}
+                        aria-hidden="true"
+                      />
+                    </button>
+                  </div>
+                </div>
               </SettingsSection>
             </div>
   );

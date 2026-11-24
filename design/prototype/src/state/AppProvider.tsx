@@ -13,6 +13,7 @@ import {
 import { INITIAL_CONFIG, INITIAL_NEARBY_PEERS, INITIAL_PAIRED_DEVICES, INITIAL_PERMISSIONS, INITIAL_SEND_QUEUE, INITIAL_TRANSFERS } from '../data';
 import { useCarinaState } from './useCarinaState';
 import { pluralize } from '../lib/format';
+import { applyAccent, DEFAULT_ACCENT } from '../lib/accent';
 import type {
   ActiveTab,
   OtpPrompt,
@@ -30,6 +31,7 @@ export function useAppState() {
   const renderStamp = renderStampRef.current;
 
   const [darkMode, setDarkMode] = useState(false);
+  const [accentColor, setAccentColor] = useState(DEFAULT_ACCENT);
   const [activeTab, setActiveTab] = useState<ActiveTab>('receive');
   const [subScreen, setSubScreen] = useState<SubScreen>(null);
 
@@ -460,8 +462,12 @@ export function useAppState() {
     document.documentElement.dataset.knTheme = darkMode ? 'dark' : 'light';
   }, [darkMode]);
 
+  useEffect(() => {
+    applyAccent(accentColor, darkMode);
+  }, [accentColor, darkMode]);
+
   return {
-    darkMode, setDarkMode, activeTab, setActiveTab, subScreen, setSubScreen, shadeOpen, setShadeOpen, shareSheetOpen, setShareSheetOpen, lockScreenOpen, setLockScreenOpen, isDeviceLocked, setIsDeviceLocked, pendingUnlockAction, setPendingUnlockAction, config, setConfig, permissions, setPermissions, pairedDevices, setPairedDevices, nearbyPeers, setNearbyPeers, everyoneNearbySecondsLeft, setEveryoneNearbySecondsLeft, sendQueue, setSendQueue, showTextComposer, setShowTextComposer, customTextSnippet, setCustomTextSnippet, selectedDeviceId, setSelectedDeviceId, editingName, setEditingName, confirmUnpairId, setConfirmUnpairId, showMimeEditor, setShowMimeEditor, newMimeInput, setNewMimeInput, snackbarMessage, setSnackbarMessage, showAllDevicesSheet, setShowAllDevicesSheet, transfers, setTransfers, dismissedTransferIds, dismissTransfers, expandedNotifIds, setExpandedNotifIds, pairingPrompt, setPairingPrompt, otpPrompt, setOtpPrompt, showSnackbar, missingPermissionsCount, activeTransfer, pendingShadeCount, formatBytes, formatCountdown, handleVisibilityChange, handleCycleQuickSettingsTile, handleUnlockDevice, triggerIncomingDrop, handleTransferConsent, handleCancelTransfer, dismissTransferNotification, triggerBlePairing, handlePairingDecision, triggerSmsOtpConsent, handlePushOtp, handleSendClipboardFromTile, startOutgoingTransfer, selectedDevice, openDeviceDetail, saveDeviceName, togglePerDeviceAutoAccept, unpairDevice, addIgnoredMime, removeIgnoredMime, mapPins, activePct, visibilityIndex, renderStamp, ...carina,
+    darkMode, setDarkMode, accentColor, setAccentColor, activeTab, setActiveTab, subScreen, setSubScreen, shadeOpen, setShadeOpen, shareSheetOpen, setShareSheetOpen, lockScreenOpen, setLockScreenOpen, isDeviceLocked, setIsDeviceLocked, pendingUnlockAction, setPendingUnlockAction, config, setConfig, permissions, setPermissions, pairedDevices, setPairedDevices, nearbyPeers, setNearbyPeers, everyoneNearbySecondsLeft, setEveryoneNearbySecondsLeft, sendQueue, setSendQueue, showTextComposer, setShowTextComposer, customTextSnippet, setCustomTextSnippet, selectedDeviceId, setSelectedDeviceId, editingName, setEditingName, confirmUnpairId, setConfirmUnpairId, showMimeEditor, setShowMimeEditor, newMimeInput, setNewMimeInput, snackbarMessage, setSnackbarMessage, showAllDevicesSheet, setShowAllDevicesSheet, transfers, setTransfers, dismissedTransferIds, dismissTransfers, expandedNotifIds, setExpandedNotifIds, pairingPrompt, setPairingPrompt, otpPrompt, setOtpPrompt, showSnackbar, missingPermissionsCount, activeTransfer, pendingShadeCount, formatBytes, formatCountdown, handleVisibilityChange, handleCycleQuickSettingsTile, handleUnlockDevice, triggerIncomingDrop, handleTransferConsent, handleCancelTransfer, dismissTransferNotification, triggerBlePairing, handlePairingDecision, triggerSmsOtpConsent, handlePushOtp, handleSendClipboardFromTile, startOutgoingTransfer, selectedDevice, openDeviceDetail, saveDeviceName, togglePerDeviceAutoAccept, unpairDevice, addIgnoredMime, removeIgnoredMime, mapPins, activePct, visibilityIndex, renderStamp, ...carina,
   };
 }
 

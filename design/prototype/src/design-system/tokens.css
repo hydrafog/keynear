@@ -184,15 +184,15 @@
   --kn-brand-accent-border: rgba(158, 226, 240, 0.55);
   --kn-brand-surface-rim: inset 0 0 0 1px rgba(10, 44, 56, 0.08);
   --kn-brand-tonal-rim: inset 0 0 0 1px rgba(10, 44, 56, 0.09);
-  --kn-brand-accent-rim: inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 0 0 1px rgba(14, 116, 138, 0.22);
+  --kn-brand-accent-rim: inset 0 1px 1px rgba(165, 248, 255, 0.50), inset 0 0 0 1px rgba(8, 128, 152, 0.28);
   --kn-grad-backdrop: radial-gradient(90% 60% at 15% 0%, rgba(74, 187, 213, 0.14) 0%, transparent 65%), radial-gradient(70% 55% at 88% 100%, rgba(92, 178, 232, 0.12) 0%, transparent 62%);
   --kn-grad-surface: radial-gradient(120% 75% at 50% 0%, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0) 68%);
   --kn-grad-surface-hover: radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.96) 0%, rgba(74, 187, 213, 0.07) 100%);
   --kn-grad-surface-tonal: radial-gradient(110% 80% at 25% 0%, rgba(255, 255, 255, 0.55) 0%, transparent 72%);
   --kn-grad-sheet: radial-gradient(100% 45% at 50% 0%, rgba(255, 255, 255, 0.95) 0%, transparent 75%);
   --kn-grad-well: none;
-  --kn-grad-accent: radial-gradient(95% 110% at 18% -10%, rgba(205, 250, 255, 0.58) 0%, transparent 56%), radial-gradient(85% 110% at 88% 115%, rgba(96, 178, 240, 0.42) 0%, transparent 60%);
-  --kn-grad-accent-hover: radial-gradient(100% 115% at 20% -10%, rgba(224, 252, 255, 0.72) 0%, transparent 58%), radial-gradient(85% 110% at 88% 115%, rgba(114, 198, 248, 0.45) 0%, transparent 62%);
+  --kn-grad-accent: radial-gradient(in oklch 95% 110% at 18% -10%, rgba(110, 244, 255, 0.42) 0%, transparent 56%), radial-gradient(in oklch 85% 110% at 88% 115%, rgba(28, 152, 235, 0.36) 0%, transparent 60%);
+  --kn-grad-accent-hover: radial-gradient(in oklch 100% 115% at 20% -10%, rgba(145, 248, 255, 0.54) 0%, transparent 58%), radial-gradient(in oklch 85% 110% at 88% 115%, rgba(36, 166, 245, 0.40) 0%, transparent 62%);
   --kn-grad-accent-tonal: radial-gradient(110% 90% at 15% 0%, rgba(255, 255, 255, 0.65) 0%, transparent 68%);
   --kn-on-brand-tonal: #084B5B;
   --kn-grad-thumb: radial-gradient(110% 90% at 30% 0%, rgba(255, 255, 255, 0.9) 0%, transparent 70%);
@@ -205,7 +205,7 @@
   --kn-brand-danger-rim: inset 0 0 0 1px rgba(202, 36, 77, 0.16);
   --kn-grad-snackbar: radial-gradient(110% 90% at 20% 0%, rgba(190, 240, 250, 0.10) 0%, transparent 70%);
   --kn-brand-aura: radial-gradient(circle, rgba(74, 187, 213, 0.24) 0%, rgba(92, 190, 232, 0.07) 46%, transparent 72%);
-  --kn-brand-depth-accent: 0 6px 18px -6px rgba(74, 187, 213, 0.52), 0 1px 2px rgba(5, 31, 39, 0.08);
+  --kn-brand-depth-accent: 0 6px 18px -5px rgba(0, 192, 228, 0.56), 0 1px 2px rgba(5, 31, 39, 0.10);
   --kn-brand-depth-accent-pressed: 0 2px 6px -2px rgba(74, 187, 213, 0.35);
   --kn-sys-shade-bg: #E3ECEF;
   --kn-sys-notif-bg: #F8FCFD;
@@ -226,7 +226,7 @@
   --kn-fog-surface-bg: linear-gradient(165deg, rgba(255, 255, 255, 0.84) 0%, rgba(243, 249, 251, 0.80) 100%);
   --kn-fog-surface-hover-bg: linear-gradient(165deg, rgba(255, 255, 255, 0.94) 0%, rgba(238, 247, 250, 0.90) 100%);
   --kn-fog-sheet-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.84) 0%, rgba(240, 247, 250, 0.80) 100%);
-  --kn-accent-fill: #4ABBD5;
+  --kn-accent-fill: oklch(74.4% 0.145 212); /* #20BCDA */
 }
 
 [data-kn-theme='dark'] {
@@ -284,15 +284,15 @@
   --kn-brand-accent-border: rgba(158, 226, 240, 0.30);
   --kn-brand-surface-rim: inset 0 1px 0 rgba(200, 242, 252, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   --kn-brand-tonal-rim: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  --kn-brand-accent-rim: inset 0 1px 0 rgba(255, 255, 255, 0.50), inset 0 0 0 1px rgba(170, 242, 255, 0.28);
+  --kn-brand-accent-rim: inset 0 1px 1px rgba(155, 246, 255, 0.45), inset 0 0 0 1px rgba(90, 234, 255, 0.34);
   --kn-grad-backdrop: radial-gradient(85% 55% at 18% 0%, rgba(74, 187, 213, 0.10) 0%, transparent 64%), radial-gradient(70% 50% at 85% 100%, rgba(56, 152, 208, 0.08) 0%, transparent 62%);
   --kn-grad-surface: radial-gradient(110% 70% at 50% 0%, rgba(190, 240, 250, 0.05) 0%, transparent 68%);
   --kn-grad-surface-hover: radial-gradient(110% 75% at 50% 0%, rgba(74, 187, 213, 0.11) 0%, transparent 72%);
   --kn-grad-surface-tonal: radial-gradient(110% 80% at 30% 0%, rgba(190, 240, 250, 0.04) 0%, transparent 70%);
   --kn-grad-sheet: radial-gradient(100% 45% at 50% 0%, rgba(190, 240, 250, 0.06) 0%, transparent 72%);
   --kn-grad-well: none;
-  --kn-grad-accent: radial-gradient(95% 110% at 18% -10%, rgba(215, 252, 255, 0.48) 0%, transparent 56%), radial-gradient(85% 110% at 88% 115%, rgba(92, 182, 240, 0.36) 0%, transparent 60%);
-  --kn-grad-accent-hover: radial-gradient(100% 115% at 20% -10%, rgba(230, 254, 255, 0.62) 0%, transparent 58%), radial-gradient(85% 110% at 88% 115%, rgba(114, 202, 248, 0.42) 0%, transparent 62%);
+  --kn-grad-accent: radial-gradient(in oklch 95% 110% at 18% -10%, rgba(110, 244, 255, 0.36) 0%, transparent 56%), radial-gradient(in oklch 85% 110% at 88% 115%, rgba(24, 150, 235, 0.34) 0%, transparent 60%);
+  --kn-grad-accent-hover: radial-gradient(in oklch 100% 115% at 20% -10%, rgba(145, 248, 255, 0.48) 0%, transparent 58%), radial-gradient(in oklch 85% 110% at 88% 115%, rgba(36, 168, 248, 0.40) 0%, transparent 62%);
   --kn-grad-accent-tonal: radial-gradient(110% 85% at 20% 0%, rgba(74, 187, 213, 0.14) 0%, transparent 70%);
   --kn-on-brand-tonal: #9BE6F5;
   --kn-grad-thumb: radial-gradient(110% 90% at 30% 0%, rgba(255, 255, 255, 0.7) 0%, transparent 70%);
@@ -305,7 +305,7 @@
   --kn-brand-danger-rim: inset 0 0 0 1px rgba(255, 148, 157, 0.22);
   --kn-grad-snackbar: radial-gradient(110% 90% at 20% 0%, rgba(190, 240, 250, 0.07) 0%, transparent 70%);
   --kn-brand-aura: radial-gradient(circle, rgba(74, 187, 213, 0.20) 0%, rgba(74, 187, 213, 0.05) 48%, transparent 72%);
-  --kn-brand-depth-accent: 0 8px 24px -8px rgba(74, 187, 213, 0.48);
+  --kn-brand-depth-accent: 0 8px 24px -7px rgba(0, 196, 232, 0.54);
   --kn-brand-depth-accent-pressed: 0 2px 8px -2px rgba(74, 187, 213, 0.32);
   --kn-sys-shade-bg: #0B0F12;
   --kn-sys-notif-bg: #151B21;
@@ -328,5 +328,5 @@
   --kn-fog-sheet-bg: linear-gradient(180deg, rgba(26, 33, 40, 0.84) 0%, rgba(16, 22, 27, 0.80) 100%);
   --kn-dark-canvas-neutral: #0D1115;
   --kn-depth-snackbar: 0 6px 18px -6px rgba(0, 0, 0, 0.6);
-  --kn-accent-fill: #4ABBD5;
+  --kn-accent-fill: oklch(74.4% 0.145 212); /* #20BCDA */
 }
