@@ -44,21 +44,20 @@ function slotFor(index: number, activeIndex: number, total: number): StackSlot {
 
 export interface HeroProps {
   theme: ThemeMode;
-  onDownload: () => void;
 }
 
-export function Hero({ theme, onDownload }: HeroProps) {
+export function Hero({ theme }: HeroProps) {
   const [activeIndex, setActiveIndex] = useState(0);
 
   return (
-    <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-10 sm:px-6 sm:pt-16 lg:grid-cols-12 lg:gap-10 lg:px-8 lg:pb-24 lg:pt-20">
+    <section className="mx-auto grid min-h-full w-full max-w-6xl items-center gap-8 px-4 py-6 sm:px-6 lg:grid-cols-12 lg:gap-10 lg:px-8">
       <div className="min-w-0 lg:col-span-7">
         <h1 className="kn-display kn-hero-in" style={delayStyle(40)}>
           Android and Linux, right next door.
         </h1>
 
         <p
-          className="kn-body kn-hero-in mt-6 max-w-[52ch] kn-text-secondary"
+          className="kn-body kn-hero-in mt-5 max-w-[52ch] kn-text-secondary"
           style={delayStyle(140)}
         >
           Send files, sync your clipboard, mirror notifications, and control desktop media
@@ -66,17 +65,18 @@ export function Hero({ theme, onDownload }: HeroProps) {
         </p>
 
         <div
-          className="kn-hero-in mt-9 flex flex-wrap items-center gap-3.5"
+          className="kn-hero-in mt-8 flex flex-wrap items-center gap-3.5"
           style={delayStyle(240)}
         >
-          <button
-            type="button"
-            onClick={onDownload}
-            className="kn-btn-primary kn-interactive kn-press inline-flex min-h-[48px] cursor-pointer items-center gap-2 rounded-xl px-6 text-sm font-bold"
+          <a
+            href={LINKS.releases}
+            target="_blank"
+            rel="noreferrer"
+            className="kn-btn-primary kn-interactive kn-press inline-flex min-h-[48px] items-center gap-2 rounded-xl px-6 text-sm font-bold"
           >
             <Download className="h-4 w-4" aria-hidden="true" />
             <span>Download Keynear</span>
-          </button>
+          </a>
 
           <a
             href={LINKS.github}
@@ -91,7 +91,7 @@ export function Hero({ theme, onDownload }: HeroProps) {
       </div>
 
       <figure
-        className="kn-hero-in relative mx-auto w-full max-w-[260px] py-4 sm:max-w-[272px] lg:col-span-5"
+        className="kn-hero-in relative mx-auto w-full max-w-[228px] py-2 sm:max-w-[248px] lg:col-span-5"
         style={delayStyle(180)}
       >
         <ProximityHalo />

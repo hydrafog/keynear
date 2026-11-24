@@ -1,31 +1,31 @@
 import { Download, Menu, Moon, Sun, X } from 'lucide-react';
 import { useState } from 'react';
 import { KeynearIcon } from '../components/KeynearIcon';
-import { NAV_ITEMS } from '../data/site';
+import { LINKS, SLIDES } from '../data/site';
 
 export interface HeaderProps {
   darkMode: boolean;
+  activeSlide: number;
   onToggleTheme: () => void;
-  onNavigate: (id: string) => void;
+  onSelectSlide: (index: number) => void;
 }
 
-export function Header({ darkMode, onToggleTheme, onNavigate }: HeaderProps) {
+export function Header({ darkMode, activeSlide, onToggleTheme, onSelectSlide }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const handleNavigate = (id: string) => {
+  const handleSelect = (index: number) => {
     setMenuOpen(false);
-    onNavigate(id);
+    onSelectSlide(index);
   };
 
   return (
-    <header className="kn-nav-bar sticky top-0">
+    <header className="kn-nav-bar relative shrink-0">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <a
           href="#main-content"
           onClick={(e) => {
             e.preventDefault();
-            setMenuOpen(false);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            handleSelect(0);
           }}
           className="kn-interactive group flex items-center gap-2.5 rounded-xl py-1 pr-2 text-lg font-extrabold tracking-tight"
         >
@@ -34,16 +34,23 @@ export function Header({ darkMode, onToggleTheme, onNavigate }: HeaderProps) {
         </a>
 
         <nav aria-label="Primary" className="hidden items-center gap-5 md:flex">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => handleNavigate(item.id)}
-              className="kn-nav-link kn-interactive cursor-pointer rounded-lg px-2 py-2 text-sm font-semibold kn-text-secondary transition-colors hover:kn-text-primary"
-            >
-              {item.label}
-            </button>
-          ))}
+          {SLIDES.map((slide) => {
+            const active = activeSlide === slide.index;
+            return (
+              <button
+                key={slide.id}
+                type="button"
+                aria-current={active ? 'page' : undefined}
+                data-active={active}
+                onClick={() => handleSelect(slide.index)}
+                className={`kn-nav-link kn-interactive cursor-pointer rounded-lg px-2 py-2 text-sm font-semibold transition-colors ${
+                  active ? 'kn-text-primary' : 'kn-text-secondary hover:kn-text-primary'
+                }`}
+              >
+                {slide.label}
+              </button>
+            );
+          })}
         </nav>
 
         <div className="flex items-center gap-2">
@@ -60,14 +67,15 @@ export function Header({ darkMode, onToggleTheme, onNavigate }: HeaderProps) {
             )}
           </button>
 
-          <button
-            type="button"
-            onClick={() => handleNavigate('download')}
+          <a
+            href={LINKS.releases}
+            target="_blank"
+            rel="noreferrer"
             className="kn-btn-primary kn-interactive kn-press inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl px-4 text-sm font-bold"
           >
             <Download className="h-4 w-4" aria-hidden="true" />
             <span>Download</span>
-          </button>
+          </a>
 
           <button
             type="button"
@@ -86,16 +94,20 @@ export function Header({ darkMode, onToggleTheme, onNavigate }: HeaderProps) {
       </div>
 
       {menuOpen && (
-        <nav aria-label="Mobile" className="mx-auto max-w-6xl px-4 pb-4 pt-2 md:hidden">
+        <nav
+          aria-label="Mobile"
+          className="absolute inset-x-0 top-16 z-30 mx-auto max-w-6xl px-4 pb-4 pt-2 md:hidden"
+        >
           <div className="kn-surface flex flex-col gap-1 rounded-2xl p-2">
-            {NAV_ITEMS.map((item) => (
+            {SLIDES.map((slide) => (
               <button
-                key={item.id}
+                key={slide.id}
                 type="button"
-                onClick={() => handleNavigate(item.id)}
+                aria-current={activeSlide === slide.index ? 'page' : undefined}
+                onClick={() => handleSelect(slide.index)}
                 className="kn-interactive min-h-[44px] cursor-pointer rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold kn-text-secondary hover:kn-text-primary"
               >
-                {item.label}
+                {slide.label}
               </button>
             ))}
           </div>

@@ -30,7 +30,7 @@ export function ScreenshotFrame({
       className={`kn-frame kn-card-lift relative w-full overflow-hidden rounded-3xl ${
         float ? 'kn-hero-float' : ''
       }`}
-      style={{ aspectRatio: '9 / 19', minHeight: '360px' }}
+      style={{ aspectRatio: '9 / 19', minHeight: '320px' }}
     >
       {showImage ? (
         <img

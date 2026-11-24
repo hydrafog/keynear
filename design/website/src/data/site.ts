@@ -3,8 +3,10 @@ import { Inbox, Send, SlidersHorizontal } from 'lucide-react';
 
 export type ThemeMode = 'light' | 'dark';
 
-export interface NavItem {
-  readonly id: string;
+export interface SlideItem {
+  readonly id: 'overview' | 'how-it-works';
+  readonly index: number;
+  readonly step: string;
   readonly label: string;
 }
 
@@ -42,9 +44,9 @@ export const LINKS = {
   releases: 'https://github.com/hydrafog/keynear/releases',
 } as const;
 
-export const NAV_ITEMS: readonly NavItem[] = [
-  { id: 'how-it-works', label: 'How it works' },
-  { id: 'capabilities', label: 'Capabilities' },
+export const SLIDES: readonly SlideItem[] = [
+  { id: 'overview', index: 0, step: '01', label: 'Overview' },
+  { id: 'how-it-works', index: 1, step: '02', label: 'How it works' },
 ];
 
 export const PAIRING_STEPS: readonly PairingStep[] = [
