@@ -39,7 +39,7 @@ export function Header({ darkMode, activeSlide, onToggleTheme, onSelectSlide }: 
 
   return (
     <header className="kn-nav-bar relative shrink-0">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-6 sm:px-6 lg:px-8">
         <a
           href="#main-content"
           onClick={(e) => {

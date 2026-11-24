@@ -5,16 +5,16 @@ export function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="mx-auto flex min-h-full w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8"
+      className="mx-auto flex min-h-full w-full max-w-6xl px-6 pb-8 pt-4 sm:px-6 sm:py-6 lg:px-8"
     >
-      <div className="my-auto grid w-full gap-7 lg:grid-cols-12 lg:items-center lg:gap-8">
+      <div className="my-auto grid w-full gap-5 sm:gap-7 lg:grid-cols-12 lg:items-center lg:gap-8">
         <div className="min-w-0 lg:col-span-4">
           <h2 className="kn-title">How it works</h2>
-          <p className="kn-desc mt-2 max-w-[30ch] kn-text-secondary">
+          <p className="kn-desc mt-1.5 max-w-[30ch] kn-text-secondary sm:mt-2">
             No accounts or cloud relays.
           </p>
 
-          <ol className="mt-6 space-y-4">
+          <ol className="mt-4 space-y-3 sm:mt-6 sm:space-y-4">
             {PAIRING_STEPS.map((item) => (
               <li key={item.step} className="flex items-start gap-3.5">
                 <span

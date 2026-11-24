@@ -15,7 +15,7 @@ export function WireframeSlot({ src, alt }: WireframeSlotProps) {
   const showImage = Boolean(src) && !failed;
 
   return (
-    <div className="mb-4 flex h-24 w-full items-center justify-center sm:h-28">
+    <div className="mb-3 flex h-20 w-full items-center justify-center sm:mb-4 sm:h-28">
       {showImage ? (
         <img
           src={src}
