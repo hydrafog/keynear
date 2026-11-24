@@ -34,7 +34,6 @@ export function HowItWorks() {
         </div>
 
         <div className="min-w-0 lg:col-span-8">
-          <h3 className="kn-heading mb-4 kn-text-secondary">Everything stays on your Wi-Fi</h3>
           <div className="kn-wireframe-grid">
             {CAPABILITIES.map(({ id, src, alt, title, detail }) => (
               <article key={id} className="kn-wireframe-cell">

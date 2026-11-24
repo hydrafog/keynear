@@ -4,10 +4,16 @@ import { Inbox, Send, SlidersHorizontal } from 'lucide-react';
 export type ThemeMode = 'light' | 'dark';
 
 export interface SlideItem {
-  readonly id: 'overview' | 'how-it-works';
+  readonly id: 'overview' | 'how-it-works' | 'privacy';
   readonly index: number;
   readonly step: string;
   readonly label: string;
+}
+
+export interface PrivacyItem {
+  readonly id: 'telemetry' | 'keys' | 'memory' | 'permissions';
+  readonly title: string;
+  readonly detail: string;
 }
 
 export interface PairingStep {
@@ -47,6 +53,34 @@ export const LINKS = {
 export const SLIDES: readonly SlideItem[] = [
   { id: 'overview', index: 0, step: '01', label: 'Overview' },
   { id: 'how-it-works', index: 1, step: '02', label: 'How it works' },
+  { id: 'privacy', index: 2, step: '03', label: 'Privacy' },
+];
+
+export const PRIVACY_ITEMS: readonly PrivacyItem[] = [
+  {
+    id: 'telemetry',
+    title: 'Zero telemetry or cloud',
+    detail:
+      'Keynear collects no analytics, usage metrics, or crash reports. Discovery and transfers stay on BLE and local Wi-Fi QUIC.',
+  },
+  {
+    id: 'keys',
+    title: 'Hardware-backed secrets',
+    detail:
+      'X25519, Ed25519, and pairing keys stay inside Android Keystore and Linux Secret Service. Unpairing wipes metadata and secrets.',
+  },
+  {
+    id: 'memory',
+    title: 'Memory-only continuity',
+    detail:
+      'Mirrored notifications, call numbers, media metadata, and OTP codes are never written to disk, config files, or logs.',
+  },
+  {
+    id: 'permissions',
+    title: 'Minimal OS permissions',
+    detail:
+      'Never requests fine location, READ_SMS, or broad storage access. Password-manager and sensitive clipboard MIME types are skipped.',
+  },
 ];
 
 export const PAIRING_STEPS: readonly PairingStep[] = [

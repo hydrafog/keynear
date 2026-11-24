@@ -5,6 +5,7 @@ import { Footer } from './sections/Footer';
 import { Header } from './sections/Header';
 import { Hero } from './sections/Hero';
 import { HowItWorks } from './sections/HowItWorks';
+import { Privacy } from './sections/Privacy';
 
 const WHEEL_COOLDOWN_MS = 540;
 const WHEEL_THRESHOLD = 18;
@@ -134,6 +135,17 @@ export default function App() {
           className="kn-wheel-panel"
         >
           <HowItWorks />
+        </div>
+
+        <div
+          ref={(node) => {
+            panelRefs.current[2] = node;
+          }}
+          data-position={panelPosition(2)}
+          aria-hidden={activeSlide !== 2}
+          className="kn-wheel-panel"
+        >
+          <Privacy />
         </div>
       </main>
 
