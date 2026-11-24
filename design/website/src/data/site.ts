@@ -23,14 +23,7 @@ export interface ScreenshotItem {
   readonly id: 'receive' | 'send' | 'settings';
   readonly src: ThemedSource;
   readonly label: string;
-  readonly caption: string;
   readonly icon: LucideIcon;
-}
-
-export interface HeroScreenshot {
-  readonly src: ThemedSource;
-  readonly alt: string;
-  readonly label: string;
 }
 
 export interface CapabilityItem {
@@ -52,7 +45,6 @@ export const LINKS = {
 export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'how-it-works', label: 'How it works' },
   { id: 'capabilities', label: 'Capabilities' },
-  { id: 'screenshots', label: 'Screenshots' },
 ];
 
 export const PAIRING_STEPS: readonly PairingStep[] = [
@@ -76,15 +68,6 @@ export const PAIRING_STEPS: readonly PairingStep[] = [
   },
 ];
 
-export const HERO_SCREENSHOT: HeroScreenshot = {
-  src: {
-    light: `${ASSET_BASE}screenshots/receive-light.png`,
-    dark: `${ASSET_BASE}screenshots/receive-dark.png`,
-  },
-  alt: 'Keynear Android Receive screen showing nearby Linux computers',
-  label: 'Hero screenshot',
-};
-
 export const SCREENSHOTS: readonly ScreenshotItem[] = [
   {
     id: 'receive',
@@ -93,7 +76,6 @@ export const SCREENSHOTS: readonly ScreenshotItem[] = [
       dark: `${ASSET_BASE}screenshots/receive-dark.png`,
     },
     label: 'Receive screen',
-    caption: 'Proximity discovery with Hidden, Paired, and Everyone nearby controls.',
     icon: Inbox,
   },
   {
@@ -103,7 +85,6 @@ export const SCREENSHOTS: readonly ScreenshotItem[] = [
       dark: `${ASSET_BASE}screenshots/send-dark.png`,
     },
     label: 'Send screen',
-    caption: 'Queue files, folders, clipboard contents, or text for paired computers.',
     icon: Send,
   },
   {
@@ -113,7 +94,6 @@ export const SCREENSHOTS: readonly ScreenshotItem[] = [
       dark: `${ASSET_BASE}screenshots/settings-dark.png`,
     },
     label: 'Settings screen',
-    caption: 'Permissions, save folder, clipboard sync, and appearance controls.',
     icon: SlidersHorizontal,
   },
 ];

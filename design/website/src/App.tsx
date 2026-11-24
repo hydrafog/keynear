@@ -6,7 +6,6 @@ import { Footer } from './sections/Footer';
 import { Header } from './sections/Header';
 import { Hero } from './sections/Hero';
 import { HowItWorks } from './sections/HowItWorks';
-import { Screenshots } from './sections/Screenshots';
 
 export default function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -48,7 +47,6 @@ export default function App() {
         <Hero theme={theme} onDownload={() => scrollTo('download')} />
         <HowItWorks />
         <Capabilities />
-        <Screenshots theme={theme} />
         <Download />
       </main>
 

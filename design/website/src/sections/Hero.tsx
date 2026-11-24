@@ -1,9 +1,10 @@
 import type { CSSProperties } from 'react';
-import { Download, Smartphone } from 'lucide-react';
+import { useState } from 'react';
+import { Download } from 'lucide-react';
 import { ProximityHalo } from '../components/ProximityHalo';
 import { ScreenshotFrame } from '../components/ScreenshotFrame';
 import type { ThemeMode } from '../data/site';
-import { HERO_SCREENSHOT, LINKS } from '../data/site';
+import { LINKS, SCREENSHOTS } from '../data/site';
 
 function GitHubMark() {
   return (
@@ -32,12 +33,23 @@ function delayStyle(ms: number): KnDelayStyle {
   return { '--kn-delay': `${ms}ms` };
 }
 
+type StackSlot = 'front' | 'right' | 'left';
+
+function slotFor(index: number, activeIndex: number, total: number): StackSlot {
+  const offset = (index - activeIndex + total) % total;
+  if (offset === 0) return 'front';
+  if (offset === 1) return 'right';
+  return 'left';
+}
+
 export interface HeroProps {
   theme: ThemeMode;
   onDownload: () => void;
 }
 
 export function Hero({ theme, onDownload }: HeroProps) {
+  const [activeIndex, setActiveIndex] = useState(0);
+
   return (
     <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-10 sm:px-6 sm:pt-16 lg:grid-cols-12 lg:gap-10 lg:px-8 lg:pb-24 lg:pt-20">
       <div className="min-w-0 lg:col-span-7">
@@ -79,18 +91,33 @@ export function Hero({ theme, onDownload }: HeroProps) {
       </div>
 
       <figure
-        className="kn-hero-in relative mx-auto w-full max-w-[280px] py-4 lg:col-span-5"
+        className="kn-hero-in relative mx-auto w-full max-w-[260px] py-4 sm:max-w-[272px] lg:col-span-5"
         style={delayStyle(180)}
       >
         <ProximityHalo />
-        <div className="relative">
-          <ScreenshotFrame
-            src={HERO_SCREENSHOT.src[theme]}
-            alt={HERO_SCREENSHOT.alt}
-            label={HERO_SCREENSHOT.label}
-            icon={Smartphone}
-            float
-          />
+        <div className="kn-hero-stack relative w-full">
+          {SCREENSHOTS.map((shot, idx) => {
+            const slot = slotFor(idx, activeIndex, SCREENSHOTS.length);
+            const isFront = slot === 'front';
+            return (
+              <button
+                key={shot.id}
+                type="button"
+                data-slot={slot}
+                aria-label={isFront ? `Keynear ${shot.label}` : `Show ${shot.label}`}
+                aria-pressed={isFront}
+                onClick={() => setActiveIndex(idx)}
+                className="kn-stack-card kn-interactive block w-full rounded-3xl p-0 text-left"
+              >
+                <ScreenshotFrame
+                  src={shot.src[theme]}
+                  alt={`Keynear ${shot.label}`}
+                  label={shot.label}
+                  icon={shot.icon}
+                />
+              </button>
+            );
+          })}
         </div>
       </figure>
     </section>
