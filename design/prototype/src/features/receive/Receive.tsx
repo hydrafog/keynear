@@ -27,6 +27,7 @@ export function ReceiveScreen() {
     setShowAllDevicesSheet, missingPermissionsCount, formatCountdown, handleVisibilityChange,
     triggerBlePairing, openDeviceDetail, mapPins, visibilityIndex, pairingPrompt, transfers,
     dismissedTransferIds,
+    accentColor,
   } = useApp();
 
   const radarRef = useRef<HTMLDivElement | null>(null);
@@ -174,7 +175,7 @@ export function ReceiveScreen() {
 
       <div ref={radarRef} className="relative min-h-52 flex-1 overflow-hidden">
         <div className="pointer-events-none absolute inset-0">
-          <WaveMapCanvas active={radarActive} darkMode={darkMode} />
+          <WaveMapCanvas active={radarActive} darkMode={darkMode} accent={accentColor} />
         </div>
         <div
           aria-hidden="true"

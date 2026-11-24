@@ -35,19 +35,35 @@ interface WavePalette {
   mote: string;
 }
 
-const LIGHT_PALETTE: WavePalette = {
-  spoke: 'rgba(14, 116, 138, 0.12)',
-  ring: 'rgba(14, 116, 138, 0.22)',
-  echo: 'rgba(74, 187, 213, 0.28)',
-  mote: 'rgba(14, 116, 138, 0.36)',
-};
+type Rgb = readonly [number, number, number];
 
-const DARK_PALETTE: WavePalette = {
-  spoke: 'rgba(155, 230, 245, 0.12)',
-  ring: 'rgba(74, 187, 213, 0.38)',
-  echo: 'rgba(155, 230, 245, 0.22)',
-  mote: 'rgba(155, 230, 245, 0.44)',
-};
+function parseHex(hex: string): Rgb {
+  const value = hex.replace('#', '');
+  return [
+    parseInt(value.slice(0, 2), 16),
+    parseInt(value.slice(2, 4), 16),
+    parseInt(value.slice(4, 6), 16),
+  ];
+}
+
+function mixRgb(from: Rgb, to: Rgb, amount: number): Rgb {
+  return [
+    Math.round(from[0] + (to[0] - from[0]) * amount),
+    Math.round(from[1] + (to[1] - from[1]) * amount),
+    Math.round(from[2] + (to[2] - from[2]) * amount),
+  ];
+}
+
+const rgba = (rgb: Rgb, alpha: number) => `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
+
+function paletteFor(accent: string, dark: boolean): WavePalette {
+  const base = parseHex(accent);
+  const light = mixRgb(base, [255, 255, 255], 0.5);
+  const ink = mixRgb(base, [7, 26, 33], 0.45);
+  return dark
+    ? { spoke: rgba(light, 0.12), ring: rgba(base, 0.38), echo: rgba(light, 0.22), mote: rgba(light, 0.44) }
+    : { spoke: rgba(ink, 0.12), ring: rgba(ink, 0.22), echo: rgba(base, 0.28), mote: rgba(ink, 0.36) };
+}
 
 function drawRingWave(
   ctx: CanvasRenderingContext2D, cx: number, cy: number, baseR: number,
@@ -129,7 +145,7 @@ function drawWaveFrame(
   ctx.globalAlpha = 1;
 }
 
-export function WaveMapCanvas({ active, darkMode }: { active: boolean; darkMode: boolean }) {
+export function WaveMapCanvas({ active, darkMode, accent }: { active: boolean; darkMode: boolean; accent: string }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const activeRef = useRef(active);
   const wakeRef = useRef<(() => void) | null>(null);
@@ -146,7 +162,7 @@ export function WaveMapCanvas({ active, darkMode }: { active: boolean; darkMode:
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
 
-    const palette = darkMode ? DARK_PALETTE : LIGHT_PALETTE;
+    const palette = paletteFor(accent, darkMode);
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     if (startRef.current === 0) startRef.current = performance.now();
     const startTime = startRef.current;
@@ -210,7 +226,7 @@ export function WaveMapCanvas({ active, darkMode }: { active: boolean; darkMode:
       observer.disconnect();
       reducedMotion.removeEventListener('change', wake);
     };
-  }, [darkMode]);
+  }, [darkMode, accent]);
 
   return <canvas ref={canvasRef} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" />;
 }
