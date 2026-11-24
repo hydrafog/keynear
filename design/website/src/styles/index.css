@@ -143,11 +143,7 @@
 .kn-wireframe-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1px;
-  background-color: var(--kn-hairline);
-  border-radius: 16px;
-  box-shadow: var(--kn-shadow-surface), var(--kn-rim-surface);
-  overflow: hidden;
+  gap: 20px;
 }
 
 .kn-wireframe-cell {
@@ -155,17 +151,21 @@
   flex-direction: column;
   justify-content: space-between;
   padding: 28px;
-  background-color: var(--kn-surface);
-  transition: background-color 220ms ease;
+  border-radius: 16px;
+  background-color: var(--kn-canvas);
+  box-shadow: var(--kn-rim-surface);
+  transition: background-color 220ms ease, box-shadow 220ms ease;
 }
 
 .kn-wireframe-cell:hover {
-  background-color: var(--kn-surface-hover);
+  background-color: var(--kn-surface);
+  box-shadow: var(--kn-shadow-surface), var(--kn-rim-surface);
 }
 
 @media (min-width: 640px) {
   .kn-wireframe-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
   }
 
   .kn-wireframe-cell {
