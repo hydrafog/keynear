@@ -152,7 +152,7 @@ internal fun DeviceActionsColumn(
                         ) {
                             ActionButton(
                                 label = "Remove device",
-                                primary = true,
+                                danger = true,
                                 minHeight = KeynearLayout.ControlMinHeight,
                                 onClick = { actions.onConfirmUnpair(device.deviceId) },
                                 modifier = Modifier.weight(1f),

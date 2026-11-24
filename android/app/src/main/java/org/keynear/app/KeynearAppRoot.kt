@@ -37,6 +37,7 @@ import org.keynear.app.ui.navigation.buildKeynearActions
 import org.keynear.app.ui.navigation.snapshotFromState
 import org.keynear.app.ui.navigation.KeynearSubScreen
 import org.keynear.app.ui.navigation.KeynearTab
+import org.keynear.designsystem.KeynearAccents
 import org.keynear.designsystem.KeynearTheme
 
 @Composable
@@ -58,6 +59,7 @@ internal fun KeynearAppRoot(
 
     val snapshot = snapshotFromState(uiState)
     val darkTheme = snapshot?.daemonConfig?.darkTheme ?: isSystemInDarkTheme()
+    val accentHex = snapshot?.daemonConfig?.accentColorHex ?: KeynearAccents.DEFAULT_HEX
 
     val showSnackbar: (String) -> Unit = {}
     val picker = PickerContext(context, bridge, scope, { state -> uiState = state }, showSnackbar)
@@ -167,7 +169,7 @@ internal fun KeynearAppRoot(
         confirmUnpairDeviceId = null
     }
 
-    KeynearTheme(darkTheme = darkTheme) {
+    KeynearTheme(darkTheme = darkTheme, accentHex = accentHex) {
         KeynearAppContent(
             snapshot = snapshot,
             uiState = uiState,

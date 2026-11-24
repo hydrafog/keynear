@@ -15,6 +15,7 @@ import org.keynear.app.MainActivity
 import org.keynear.app.ui.model.CoreSnapshot
 import org.keynear.app.ui.model.CoreState
 import org.keynear.app.ui.model.ShareValidationResult
+import org.keynear.designsystem.KeynearAccents
 import org.keynear.designsystem.KeynearTheme
 
 @Composable
@@ -32,6 +33,7 @@ var loadedSnapshot by remember { mutableStateOf<CoreSnapshot?>(null) }
 var totalSizeBytes by remember { mutableLongStateOf(0L) }
 val systemDark = isSystemInDarkTheme()
 val darkTheme = loadedSnapshot?.daemonConfig?.darkTheme ?: systemDark
+val accentHex = loadedSnapshot?.daemonConfig?.accentColorHex ?: KeynearAccents.DEFAULT_HEX
 
 LaunchedEffect(Unit) {
     val state = withContext(Dispatchers.IO) { client.loadState() }
@@ -49,7 +51,7 @@ LaunchedEffect(Unit) {
     }
 }
 
-KeynearTheme(darkTheme = darkTheme) {
+KeynearTheme(darkTheme = darkTheme, accentHex = accentHex) {
     SharePickerScreen(
         validation = validation,
         totalSizeBytes = totalSizeBytes,

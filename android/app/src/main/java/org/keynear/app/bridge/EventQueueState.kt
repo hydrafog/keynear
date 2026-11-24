@@ -30,6 +30,8 @@ import org.keynear.app.ui.model.TransferUi
 import org.keynear.app.ui.model.SendQueueItemUi
 import org.keynear.app.ui.model.VisibilityState
 import org.keynear.app.ui.model.validateDisplayNameInput
+import org.keynear.designsystem.KeynearAccents
+import org.keynear.designsystem.normalizeAccentHex
 import uniffi.keynear_core.CoreHandle
 import uniffi.keynear_core.FfiClipboardItem
 import uniffi.keynear_core.FfiDeviceRole
@@ -59,7 +61,10 @@ internal fun EventQueue.buildState(): CoreState = try {
     syncShortcutSnapshotIfNeeded(paired)
     val transfers = collectActiveTransfers(peerNames)
     decrementPendingPairing()
-    val activeConfig = cachedDaemonConfig.copy(darkTheme = cachedDarkTheme)
+    val activeConfig = cachedDaemonConfig.copy(
+        darkTheme = cachedDarkTheme,
+        accentColorHex = cachedAccentColorHex,
+    )
     val queue = sendQueueStore.snapshot()
     val snapshot = CoreSnapshot(
         version = status.version,
@@ -115,6 +120,7 @@ private fun EventQueue.decrementPendingPairing() {
 
 private const val UI_PREFS_NAME = "keynear_ui_prefs"
 private const val PREF_DARK_THEME = "dark_theme"
+private const val PREF_ACCENT_COLOR = "accent_color_hex"
 
 internal fun readDarkThemePref(context: Context): Boolean =
     context.getSharedPreferences(UI_PREFS_NAME, Context.MODE_PRIVATE)
@@ -127,6 +133,19 @@ internal fun writeDarkThemePref(context: Context, enabled: Boolean) {
         .apply()
 }
 
+internal fun readAccentColorPref(context: Context): String =
+    normalizeAccentHex(
+        context.getSharedPreferences(UI_PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(PREF_ACCENT_COLOR, KeynearAccents.DEFAULT_HEX) ?: KeynearAccents.DEFAULT_HEX,
+    )
+
+internal fun writeAccentColorPref(context: Context, hex: String) {
+    context.getSharedPreferences(UI_PREFS_NAME, Context.MODE_PRIVATE)
+        .edit()
+        .putString(PREF_ACCENT_COLOR, normalizeAccentHex(hex))
+        .apply()
+}
+
 private fun EventQueue.isSnapshotEmpty(
     paired: List<PairedDeviceUi>,
     transfers: List<TransferUi>,
@@ -136,17 +155,20 @@ private fun EventQueue.isSnapshotEmpty(
 
 internal fun EventQueue.updateDaemonConfigImpl(transform: (DaemonConfigUi) -> DaemonConfigUi): CoreState = try {
     val updated = transform(cachedDaemonConfig)
+    val normalizedAccent = normalizeAccentHex(updated.accentColorHex)
     cachedDarkTheme = updated.darkTheme
+    cachedAccentColorHex = normalizedAccent
     appContext?.let {
         writeDarkThemePref(it, updated.darkTheme)
+        writeAccentColorPref(it, normalizedAccent)
     }
     val currentVisibility = VisibilityState.fromFfi(handle.visibilityMode())
     val path = configPath
     cachedDaemonConfig = if (path != null) {
         val saved = handle.saveDaemonConfig(path, updated.toFfi(currentVisibility))
-        DaemonConfigUi.fromFfi(saved, updated.darkTheme)
+        DaemonConfigUi.fromFfi(saved, updated.darkTheme, normalizedAccent)
     } else {
-        updated
+        updated.copy(accentColorHex = normalizedAccent)
     }
     orionNode?.let { node ->
         node.setAutoAcceptFromPaired(cachedDaemonConfig.autoAcceptFromPaired)

@@ -28,6 +28,7 @@ import org.keynear.app.ui.model.TransferStateUi
 import org.keynear.app.ui.model.TransferUi
 import org.keynear.app.ui.model.VisibilityState
 import org.keynear.app.ui.model.validateDisplayNameInput
+import org.keynear.designsystem.KeynearAccents
 import uniffi.keynear_core.CoreHandle
 import uniffi.keynear_core.FfiClipboardItem
 import uniffi.keynear_core.FfiDeviceRole
@@ -58,8 +59,12 @@ class EventQueue(
     internal var cachedDarkTheme: Boolean = appContext?.let { readDarkThemePref(it) } ?: false
 
     @Volatile
+    internal var cachedAccentColorHex: String = appContext?.let { readAccentColorPref(it) } ?: KeynearAccents.DEFAULT_HEX
+
+    @Volatile
     internal var cachedDaemonConfig: DaemonConfigUi = DaemonConfigUi(
         darkTheme = cachedDarkTheme,
+        accentColorHex = cachedAccentColorHex,
     )
 
     @Volatile
@@ -111,6 +116,7 @@ class EventQueue(
         }
         localDeviceId = DeviceRepo.resolveStableLocalDeviceId(app)
         cachedDarkTheme = readDarkThemePref(app)
+        cachedAccentColorHex = readAccentColorPref(app)
         refreshConfigFromDisk()
     }
 
@@ -119,7 +125,7 @@ class EventQueue(
         runCatching {
             val loaded = handle.loadDaemonConfig(path)
             handle.setVisibilityMode(loaded.visibilityMode)
-            cachedDaemonConfig = DaemonConfigUi.fromFfi(loaded, cachedDarkTheme)
+            cachedDaemonConfig = DaemonConfigUi.fromFfi(loaded, cachedDarkTheme, cachedAccentColorHex)
         }
     }
 
@@ -224,7 +230,7 @@ class EventQueue(
         val path = configPath ?: return
         runCatching {
             val saved = handle.saveDaemonConfig(path, cachedDaemonConfig.toFfi(visibility))
-            cachedDaemonConfig = DaemonConfigUi.fromFfi(saved, cachedDarkTheme)
+            cachedDaemonConfig = DaemonConfigUi.fromFfi(saved, cachedDarkTheme, cachedAccentColorHex)
         }
     }
 

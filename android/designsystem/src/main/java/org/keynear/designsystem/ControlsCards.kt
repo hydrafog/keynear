@@ -68,11 +68,11 @@ fun TactileSurface(
     Box(
         modifier = modifier
             .tactileInteractiveSurface(onClick, enabled, interactionSource, pressScale)
-            .tactileShadow(effectiveTone, isDark, cornerRadius, isCircle)
+            .tactileShadow(effectiveTone, isDark, cornerRadius, isCircle, palette.accent)
             .clip(shape)
             .tactileSurfaceBackground(effectiveTone, containerColor, palette)
             .tactileOptionalRim(rimColor, shape)
-            .tactileCushion(effectiveTone, isDark, cornerRadius, isCircle),
+            .tactileCushion(effectiveTone, isDark, cornerRadius, isCircle, palette.accent),
         contentAlignment = contentAlignment,
     ) { content() }
 }

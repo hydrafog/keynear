@@ -8,6 +8,40 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+data class KeynearAccentPreset(
+    val id: String,
+    val name: String,
+    val hex: String,
+    val color: Color,
+)
+
+object KeynearAccents {
+    const val DEFAULT_HEX = "#4ABBD5"
+
+    val Presets: List<KeynearAccentPreset> = listOf(
+        KeynearAccentPreset("cyan", "Keynear cyan", "#4ABBD5", Color(0xFF4ABBD5)),
+        KeynearAccentPreset("violet", "Violet", "#C594E9", Color(0xFFC594E9)),
+        KeynearAccentPreset("green", "Green", "#6AC380", Color(0xFF6AC380)),
+        KeynearAccentPreset("amber", "Amber", "#E79750", Color(0xFFE79750)),
+        KeynearAccentPreset("rose", "Rose", "#F3898A", Color(0xFFF3898A)),
+    )
+
+    val CustomPickerSwatches: List<String> = listOf(
+        "2596D4",
+        "4E73DF",
+        "6D5BD0",
+        "9B59B6",
+        "D45B90",
+        "E05A5A",
+        "D97336",
+        "C2922B",
+        "3A9E6F",
+        "1E9E96",
+        "3E82A8",
+        "64748B",
+    )
+}
+
 enum class TactileTone {
     SURFACE,
     TONAL,
@@ -149,7 +183,7 @@ val LightKeynearPalette = KeynearPalette(
     sheetSheen = Color(0xF2FFFFFF),
     accentSheen = Color(0x94CDFAFF),
     accentShift = Color(0x6B60B2F0),
-    accentTonalSheen = Color(0xA6FFFFFF),
+    accentTonalSheen = Color(0x00000000),
     thumbSheen = Color(0xE6FFFFFF),
     dangerSheen = Color(0x73FFD6DE),
     brandAuraInner = Color(0x3D4ABBD5),
@@ -168,7 +202,7 @@ val DarkKeynearPalette = KeynearPalette(
     onAccent = Color(0xFFFFFFFF),
     focusRing = Color(0xFF4ABBD5),
     surfaceRim = Color(0x0FFFFFFF),
-    surfaceTopRim = Color(0x14C8F2FC),
+    surfaceTopRim = Color(0x14FFFFFF),
     tonalRim = Color(0x14FFFFFF),
     accentRim = Color(0x47AAF2FF),
     accentTopRim = Color(0x80FFFFFF),
@@ -212,12 +246,12 @@ val DarkKeynearPalette = KeynearPalette(
     waveRing = Color(0x614ABBD5),
     waveEcho = Color(0x389BE6F5),
     waveMote = Color(0x709BE6F5),
-    surfaceSheen = Color(0x0DBEF0FA),
-    tonalSheen = Color(0x0ABEF0FA),
-    sheetSheen = Color(0x0FBEF0FA),
+    surfaceSheen = Color(0x0DFFFFFF),
+    tonalSheen = Color(0x0AFFFFFF),
+    sheetSheen = Color(0x0FFFFFFF),
     accentSheen = Color(0x7AD7FCFF),
     accentShift = Color(0x5C5CB6F0),
-    accentTonalSheen = Color(0x244ABBD5),
+    accentTonalSheen = Color(0x00000000),
     thumbSheen = Color(0xB3FFFFFF),
     dangerSheen = Color(0x3DFFAAB6),
     brandAuraInner = Color(0x334ABBD5),
@@ -444,7 +478,7 @@ object KeynearElevation {
     val OuterNone = emptyList<KeynearOuterShadow>()
 
     val InsetSurfaceDark = listOf(
-        KeynearInsetShadow(1.dp, 0.dp, Color(0x14C8F2FC)),
+        KeynearInsetShadow(1.dp, 0.dp, Color(0x14FFFFFF)),
     )
     val InsetSurfaceLight = emptyList<KeynearInsetShadow>()
     val InsetTonalDark = emptyList<KeynearInsetShadow>()

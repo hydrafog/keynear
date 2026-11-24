@@ -21,6 +21,11 @@ private const val SHADOW_BLUR_THRESHOLD_PX = 0.5f
 private const val CUSHION_BLUR_THRESHOLD_PX = 0.4f
 private const val CUSHION_PADDING_MARGIN_PX = 8f
 private const val HALF_FRACTION = 0.5f
+private const val LIGHT_ACCENT_SHADOW_ALPHA = 0.52f
+private const val DARK_ACCENT_SHADOW_ALPHA = 0.54f
+private const val LIGHT_TONAL_TOP_RIM_ALPHA = 0.78f
+private const val DARK_TONAL_TOP_RIM_ALPHA = 0.28f
+private const val DARK_TONAL_TOP_RIM_ACCENT_MIX = 0.24f
 
 internal const val SYMBOLIC_BEACON_ALPHA = 0.08f
 internal const val SYMBOLIC_PEER_HALO_ALPHA = 0.22f
@@ -44,34 +49,54 @@ private data class InsetShadowSpec(
     val color: Color,
 )
 
-private fun outerShadowSpecs(tone: TactileTone, isDark: Boolean): List<ShadowSpec> {
-    val variants = when (tone) {
-        TactileTone.SURFACE -> KeynearElevation.OuterSurfaceLight to KeynearElevation.OuterSurfaceDark
-        TactileTone.TONAL,
-        TactileTone.ACCENT_TONAL,
-        TactileTone.DANGER,
-        TactileTone.DANGER_TONAL, -> KeynearElevation.OuterTonalLight to KeynearElevation.OuterTonalDark
-        TactileTone.ACCENT -> KeynearElevation.OuterAccentLight to KeynearElevation.OuterAccentDark
-        TactileTone.SHEET -> KeynearElevation.OuterSheetLight to KeynearElevation.OuterSheetDark
-        TactileTone.THUMB -> KeynearElevation.OuterThumbLight to KeynearElevation.OuterThumbDark
-        TactileTone.INSET, TactileTone.NONE -> KeynearElevation.OuterNone to KeynearElevation.OuterNone
-    }
+private val OUTER_SHADOW_VARIANTS: Map<TactileTone, Pair<List<KeynearOuterShadow>, List<KeynearOuterShadow>>> = mapOf(
+    TactileTone.SURFACE to (KeynearElevation.OuterSurfaceLight to KeynearElevation.OuterSurfaceDark),
+    TactileTone.TONAL to (KeynearElevation.OuterTonalLight to KeynearElevation.OuterTonalDark),
+    TactileTone.ACCENT_TONAL to (KeynearElevation.OuterTonalLight to KeynearElevation.OuterTonalDark),
+    TactileTone.DANGER to (KeynearElevation.OuterTonalLight to KeynearElevation.OuterTonalDark),
+    TactileTone.DANGER_TONAL to (KeynearElevation.OuterTonalLight to KeynearElevation.OuterTonalDark),
+    TactileTone.ACCENT to (KeynearElevation.OuterAccentLight to KeynearElevation.OuterAccentDark),
+    TactileTone.SHEET to (KeynearElevation.OuterSheetLight to KeynearElevation.OuterSheetDark),
+    TactileTone.THUMB to (KeynearElevation.OuterThumbLight to KeynearElevation.OuterThumbDark),
+)
+
+private val INSET_SHADOW_VARIANTS: Map<TactileTone, Pair<List<KeynearInsetShadow>, List<KeynearInsetShadow>>> = mapOf(
+    TactileTone.SURFACE to (KeynearElevation.InsetSurfaceLight to KeynearElevation.InsetSurfaceDark),
+    TactileTone.TONAL to (KeynearElevation.InsetTonalLight to KeynearElevation.InsetTonalDark),
+    TactileTone.ACCENT to (KeynearElevation.InsetAccentLight to KeynearElevation.InsetAccentDark),
+    TactileTone.DANGER to (KeynearElevation.InsetAccentLight to KeynearElevation.InsetAccentDark),
+    TactileTone.SHEET to (KeynearElevation.InsetSheetLight to KeynearElevation.InsetSheetDark),
+    TactileTone.THUMB to (KeynearElevation.InsetThumbLight to KeynearElevation.InsetThumbDark),
+    TactileTone.INSET to (KeynearElevation.InsetInsetLight to KeynearElevation.InsetInsetDark),
+)
+
+private fun outerShadowSpecs(tone: TactileTone, isDark: Boolean, accentColor: Color?): List<ShadowSpec> {
+    val variants = OUTER_SHADOW_VARIANTS[tone] ?: return emptyList()
     val specs = if (isDark) variants.second else variants.first
-    return specs.map { ShadowSpec(it.offsetY, it.blurRadius, it.spread, it.color) }
+    val accentAlpha = if (isDark) DARK_ACCENT_SHADOW_ALPHA else LIGHT_ACCENT_SHADOW_ALPHA
+    return specs.mapIndexed { idx, spec ->
+        val resolvedColor = if (tone == TactileTone.ACCENT && idx == 0 && accentColor != null) {
+            accentColor.copy(alpha = accentAlpha)
+        } else {
+            spec.color
+        }
+        ShadowSpec(spec.offsetY, spec.blurRadius, spec.spread, resolvedColor)
+    }
 }
 
-private fun insetShadowSpecs(tone: TactileTone, isDark: Boolean): List<InsetShadowSpec> {
-    val variants = when (tone) {
-        TactileTone.SURFACE -> KeynearElevation.InsetSurfaceLight to KeynearElevation.InsetSurfaceDark
-        TactileTone.TONAL, TactileTone.ACCENT_TONAL ->
-            KeynearElevation.InsetTonalLight to KeynearElevation.InsetTonalDark
-        TactileTone.ACCENT -> KeynearElevation.InsetAccentLight to KeynearElevation.InsetAccentDark
-        TactileTone.SHEET -> KeynearElevation.InsetSheetLight to KeynearElevation.InsetSheetDark
-        TactileTone.THUMB -> KeynearElevation.InsetThumbLight to KeynearElevation.InsetThumbDark
-        TactileTone.INSET -> KeynearElevation.InsetInsetLight to KeynearElevation.InsetInsetDark
-        TactileTone.DANGER, TactileTone.DANGER_TONAL, TactileTone.NONE ->
-            KeynearElevation.InsetNone to KeynearElevation.InsetNone
+private fun tonalTopRimSpec(isDark: Boolean, accentColor: Color?): List<InsetShadowSpec> {
+    val topRimColor = if (isDark) {
+        val base = accentColor ?: DarkKeynearPalette.accent
+        mixSrgb(Color.White, base, DARK_TONAL_TOP_RIM_ACCENT_MIX).copy(alpha = DARK_TONAL_TOP_RIM_ALPHA)
+    } else {
+        Color.White.copy(alpha = LIGHT_TONAL_TOP_RIM_ALPHA)
     }
+    return listOf(InsetShadowSpec(KeynearDimensions.Dp1, KeynearDimensions.Dp1, topRimColor))
+}
+
+private fun insetShadowSpecs(tone: TactileTone, isDark: Boolean, accentColor: Color?): List<InsetShadowSpec> {
+    if (tone == TactileTone.ACCENT_TONAL) return tonalTopRimSpec(isDark, accentColor)
+    val variants = INSET_SHADOW_VARIANTS[tone] ?: return emptyList()
     val specs = if (isDark) variants.second else variants.first
     return specs.map { InsetShadowSpec(it.offsetY, it.blurRadius, it.color) }
 }
@@ -157,8 +182,9 @@ fun Modifier.tactileShadow(
     isDark: Boolean,
     cornerRadius: Dp = KeynearRadii.TwoXl,
     isCircle: Boolean = false,
+    accentColor: Color? = null,
 ): Modifier {
-    val specs = outerShadowSpecs(tone, isDark)
+    val specs = outerShadowSpecs(tone, isDark, accentColor)
     if (specs.isEmpty()) return this
     return drawBehind { drawOuterShadows(specs, cornerRadius, isCircle, tone) }
 }
@@ -168,8 +194,9 @@ fun Modifier.tactileCushion(
     isDark: Boolean,
     cornerRadius: Dp = KeynearRadii.TwoXl,
     isCircle: Boolean = false,
+    accentColor: Color? = null,
 ): Modifier {
-    val specs = insetShadowSpecs(tone, isDark)
+    val specs = insetShadowSpecs(tone, isDark, accentColor)
     if (specs.isEmpty()) return this
     return drawWithContent {
         val radiusPx = if (isCircle) {

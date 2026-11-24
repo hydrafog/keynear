@@ -136,11 +136,21 @@ private fun SwitchTrack(
         modifier = Modifier
             .width(KeynearLayout.SwitchTrackWidth)
             .height(KeynearLayout.SwitchTrackHeight)
-            .tactileShadow(tone = trackTone, isDark = palette.isDark, cornerRadius = KeynearLayout.SwitchTrackRadius)
+            .tactileShadow(
+                tone = trackTone,
+                isDark = palette.isDark,
+                cornerRadius = KeynearLayout.SwitchTrackRadius,
+                accentColor = palette.accent,
+            )
             .clip(CircleShape)
             .tactileSurfaceBackground(tone = trackTone, containerColor = trackColor, palette = palette)
             .then(rimModifier)
-            .tactileCushion(tone = trackTone, isDark = palette.isDark, cornerRadius = KeynearLayout.SwitchTrackRadius)
+            .tactileCushion(
+                tone = trackTone,
+                isDark = palette.isDark,
+                cornerRadius = KeynearLayout.SwitchTrackRadius,
+                accentColor = palette.accent,
+            )
             .padding(KeynearSpacing.Xs),
         contentAlignment = Alignment.CenterStart,
     ) {

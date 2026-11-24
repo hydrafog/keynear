@@ -391,6 +391,7 @@ class SurfacesAndOnboardingTest {
             ignoredMimeTypes = listOf("x-kde-passwordManagerHint", "application/x-custom"),
             notifyAutoAcceptComplete = true,
             darkTheme = true,
+            accentColorHex = "#C594E9",
         )
         val ffi = customConfig.toFfi(VisibilityState.EVERYONE_NEARBY)
         assertEquals(FfiVisibilityMode.EVERYONE_NEARBY, ffi.visibilityMode)
@@ -403,7 +404,7 @@ class SurfacesAndOnboardingTest {
         assertEquals(listOf("x-kde-passwordManagerHint", "application/x-custom"), ffi.ignoredMimeTypes)
         assertTrue(ffi.notifyAutoAcceptComplete)
 
-        val roundTripped = DaemonConfigUi.fromFfi(ffi, darkTheme = true)
+        val roundTripped = DaemonConfigUi.fromFfi(ffi, darkTheme = true, accentColorHex = "#C594E9")
         assertEquals(customConfig, roundTripped)
 
         val missingOne = PermissionsChecklistState(

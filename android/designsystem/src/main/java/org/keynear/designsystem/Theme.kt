@@ -188,10 +188,18 @@ private fun applySystemBars(view: View, darkTheme: Boolean) {
 @Composable
 fun KeynearTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    accentHex: String = KeynearAccents.DEFAULT_HEX,
     content: @Composable () -> Unit,
 ) {
-    val palette = if (darkTheme) DarkKeynearPalette else LightKeynearPalette
-    val colorScheme = if (darkTheme) KeynearDarkColorScheme else KeynearLightColorScheme
+    val basePalette = if (darkTheme) DarkKeynearPalette else LightKeynearPalette
+    val palette = remember(basePalette, accentHex) { basePalette.withAccentHex(accentHex) }
+    val baseScheme = if (darkTheme) KeynearDarkColorScheme else KeynearLightColorScheme
+    val colorScheme = remember(baseScheme, palette) {
+        baseScheme.copy(
+            primary = palette.accent,
+            onPrimary = palette.onAccent,
+        )
+    }
     val indication = remember(palette) { KeynearIndication(palette.focusRing) }
     val view = LocalView.current
     if (!view.isInEditMode) {

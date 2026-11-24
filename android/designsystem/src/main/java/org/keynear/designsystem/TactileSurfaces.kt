@@ -9,7 +9,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -30,18 +29,6 @@ private val SHEEN_BUILDERS: Map<TactileTone, (KeynearPalette) -> List<SheenOverl
     TactileTone.SURFACE to { p -> listOf(SheenOverlay(p.surfaceSheen, SheenAnchor(0.5f, 0f), 0.82f)) },
     TactileTone.TONAL to { p -> listOf(SheenOverlay(p.tonalSheen, SheenAnchor(0.28f, 0f), 0.80f)) },
     TactileTone.SHEET to { p -> listOf(SheenOverlay(p.sheetSheen, SheenAnchor(0.5f, 0f), 0.74f)) },
-    TactileTone.ACCENT to { p ->
-        listOf(
-            SheenOverlay(p.accentSheen, SheenAnchor(0.18f, -0.10f), 0.70f),
-            SheenOverlay(p.accentShift, SheenAnchor(0.88f, 1.15f), 0.68f),
-        )
-    },
-    TactileTone.ACCENT_TONAL to { p -> listOf(SheenOverlay(p.accentTonalSheen, SheenAnchor(0.18f, 0f), 0.76f)) },
-    TactileTone.DANGER to { p -> listOf(SheenOverlay(p.dangerSheen, SheenAnchor(0.18f, -0.10f), 0.70f)) },
-    TactileTone.DANGER_TONAL to { p ->
-        val color = if (p.isDark) p.dangerSheen else p.accentTonalSheen
-        listOf(SheenOverlay(color, SheenAnchor(0.15f, 0f), 0.75f))
-    },
     TactileTone.THUMB to { p -> listOf(SheenOverlay(p.thumbSheen, SheenAnchor(0.30f, 0f), 0.76f)) },
 )
 
@@ -66,16 +53,18 @@ fun Modifier.tactileSurfaceBackground(
     containerColor: Color,
     palette: KeynearPalette,
 ): Modifier = drawBehind {
-    drawRect(color = containerColor)
-    tactileSheenOverlays(tone, palette).forEach { drawSheenOverlay(it) }
-    if (tone == TactileTone.ACCENT_TONAL) {
-        tactileTopRimColor(tone, palette)?.let { topRim ->
-            if (topRim.alpha > 0f) {
-                drawRect(
-                    color = topRim,
-                    size = Size(size.width, KeynearDimensions.Dp1.toPx()),
-                )
-            }
+    when (tone) {
+        TactileTone.ACCENT, TactileTone.DANGER -> {
+            val (topColor, bottomColor) = chromaGradientPair(containerColor)
+            drawRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(topColor, bottomColor),
+                ),
+            )
+        }
+        else -> {
+            drawRect(color = containerColor)
+            tactileSheenOverlays(tone, palette).forEach { drawSheenOverlay(it) }
         }
     }
 }

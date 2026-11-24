@@ -235,7 +235,7 @@ private fun ClipboardMimeEditor(
             )
             ActionButton(
                 label = "Add",
-                primary = false,
+                primary = true,
                 enabled = mimeInput.trim().isNotEmpty(),
                 minHeight = AddButtonMinHeight,
                 onClick = onAddMime,

@@ -444,6 +444,27 @@ fun IconTrash2(
 }
 
 @Composable
+fun IconPalette(
+    modifier: Modifier = Modifier.size(KeynearLayout.ChevronIconSize),
+    tint: Color = LocalKeynearPalette.current.loadingInk,
+    strokeWidthDp: Float = DEFAULT_STROKE_WIDTH,
+) {
+    LucideSvgIcon(
+        modifier = modifier,
+        tint = tint,
+        strokeWidth = strokeWidthDp,
+        pathStrings = listOf(
+            "M 12 22 A 1 1 0 0 1 12 20 A 10 9 0 0 0 22 11 C 22 6.03 17.52 2 12 2 " +
+                "C 6.5 2 2 6.5 2 12 A 10 10 0 0 0 12 22 Z",
+            "M 13 6.5 A 0.5 0.5 0 1 0 14 6.5 A 0.5 0.5 0 1 0 13 6.5",
+            "M 17 10.5 A 0.5 0.5 0 1 0 18 10.5 A 0.5 0.5 0 1 0 17 10.5",
+            "M 6 12.5 A 0.5 0.5 0 1 0 7 12.5 A 0.5 0.5 0 1 0 6 12.5",
+            "M 8 7.5 A 0.5 0.5 0 1 0 9 7.5 A 0.5 0.5 0 1 0 8 7.5",
+        ),
+    )
+}
+
+@Composable
 fun IconKeynearSymbolic(
     modifier: Modifier = Modifier.size(KeynearSpacing.Xl),
     tint: Color = LocalKeynearPalette.current.textPrimary,

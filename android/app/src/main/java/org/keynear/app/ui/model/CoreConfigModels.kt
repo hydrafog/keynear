@@ -1,5 +1,6 @@
 package org.keynear.app.ui.model
 
+import org.keynear.designsystem.KeynearAccents
 import uniffi.keynear_core.FfiDaemonConfig
 import kotlin.math.roundToInt
 
@@ -86,6 +87,7 @@ data class DaemonConfigUi(
     val ignoredMimeTypes: List<String> = DEFAULT_IGNORED_MIMES,
     val notifyAutoAcceptComplete: Boolean = false,
     val darkTheme: Boolean = false,
+    val accentColorHex: String = KeynearAccents.DEFAULT_HEX,
 ) {
     fun toFfi(visibility: VisibilityState): FfiDaemonConfig = FfiDaemonConfig(
         visibilityMode = visibility.toFfi(),
@@ -108,6 +110,7 @@ data class DaemonConfigUi(
         fun fromFfi(
             ffi: FfiDaemonConfig,
             darkTheme: Boolean,
+            accentColorHex: String = KeynearAccents.DEFAULT_HEX,
         ): DaemonConfigUi = DaemonConfigUi(
             incomingDirectory = ffi.incomingDirectory,
             autoAcceptFromPaired = ffi.autoAcceptFromPaired,
@@ -118,6 +121,7 @@ data class DaemonConfigUi(
             ignoredMimeTypes = ffi.ignoredMimeTypes,
             notifyAutoAcceptComplete = ffi.notifyAutoAcceptComplete,
             darkTheme = darkTheme,
+            accentColorHex = accentColorHex,
         )
     }
 }

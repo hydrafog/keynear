@@ -90,10 +90,10 @@ internal fun SendTargetsSection(
                         )
                     }
                 } else {
-                    devices.forEachIndexed { idx, device ->
+                    devices.forEach { device ->
                         SendTargetRow(
                             device = device,
-                            primary = idx == 0,
+                            primary = device.isOnline,
                             enabled = queue.isNotEmpty(),
                             onSend = { actions.onSendQueueToPeer(device) },
                         )

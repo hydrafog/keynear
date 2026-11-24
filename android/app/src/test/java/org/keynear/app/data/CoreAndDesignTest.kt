@@ -11,8 +11,11 @@ import org.keynear.app.ui.model.ShareValidationResult
 import org.keynear.app.ui.model.VisibilityState
 import org.keynear.app.bridge.validateShareIntent
 import org.keynear.designsystem.DarkKeynearPalette
+import org.keynear.designsystem.KeynearAccents
 import org.keynear.designsystem.KeynearSpacing
 import org.keynear.designsystem.LightKeynearPalette
+import org.keynear.designsystem.normalizeAccentHex
+import org.keynear.designsystem.withAccentHex
 
 class CoreAndDesignTest {
     private class FakeCoreBridge : CoreBridge {
@@ -115,6 +118,18 @@ class CoreAndDesignTest {
         assertEquals(Color(0xFF4ABBD5), LightKeynearPalette.accent)
         assertEquals(Color(0xFF0E748A), LightKeynearPalette.focusRing)
         assertEquals(48, KeynearSpacing.MIN_TOUCH_TARGET_DP)
+        assertEquals(5, KeynearAccents.Presets.size)
+        assertEquals("#4ABBD5", KeynearAccents.DEFAULT_HEX)
+        assertEquals("#C594E9", normalizeAccentHex("c594e9"))
+
+        val greenLight = LightKeynearPalette.withAccentHex("#6AC380")
+        assertEquals(Color(0xFF6AC380), greenLight.accent)
+        assertEquals(Color(0xFFFFFFFF), greenLight.onAccent)
+
+        val amberDark = DarkKeynearPalette.withAccentHex("#E79750")
+        assertEquals(Color(0xFFE79750), amberDark.accent)
+        assertEquals(Color(0xFFE79750), amberDark.focusRing)
+        assertEquals(Color(0xFFFFFFFF), amberDark.onAccent)
     }
 }
 

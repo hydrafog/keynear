@@ -92,84 +92,128 @@ fun ActiveTransfersStrip(
             verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Lg),
         ) {
             transfers.take(2).forEach { tx ->
-                val fraction = if (tx.totalBytes > 0L) {
-                    (tx.transferredBytes.toFloat() / tx.totalBytes.toFloat()).coerceIn(0f, 1f)
-                } else {
-                    0f
-                }
-                val pct = (fraction * 100f).toInt()
-                Column(verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Md)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.Top,
-                        horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Md),
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Xs),
-                        ) {
-                            Text(
-                                text = tx.summaryName,
-                                color = palette.textPrimary,
-                                fontSize = KeynearTypeSizes.Body,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            val dir = if (tx.direction == TransferDirectionUi.SEND) "To" else "From"
-                            Text(
-                                text = "$dir ${tx.peerDisplayName} · ${formatBytes(tx.totalBytes)}",
-                                color = palette.textMuted,
-                                fontSize = KeynearTypeSizes.Description,
-                            )
-                        }
-                        if (tx.state == TransferStateUi.ACTIVE) {
-                            Text(
-                                text = "$pct%",
-                                color = palette.loadingInk,
-                                fontSize = KeynearTypeSizes.Description,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
-                    }
-                    if (tx.state == TransferStateUi.ACTIVE) {
-                        KeynearProgressBar(progress = fraction)
-                    }
-                    when (tx.state) {
-                        TransferStateUi.PENDING_CONSENT -> {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
-                            ) {
-                                ActionButton(
-                                    label = "Decline",
-                                    onClick = { onDecline(tx.transferId) },
-                                    tonalSurface = true,
-                                    minHeight = KeynearLayout.CompactButtonMinHeight,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                ActionButton(
-                                    label = "Accept",
-                                    onClick = { onAccept(tx.transferId) },
-                                    primary = true,
-                                    minHeight = KeynearLayout.CompactButtonMinHeight,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                        }
-                        TransferStateUi.ACTIVE -> {
-                            ActionButton(
-                                label = "Cancel transfer",
-                                onClick = { onCancel(tx.transferId) },
-                                tonalSurface = true,
-                                minHeight = KeynearLayout.CompactButtonMinHeight,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-                        else -> {}
-                    }
-                }
+                ActiveTransferRowItem(
+                    tx = tx,
+                    onAccept = onAccept,
+                    onDecline = onDecline,
+                    onCancel = onCancel,
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun ActiveTransferRowItem(
+    tx: TransferUi,
+    onAccept: (String) -> Unit,
+    onDecline: (String) -> Unit,
+    onCancel: (String) -> Unit,
+) {
+    val palette = LocalKeynearPalette.current
+    val fraction = if (tx.totalBytes > 0L) {
+        (tx.transferredBytes.toFloat() / tx.totalBytes.toFloat()).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+    val pct = (fraction * 100f).toInt()
+    Column(verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Md)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Md),
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Xs),
+            ) {
+                Text(
+                    text = tx.summaryName,
+                    color = palette.textPrimary,
+                    fontSize = KeynearTypeSizes.Body,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                val dir = if (tx.direction == TransferDirectionUi.SEND) "To" else "From"
+                Text(
+                    text = "$dir ${tx.peerDisplayName} · ${formatBytes(tx.totalBytes)}",
+                    color = palette.textMuted,
+                    fontSize = KeynearTypeSizes.Description,
+                )
+            }
+            TransferStatusLabel(state = tx.state, pct = pct)
+        }
+        if (tx.state == TransferStateUi.ACTIVE) {
+            KeynearProgressBar(progress = fraction)
+        }
+        TransferActionButtons(
+            tx = tx,
+            onAccept = onAccept,
+            onDecline = onDecline,
+            onCancel = onCancel,
+        )
+    }
+}
+
+@Composable
+private fun TransferStatusLabel(
+    state: TransferStateUi,
+    pct: Int,
+) {
+    val palette = LocalKeynearPalette.current
+    val (label, color) = when (state) {
+        TransferStateUi.ACTIVE -> "$pct%" to palette.loadingInk
+        TransferStateUi.COMPLETED -> "Completed" to palette.loadingInk
+        TransferStateUi.CANCELLED, TransferStateUi.FAILED -> "Cancelled" to palette.textMuted
+        TransferStateUi.PENDING_CONSENT -> return
+    }
+    Text(
+        text = label,
+        color = color,
+        fontSize = KeynearTypeSizes.Description,
+        fontWeight = FontWeight.Bold,
+    )
+}
+
+@Composable
+private fun TransferActionButtons(
+    tx: TransferUi,
+    onAccept: (String) -> Unit,
+    onDecline: (String) -> Unit,
+    onCancel: (String) -> Unit,
+) {
+    when (tx.state) {
+        TransferStateUi.PENDING_CONSENT -> {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
+            ) {
+                ActionButton(
+                    label = "Decline",
+                    onClick = { onDecline(tx.transferId) },
+                    tonalSurface = true,
+                    minHeight = KeynearLayout.CompactButtonMinHeight,
+                    modifier = Modifier.weight(1f),
+                )
+                ActionButton(
+                    label = "Accept",
+                    onClick = { onAccept(tx.transferId) },
+                    primary = true,
+                    minHeight = KeynearLayout.CompactButtonMinHeight,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+        TransferStateUi.ACTIVE -> {
+            ActionButton(
+                label = "Cancel transfer",
+                onClick = { onCancel(tx.transferId) },
+                tonalSurface = true,
+                minHeight = KeynearLayout.CompactButtonMinHeight,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        else -> {}
     }
 }
