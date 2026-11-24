@@ -183,8 +183,8 @@
 
   --kn-brand-surface-rim: inset 0 0 0 1px rgba(10, 44, 56, 0.08);
   --kn-brand-tonal-rim: inset 0 0 0 1px rgba(10, 44, 56, 0.09);
-  --kn-brand-accent-rim: inset 0 1px 0 rgba(255, 255, 255, 0.24), inset 0 0 0 1px oklch(from var(--kn-accent-fill) calc(l - 0.10) c h / 0.35);
-  --kn-brand-accent-tonal-rim: inset 0 0 0 1px color-mix(in oklch, var(--kn-accent-fill) 24%, transparent);
+  --kn-brand-accent-rim: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 0 0 1px oklch(from var(--kn-accent-fill) calc(l - 0.10) c h / 0.35);
+  --kn-brand-accent-tonal-rim: inset 0 1px 1px rgba(255, 255, 255, 0.78), inset 0 0 0 1px color-mix(in oklch, var(--kn-accent-fill) 24%, transparent);
   --kn-grad-backdrop: radial-gradient(90% 60% at 15% 0%, color-mix(in oklch, var(--kn-accent-fill) 14%, transparent) 0%, transparent 65%), radial-gradient(70% 55% at 88% 100%, color-mix(in oklch, var(--kn-accent-fill) 12%, transparent) 0%, transparent 62%);
   --kn-grad-surface: radial-gradient(120% 75% at 50% 0%, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0) 68%);
   --kn-grad-surface-hover: radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.96) 0%, color-mix(in oklch, var(--kn-accent-fill) 7%, transparent) 100%);
@@ -283,8 +283,8 @@
 
   --kn-brand-surface-rim: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   --kn-brand-tonal-rim: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  --kn-brand-accent-rim: inset 0 1px 0 rgba(255, 255, 255, 0.24), inset 0 0 0 1px oklch(from var(--kn-accent-fill) calc(l - 0.10) c h / 0.35);
-  --kn-brand-accent-tonal-rim: inset 0 0 0 1px color-mix(in oklch, var(--kn-accent-fill) 22%, transparent);
+  --kn-brand-accent-rim: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 0 0 1px oklch(from var(--kn-accent-fill) calc(l - 0.10) c h / 0.35);
+  --kn-brand-accent-tonal-rim: inset 0 1px 1px color-mix(in oklch, var(--kn-accent-fill) 24%, rgba(255, 255, 255, 0.34)), inset 0 0 0 1px color-mix(in oklch, var(--kn-accent-fill) 22%, transparent);
   --kn-grad-backdrop: radial-gradient(85% 55% at 18% 0%, color-mix(in oklch, var(--kn-accent-fill) 10%, transparent) 0%, transparent 64%), radial-gradient(70% 50% at 85% 100%, color-mix(in oklch, var(--kn-accent-fill) 8%, transparent) 0%, transparent 62%);
   --kn-grad-surface: radial-gradient(110% 70% at 50% 0%, rgba(255, 255, 255, 0.05) 0%, transparent 68%);
   --kn-grad-surface-hover: radial-gradient(110% 75% at 50% 0%, color-mix(in oklch, var(--kn-accent-fill) 11%, transparent) 0%, transparent 72%);
