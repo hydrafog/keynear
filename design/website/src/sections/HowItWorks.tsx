@@ -10,8 +10,8 @@ export function HowItWorks() {
       <div className="grid w-full gap-8 lg:grid-cols-12 lg:items-center">
         <div className="min-w-0 lg:col-span-4">
           <h2 className="kn-title">How it works</h2>
-          <p className="kn-desc mt-2.5 max-w-[36ch] kn-text-secondary">
-            No accounts or cloud relays. Keys are verified in person and stay on your hardware.
+          <p className="kn-desc mt-2 max-w-[30ch] kn-text-secondary">
+            No accounts or cloud relays.
           </p>
 
           <ol className="mt-6 space-y-4">

@@ -53,20 +53,17 @@ export const PAIRING_STEPS: readonly PairingStep[] = [
   {
     step: '01',
     title: 'Discover over Bluetooth',
-    detail:
-      'Bluetooth Low Energy announces nearby presence when your phone and Linux desktop share the room.',
+    detail: 'BLE finds your nearby Linux desktop.',
   },
   {
     step: '02',
-    title: 'Confirm a 6-digit code',
-    detail:
-      'Approve the matching 6-digit code within 120 seconds to pin static X25519 keys in Android Keystore.',
+    title: 'Confirm 6-digit code',
+    detail: 'Verify once to pin X25519 keys on device.',
   },
   {
     step: '03',
-    title: 'Bridge over local Wi-Fi',
-    detail:
-      'Files, clipboard items, notifications, and media controls move directly over your local network with no relay server.',
+    title: 'Bridge over Wi-Fi',
+    detail: 'Everything moves directly over your LAN.',
   },
 ];
 
@@ -104,33 +101,29 @@ export const CAPABILITIES: readonly CapabilityItem[] = [
   {
     id: 'files',
     src: `${ASSET_BASE}wireframes/files.png`,
-    alt: 'Wireframe illustration for direct file and folder drops',
-    title: 'Direct file and folder drops',
-    detail:
-      'Queue files, folders, clipboard items, or notes from Android Direct Share. Paired computers auto-accept into Downloads/Keynear.',
+    alt: 'Wireframe illustration for file and folder drops',
+    title: 'File & folder drops',
+    detail: 'Share files or folders straight into Downloads/Keynear.',
   },
   {
     id: 'clipboard',
     src: `${ASSET_BASE}wireframes/clipboard.png`,
-    alt: 'Wireframe illustration for clipboard sync and 2FA pass-through',
-    title: 'Clipboard and 2FA pass-through',
-    detail:
-      'Sync text and images while skipping password-manager MIME types. Forward SMS verification codes to Linux with one tap.',
+    alt: 'Wireframe illustration for clipboard sync and 2FA codes',
+    title: 'Clipboard & 2FA',
+    detail: 'Sync text and images, skip passwords, forward SMS codes.',
   },
   {
     id: 'media',
     src: `${ASSET_BASE}wireframes/media.png`,
-    alt: 'Wireframe illustration for mirrored notifications and desktop media controls',
-    title: 'Mirrored notifications and media',
-    detail:
-      'Read selected Android notifications on Linux with inline replies, and control desktop MPRIS2 playback from the phone shade.',
+    alt: 'Wireframe illustration for notifications and desktop media controls',
+    title: 'Notifications & media',
+    detail: 'Reply to Android alerts on Linux and control desktop playback.',
   },
   {
     id: 'calls',
     src: `${ASSET_BASE}wireframes/calls.png`,
     alt: 'Wireframe illustration for call handoff and lock-screen safety',
-    title: 'Call handoff and lock-screen safety',
-    detail:
-      'Route phone calls through your Linux PipeWire headset profile. Keep Quick Settings limited to Hidden and Paired while locked.',
+    title: 'Calls & lock-screen safety',
+    detail: 'Route calls to PipeWire headsets; stay hidden while locked.',
   },
 ];
