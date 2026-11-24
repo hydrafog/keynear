@@ -116,12 +116,26 @@ function MarkGeometry({ prefix, palette }: { prefix: string; palette: MarkPalett
 
 function SymbolicGeometry() {
   return (
-    <g fill="currentColor">
-      <path opacity="0.55" d="m 160,276 c 17.728,0 32,14.272 32,32 v 60 c 0,17.728 -14.272,32 -32,32 -17.728,0 -32,-14.272 -32,-32 v -60 c 0,-17.728 14.272,-32 32,-32 z" />
-      <path opacity="0.75" d="m 324.30273,104.08203 a 32,32 0 0 0 -23.24218,7.7207 l -104,90 a 32,32 0 0 0 -3.25782,45.13672 32,32 0 0 0 45.13672,3.25782 l 104,-90 a 32,32 0 0 0 3.25782,-45.13672 32,32 0 0 0 -21.89454,-10.97852 z" />
-      <path d="m 160,112 a 32,32 0 0 0 -32,32 v 104 c 0,23.39394 11.94155,46.93935 30.35352,61.25977 a 32.0032,32.0032 0 0 0 2.68554,1.87695 l 144,90 a 32,32 0 0 0 44.09766,-10.17578 32,32 0 0 0 -10.17578,-44.09766 L 196.6582,257.92383 C 192.24605,254.4069 192,253.48645 192,248 V 144 a 32,32 0 0 0 -32,-32 z" />
-      <path d="m 335.31055,191.02148 a 11,11 0 0 0 -7.56055,3.70313 11,11 0 0 0 0.97461,15.52539 c 27.67868,24.4103 27.67868,67.0897 0,91.5 A 11,11 0 0 0 327.75,317.27539 11,11 0 0 0 343.27539,318.25 c 37.32525,-32.91778 37.32525,-91.58222 0,-124.5 a 11,11 0 0 0 -7.96484,-2.72852 z" />
-      <path opacity="0.58" d="M 375.49805,164.01562 A 8,8 0 0 0 370,166.70898 8,8 0 0 0 370.70898,178 c 47.05078,41.49488 47.05078,114.50512 0,156 A 8,8 0 0 0 370,345.29102 8,8 0 0 0 381.29102,346 c 54.06646,-47.68214 54.06646,-132.31786 0,-180 a 8,8 0 0 0 -5.79297,-1.98438 z" />
+    <g>
+      <circle cx="232" cy="290" r="88" fill="currentColor" fillOpacity="0.08" />
+      <g fill="none" stroke="currentColor" strokeLinecap="round">
+        <path d="M 60.4 146.0 A 224 224 0 0 1 330.2 88.7" strokeWidth="5" strokeOpacity="0.18" />
+        <path d="M 452.6 251.1 A 224 224 0 0 1 393.1 445.6" strokeWidth="5" strokeOpacity="0.18" />
+        <path d="M 389.9 238.7 A 166 166 0 0 1 398.0 287.1" strokeWidth="6" strokeOpacity="0.24" />
+        <path d="M 371.2 380.4 A 166 166 0 0 1 86.8 209.5" strokeWidth="6" strokeOpacity="0.24" />
+        <path d="M 339.6 246.5 A 116 116 0 1 1 118.5 265.9" strokeWidth="6" strokeOpacity="0.30" />
+      </g>
+      <g fill="none" stroke="currentColor" strokeLinecap="round">
+        <path d="M 101.2 187.8 A 166 166 0 0 1 272.2 128.9" strokeWidth="18" strokeOpacity="0.68" />
+        <path d="M 127.7 239.1 A 116 116 0 0 1 267.8 179.7" strokeWidth="22" strokeOpacity="0.88" />
+      </g>
+      <circle cx="391.6" cy="335.8" r="34" fill="currentColor" fillOpacity="0.22" />
+      <circle cx="391.6" cy="335.8" r="18" fill="currentColor" fillOpacity="0.96" />
+      <g fill="none" stroke="currentColor" strokeWidth="42" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="232" cy="290" r="54" />
+        <path d="M 270.2 251.8 L 387.6 134.4 L 424.3 171.2" />
+        <path d="M 339.5 182.5 L 364.9 208.0" />
+      </g>
     </g>
   );
 }
@@ -143,7 +157,7 @@ export function KeynearMark({
         xmlns="http://www.w3.org/2000/svg"
         width={size}
         height={size}
-        viewBox="108 96 316 316"
+        viewBox="0 0 512 512"
         aria-hidden="true"
         className={className}
       >

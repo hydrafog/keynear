@@ -15,13 +15,14 @@ const DURATION = 40;
 
 /** Half of a pin label's widest case (136px text + 28px padding). Outer pins stay inset by this much. */
 const PIN_HALF_WIDTH = 82;
-/** Half of a pin height (44px avatar + two-line label card). */
-const PIN_HALF_HEIGHT = 50;
+/** Half of a pin height (58px avatar + two-line label card). */
+const PIN_HALF_HEIGHT = 57;
 /** Smallest orbit that still clears the centre beacon. */
 const MIN_RADIUS = 116;
 const MAX_RADIUS = 172;
 const MIN_SCALE = 0.62;
 const INNER_RATIO = 0.8;
+const RING_COUNT = 3;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -38,13 +39,32 @@ export function radarLayoutFor(width: number, height: number): RadarLayout {
   return { scale, maxRadius };
 }
 
-export function orbitFor(rssi: number, idx: number, count: number, layout: RadarLayout): Orbit {
-  // 0 for a close, strong signal; 1 for a weak, distant one. Weaker signals sit on the outer orbit.
-  const distance = Math.min(1, Math.max(0, (-rssi - 40) / 50));
+export function orbitPlacementsFor(deviceIds: string[], layout: RadarLayout): Orbit[] {
+  const count = deviceIds.length;
+  if (count === 0) return [];
+  const rankById = deviceIds.map((_, index) => index).sort((a, b) =>
+    deviceIds[a] < deviceIds[b] ? -1 : deviceIds[a] > deviceIds[b] ? 1 : 0
+  );
+  const ringOf = new Array<number>(count).fill(0);
+  rankById.forEach((index, rank) => {
+    ringOf[index] = count === 1 ? 1 : count === 2 ? (rank === 0 ? 0 : 2) : rank % RING_COUNT;
+  });
+  const ringCounts = new Array<number>(RING_COUNT).fill(0);
+  ringOf.forEach((ring) => {
+    ringCounts[ring] += 1;
+  });
+  const slotOf = new Array<number>(count).fill(0);
+  const nextSlot = new Array<number>(RING_COUNT).fill(0);
+  rankById.forEach((index) => {
+    const ring = ringOf[index];
+    slotOf[index] = nextSlot[ring];
+    nextSlot[ring] += 1;
+  });
   const inner = Math.max(MIN_RADIUS, layout.maxRadius * INNER_RATIO);
-  return {
-    radius: inner + distance * (layout.maxRadius - inner),
-    duration: DURATION,
-    phase: (idx / Math.max(1, count)) * DURATION,
-  };
+  return deviceIds.map((_, index) => {
+    const ring = ringOf[index];
+    const radius = inner + ((layout.maxRadius - inner) * ring) / (RING_COUNT - 1);
+    const phase = ((slotOf[index] / ringCounts[ring] + ring / RING_COUNT) % 1) * DURATION;
+    return { radius: Math.round(radius), duration: DURATION, phase };
+  });
 }

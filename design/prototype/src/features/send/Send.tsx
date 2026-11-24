@@ -1,6 +1,6 @@
 import { useEffect, type FormEvent } from 'react';
 import { useApp } from '../../state/AppProvider';
-import { SelectionTile } from '../../design-system/Controls';
+import { ActionButton, SelectionTile } from '../../design-system/Controls';
 import { Card, ListGroup } from '../../design-system/Card';
 import { SectionHeading } from '../../design-system/Setting';
 import { joinMeta, pluralize } from '../../lib/format';
@@ -21,6 +21,9 @@ export function SendScreen() {
     setCustomTextSnippet,
     formatBytes,
     startOutgoingTransfer,
+    transfers,
+    handleTransferConsent,
+    handleCancelTransfer,
   } = useApp();
 
   useEffect(() => {
@@ -52,6 +55,9 @@ export function SendScreen() {
   };
 
   const totalBytes = sendQueue.reduce((acc, i) => acc + i.sizeBytes, 0);
+  const outgoingTransfers = transfers
+    .filter((t) => t.direction === 'send' && (t.state === 'active' || t.state === 'pendingConsent'))
+    .slice(0, 2);
 
   return (
     <div className="space-y-6">
@@ -182,6 +188,65 @@ export function SendScreen() {
           </>
         )}
       </Card>
+
+      {outgoingTransfers.length > 0 && (
+        <Card className="space-y-4">
+          {outgoingTransfers.map((tx) => {
+            const pct =
+              tx.totalBytes > 0
+                ? Math.min(100, Math.round((tx.transferredBytes / tx.totalBytes) * 100))
+                : 0;
+            const first = tx.items[0]?.name ?? 'Files';
+            const summary = tx.items.length <= 1 ? first : `${first} +${tx.items.length - 1}`;
+            return (
+              <div key={tx.transferId} className="space-y-3">
+                <div className="flex items-baseline justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-kn-base font-kn-semibold">{summary}</div>
+                    <div className="mt-0.5 truncate text-kn-xs tabular-nums kn-text-muted">
+                      {joinMeta(`To ${tx.peerName}`, formatBytes(tx.totalBytes))}
+                    </div>
+                  </div>
+                  {tx.state === 'active' && (
+                    <span className="shrink-0 text-kn-xs font-kn-bold tabular-nums kn-loading-text">
+                      {pct}%
+                    </span>
+                  )}
+                </div>
+                {tx.state === 'active' && (
+                  <div
+                    role="progressbar"
+                    aria-valuenow={pct}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={`Transfer progress for ${summary}`}
+                    className="h-2.5 w-full overflow-hidden rounded-full kn-track-well"
+                  >
+                    <div
+                      className="h-full rounded-full transition-[width] duration-(--kn-duration-morph) ease-(--ease-kn-spring) kn-loading-bg"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                )}
+                {tx.state === 'pendingConsent' ? (
+                  <div className="flex gap-2.5">
+                    <ActionButton tone="tonal" height={46} width="grow" onClick={() => handleTransferConsent(tx.transferId, false)}>
+                      Decline
+                    </ActionButton>
+                    <ActionButton tone="accent" height={46} width="grow" onClick={() => handleTransferConsent(tx.transferId, true)}>
+                      Accept
+                    </ActionButton>
+                  </div>
+                ) : (
+                  <ActionButton tone="tonal" height={46} width="block" onClick={() => handleCancelTransfer(tx.transferId)}>
+                    Cancel transfer
+                  </ActionButton>
+                )}
+              </div>
+            );
+          })}
+        </Card>
+      )}
 
       <section>
         <SectionHeading>Send to</SectionHeading>

@@ -40,7 +40,7 @@
   --ease-kn-tactile: cubic-bezier(0.16, 1, 0.3, 1);
 
   --animate-kn-fade-in: kn-fade-in 200ms cubic-bezier(0.2, 0, 0, 1) both;
-  --animate-kn-screen-in: kn-screen-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-kn-screen-in: kn-fade-in 75ms cubic-bezier(0.2, 0, 0, 1) both;
   --animate-kn-modal-in: kn-modal-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-kn-shade-down: kn-shade-down 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-kn-sheet-up: kn-sheet-up 300ms cubic-bezier(0.22, 1, 0.36, 1) both;

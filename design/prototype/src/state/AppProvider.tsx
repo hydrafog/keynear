@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useLayoutEffect,
@@ -57,6 +58,7 @@ export function useAppState() {
   const [showAllDevicesSheet, setShowAllDevicesSheet] = useState(false);
 
   const [transfers, setTransfers] = useState(INITIAL_TRANSFERS);
+  const [dismissedTransferIds, setDismissedTransferIds] = useState<Set<string>>(() => new Set());
   const [expandedNotifIds, setExpandedNotifIds] = useState<Record<string, boolean>>({ 'tx-initial-1': true });
   const [pairingPrompt, setPairingPrompt] = useState<PairingPrompt | null>(null);
   const [otpPrompt, setOtpPrompt] = useState<OtpPrompt | null>(null);
@@ -270,6 +272,10 @@ export function useAppState() {
     setTransfers((prev) => prev.filter((t) => t.transferId !== transferId));
   };
 
+  const dismissTransfers = useCallback((ids: string[]) => {
+    setDismissedTransferIds((prev) => new Set([...prev, ...ids]));
+  }, []);
+
   const triggerBlePairing = (targetPeerName = 'fedora-studio') => {
     const code = `${Math.floor(100 + Math.random() * 900)} ${Math.floor(100 + Math.random() * 900)}`;
     setPairingPrompt({
@@ -455,7 +461,7 @@ export function useAppState() {
   }, [darkMode]);
 
   return {
-    darkMode, setDarkMode, activeTab, setActiveTab, subScreen, setSubScreen, shadeOpen, setShadeOpen, shareSheetOpen, setShareSheetOpen, lockScreenOpen, setLockScreenOpen, isDeviceLocked, setIsDeviceLocked, pendingUnlockAction, setPendingUnlockAction, config, setConfig, permissions, setPermissions, pairedDevices, setPairedDevices, nearbyPeers, setNearbyPeers, everyoneNearbySecondsLeft, setEveryoneNearbySecondsLeft, sendQueue, setSendQueue, showTextComposer, setShowTextComposer, customTextSnippet, setCustomTextSnippet, selectedDeviceId, setSelectedDeviceId, editingName, setEditingName, confirmUnpairId, setConfirmUnpairId, showMimeEditor, setShowMimeEditor, newMimeInput, setNewMimeInput, snackbarMessage, setSnackbarMessage, showAllDevicesSheet, setShowAllDevicesSheet, transfers, setTransfers, expandedNotifIds, setExpandedNotifIds, pairingPrompt, setPairingPrompt, otpPrompt, setOtpPrompt, showSnackbar, missingPermissionsCount, activeTransfer, pendingShadeCount, formatBytes, formatCountdown, handleVisibilityChange, handleCycleQuickSettingsTile, handleUnlockDevice, triggerIncomingDrop, handleTransferConsent, handleCancelTransfer, dismissTransferNotification, triggerBlePairing, handlePairingDecision, triggerSmsOtpConsent, handlePushOtp, handleSendClipboardFromTile, startOutgoingTransfer, selectedDevice, openDeviceDetail, saveDeviceName, togglePerDeviceAutoAccept, unpairDevice, addIgnoredMime, removeIgnoredMime, mapPins, activePct, visibilityIndex, renderStamp, ...carina,
+    darkMode, setDarkMode, activeTab, setActiveTab, subScreen, setSubScreen, shadeOpen, setShadeOpen, shareSheetOpen, setShareSheetOpen, lockScreenOpen, setLockScreenOpen, isDeviceLocked, setIsDeviceLocked, pendingUnlockAction, setPendingUnlockAction, config, setConfig, permissions, setPermissions, pairedDevices, setPairedDevices, nearbyPeers, setNearbyPeers, everyoneNearbySecondsLeft, setEveryoneNearbySecondsLeft, sendQueue, setSendQueue, showTextComposer, setShowTextComposer, customTextSnippet, setCustomTextSnippet, selectedDeviceId, setSelectedDeviceId, editingName, setEditingName, confirmUnpairId, setConfirmUnpairId, showMimeEditor, setShowMimeEditor, newMimeInput, setNewMimeInput, snackbarMessage, setSnackbarMessage, showAllDevicesSheet, setShowAllDevicesSheet, transfers, setTransfers, dismissedTransferIds, dismissTransfers, expandedNotifIds, setExpandedNotifIds, pairingPrompt, setPairingPrompt, otpPrompt, setOtpPrompt, showSnackbar, missingPermissionsCount, activeTransfer, pendingShadeCount, formatBytes, formatCountdown, handleVisibilityChange, handleCycleQuickSettingsTile, handleUnlockDevice, triggerIncomingDrop, handleTransferConsent, handleCancelTransfer, dismissTransferNotification, triggerBlePairing, handlePairingDecision, triggerSmsOtpConsent, handlePushOtp, handleSendClipboardFromTile, startOutgoingTransfer, selectedDevice, openDeviceDetail, saveDeviceName, togglePerDeviceAutoAccept, unpairDevice, addIgnoredMime, removeIgnoredMime, mapPins, activePct, visibilityIndex, renderStamp, ...carina,
   };
 }
 

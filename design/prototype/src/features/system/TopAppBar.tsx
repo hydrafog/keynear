@@ -1,10 +1,8 @@
 import { useApp } from '../../state/AppProvider';
-import { KeynearMark } from '../../design-system/KeynearMark';
 import { ArrowLeft } from 'lucide-react';
 
 export function TopAppBar() {
   const { activeTab, subScreen, setSubScreen, selectedDevice } = useApp();
-  const isReceiveHome = !subScreen && activeTab === 'receive';
   return (
     <header className="flex h-16 shrink-0 items-center justify-between px-4">
       <div className="flex min-w-0 items-center gap-2.5">
@@ -18,13 +16,7 @@ export function TopAppBar() {
             <ArrowLeft className="h-6 w-6" aria-hidden="true" />
           </button>
         )}
-        {isReceiveHome && (
-          <KeynearMark size={24} variant="symbolic" className="block shrink-0 kn-loading-text" />
-        )}
-        <h1
-          key={`${subScreen || activeTab}-title`}
-          className="animate-kn-fade-in truncate py-1 text-kn-2xl font-kn-bold leading-kn-tight tracking-kn-tight"
-        >
+        <h1 className="truncate text-kn-2xl font-kn-bold leading-kn-tight tracking-kn-tight">
           {subScreen === 'deviceDetail'
             ? selectedDevice?.displayName || 'Device details'
             : subScreen === 'permissions'

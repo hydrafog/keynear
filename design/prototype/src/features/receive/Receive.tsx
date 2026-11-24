@@ -1,6 +1,6 @@
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { useApp } from '../../state/AppProvider';
-import { orbitFor, radarLayoutFor } from '../../lib/orbit';
+import { orbitPlacementsFor, radarLayoutFor } from '../../lib/orbit';
 import { joinMeta, pluralize, VISIBILITY_LABELS } from '../../lib/format';
 import { useElementSize } from '../../lib/useElementSize';
 import { useOrbitRate } from '../../lib/useOrbitRate';
@@ -26,6 +26,7 @@ export function ReceiveScreen() {
     darkMode, setSubScreen, config, everyoneNearbySecondsLeft, showAllDevicesSheet,
     setShowAllDevicesSheet, missingPermissionsCount, formatCountdown, handleVisibilityChange,
     triggerBlePairing, openDeviceDetail, mapPins, visibilityIndex, pairingPrompt, transfers,
+    dismissedTransferIds,
   } = useApp();
 
   const radarRef = useRef<HTMLDivElement | null>(null);
@@ -35,7 +36,9 @@ export function ReceiveScreen() {
   const segTrackRef = useRef<HTMLDivElement | null>(null);
   const segDrag = useRef({ active: false, moved: false, id: -1, x: 0, base: 0, last: 0 });
   // While a pairing or transfer banner is up, the device list folds away so the radar keeps its room.
-  const hasBanner = Boolean(pairingPrompt) || transfers.some((t) => t.state === 'pendingConsent' || t.state === 'active');
+  const hasBanner = Boolean(pairingPrompt) || transfers.some((t) =>
+    !dismissedTransferIds.has(t.transferId) && (t.state === 'pendingConsent' || t.state === 'active')
+  );
   const collapsedH = hasBanner ? 0 : SHEET_COLLAPSED_PX;
   const expandedH = SHEET_EXPANDED_PX;
   const [dragSheetH, setDragSheetH] = useState<number | null>(null);
@@ -104,6 +107,7 @@ export function ReceiveScreen() {
   const sheetHeight = dragSheetH !== null ? dragSheetH : showAllDevicesSheet ? expandedH : collapsedH;
   const radarActive = config.visibilityMode !== 'hidden';
   const layout = radarLayoutFor(radarSize.width, radarSize.height);
+  const placements = orbitPlacementsFor(mapPins.map((pin) => pin.id), layout);
   const visiblePins = mapPins.filter((pin) => pin.isVisible);
   useOrbitRate(sceneRef, radarActive, mapPins.length);
 
@@ -204,7 +208,7 @@ export function ReceiveScreen() {
 
             <div className="absolute left-1/2 top-1/2 h-0 w-0">
               {mapPins.map((pin, idx) => {
-                const orbit = orbitFor(pin.rssi, idx, mapPins.length, layout);
+                const orbit = placements[idx];
                 const motion = {
                   animationDuration: `${orbit.duration}s`,
                   animationDelay: `-${orbit.phase}s`,
@@ -218,15 +222,15 @@ export function ReceiveScreen() {
                         style={motion}
                         tabIndex={pin.isVisible ? 0 : -1}
                         aria-hidden={!pin.isVisible || undefined}
-                        className={`animate-kn-orbit-counter absolute left-0 top-0 z-10 flex min-h-(--kn-size-56px) min-w-(--kn-size-56px) -translate-x-1/2 -translate-y-1/2 cursor-pointer flex-col items-center rounded-kn-2xl text-center transition-[opacity,scale] duration-500 ease-(--ease-kn-spring) ${pin.isVisible ? 'pointer-events-auto scale-100 opacity-100' : 'pointer-events-none scale-75 opacity-0'} ${FOCUS_RING}`}
+                        className={`animate-kn-orbit-counter absolute left-0 top-0 z-10 flex min-h-(--kn-size-58px) min-w-(--kn-size-58px) -translate-x-1/2 -translate-y-1/2 cursor-pointer flex-col items-center rounded-kn-2xl text-center transition-[opacity,scale] duration-500 ease-(--ease-kn-spring) active:scale-(--kn-press-95) ${pin.isVisible ? 'pointer-events-auto scale-100 opacity-100' : 'pointer-events-none scale-75 opacity-0'} ${FOCUS_RING}`}
                       >
                         <div className="animate-kn-pin-enter flex flex-col items-center" style={{ animationDelay: `${idx * 55}ms` }}>
-                          <div className="relative flex h-11 w-11 items-center justify-center rounded-full transition-all duration-(--kn-duration-press) ease-(--ease-kn-tactile) kn-fog-surface kn-fog-hover">
-                            <Laptop className="h-5 w-5 kn-loading-text" aria-hidden="true" />
+                          <div className="relative flex h-(--kn-size-58px) w-(--kn-size-58px) items-center justify-center rounded-full kn-fog-surface">
+                            <Laptop className="h-(--kn-size-26px) w-(--kn-size-26px) kn-loading-text" aria-hidden="true" />
                           </div>
                           <div className="mt-2 rounded-kn-xl px-3.5 py-1.5 kn-fog-surface">
-                            <div className="max-w-(--kn-size-136px) truncate text-kn-xs font-kn-bold leading-kn-tight">{pin.displayName}</div>
-                            <div className="mt-0.5 max-w-(--kn-size-136px) truncate text-kn-xs leading-kn-tight tabular-nums kn-text-muted">
+                            <div className="max-w-(--kn-size-164px) truncate text-kn-xs font-kn-bold leading-kn-tight">{pin.displayName}</div>
+                            <div className="mt-0.5 max-w-(--kn-size-164px) truncate text-kn-xs leading-kn-tight tabular-nums kn-text-muted">
                               {joinMeta(pin.state, `${pin.rssi} dBm`)}
                             </div>
                           </div>
@@ -241,7 +245,7 @@ export function ReceiveScreen() {
         </div>
       </div>
 
-      <section aria-label="Devices in range" className="relative z-20 mx-4 mb-2 shrink-0 rounded-kn-3xl px-4 pb-3 pt-2.5 kn-sheet">
+      <section aria-label="Devices in range" className="relative z-20 mx-4 mb-4 shrink-0 rounded-kn-3xl px-4 pb-3 pt-2.5 kn-surface">
         {visiblePins.length === 0 ? (
           <div className="flex flex-col items-center">
             <span aria-hidden="true" className="h-1.5 w-12 rounded-full kn-sheet-handle" />
