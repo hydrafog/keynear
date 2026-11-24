@@ -20,7 +20,7 @@ export interface ThemedSource {
 }
 
 export interface ScreenshotItem {
-  readonly id: 'receive' | 'send' | 'shade';
+  readonly id: 'receive' | 'send' | 'settings';
   readonly src: ThemedSource;
   readonly label: string;
   readonly caption: string;
@@ -106,13 +106,13 @@ export const SCREENSHOTS: readonly ScreenshotItem[] = [
     icon: Send,
   },
   {
-    id: 'shade',
+    id: 'settings',
     src: {
-      light: '/screenshots/shade-light.png',
-      dark: '/screenshots/shade-dark.png',
+      light: '/screenshots/settings-light.png',
+      dark: '/screenshots/settings-dark.png',
     },
-    label: 'Notification shade',
-    caption: 'Quick Settings tiles, Live Update transfer progress, and desktop media controls.',
+    label: 'Settings screen',
+    caption: 'Permissions, save folder, clipboard sync, and appearance controls.',
     icon: SlidersHorizontal,
   },
 ];
