@@ -17,7 +17,7 @@ For Android native and Gradle builds, use the isolated Android devShell:
 nix develop .#android --command bash -c 'cd android && gradle testDebugUnitTest lintDebug detekt assembleDebug'
 ```
 
-On non-Nix Ubuntu hosts, install `protobuf-compiler`, `libdbus-1-dev`, and `pkg-config` before building the workspace.
+On non-Nix Ubuntu hosts, install `protobuf-compiler`, `libdbus-1-dev`, `libpipewire-0.3-dev`, `libclang-dev`, and `pkg-config` before building the workspace.
 
 ## Design System Tokens
 

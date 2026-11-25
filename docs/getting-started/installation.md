@@ -46,7 +46,7 @@ The Flatpak recipe at `packaging/flathub/org.keynear.Keynear.yml` targets `org.g
 
 ## Linux From Source
 
-Build the workspace inside the Nix development shell or with a local Rust toolchain. For a local toolchain, install `protobuf-compiler`, `libdbus-1-dev`, and `pkg-config`:
+Build the workspace inside the Nix development shell or with a local Rust toolchain. For a local toolchain, install `protobuf-compiler`, `libdbus-1-dev`, `libpipewire-0.3-dev`, `libclang-dev`, and `pkg-config`:
 
 ```bash
 git clone git@github.com:hydrafog/keynear.git

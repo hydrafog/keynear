@@ -4,7 +4,7 @@
 
 ## Build and Runtime Prerequisites
 
-Building `keynear` (`oo7`) and the Rust workspace requires D-Bus development headers. On Debian and Ubuntu, install `libdbus-1-dev`. The repository Nix devShell provides the header automatically.
+Building `keynear` (`oo7`) and the Rust workspace requires D-Bus development headers. On Debian and Ubuntu, install `libdbus-1-dev` and `libpipewire-0.3-dev`. The `pipewire` crate also needs `libclang-dev` for its bindgen build. The repository Nix devShell provides these automatically.
 
 At runtime, Keynear uses these services:
 

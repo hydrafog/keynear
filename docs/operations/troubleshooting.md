@@ -11,6 +11,7 @@ Check these items when Bluetooth discovery or pairing fails.
 - When Android shows a Bluetooth warning banner, tap Allow Bluetooth to grant `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, and `BLUETOOTH_ADVERTISE`. Tap Open Bluetooth settings to power on the adapter.
 - If a Noise XX pairing prompt disappears before confirmation, the 120-second pairing window (`PAIRING_TIMEOUT_SECS`) elapsed. Start pairing again from Nearby peers.
 - On Linux build hosts (`keynear`), install `libdbus-1-dev` or enter `nix develop` when `dbus-sys` fails to link.
+- When `libspa-sys` reports that `libpipewire-0.3` is missing, install `libpipewire-0.3-dev` and `libclang-dev`, or enter `nix develop`, which supplies both.
 
 ## Keyring and Paired Device Recovery
 
