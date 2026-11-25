@@ -84,3 +84,71 @@ pub fn vfs_read_plan(
 pub fn vfs_root_node(root_id: String, label: String) -> Result<FfiVfsNode, FfiError> {
     Ok(RemoteVfsNode::root(&root_id, &label)?.into())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn node(size: u64) -> FfiVfsNode {
+        FfiVfsNode {
+            document_id: "doc-1".to_string(),
+            name: "file.txt".to_string(),
+            is_directory: false,
+            size_bytes: size,
+        }
+    }
+
+    #[test]
+    fn resume_decision_converts_all_variants() {
+        assert_eq!(
+            FfiResumeDecision::from(ResumeDecision::Full),
+            FfiResumeDecision::Full
+        );
+        assert_eq!(
+            FfiResumeDecision::from(ResumeDecision::FromChunk(7)),
+            FfiResumeDecision::FromChunk { chunk: 7 }
+        );
+        assert_eq!(
+            FfiResumeDecision::from(ResumeDecision::Unavailable),
+            FfiResumeDecision::Unavailable
+        );
+    }
+
+    #[test]
+    fn node_conversion_and_root_builder() {
+        let converted: FfiVfsNode = RemoteVfsNode::root("root", "Phone").expect("root").into();
+        assert_eq!(converted.name, "Phone");
+        assert!(converted.is_directory);
+        assert_eq!(node(10).size_bytes, 10);
+    }
+
+    #[test]
+    fn capability_flag_is_stable() {
+        assert_eq!(
+            resumable_transfer_capability_flags(),
+            CAP_RESUMABLE_TRANSFER
+        );
+    }
+
+    #[test]
+    fn read_plan_clamps_offset_and_bounds_length() {
+        let plan = vfs_read_plan(node(100), 90, 16).expect("plan");
+        assert_eq!(plan.offset, 90);
+        assert_eq!(plan.length, 10);
+        assert_eq!(plan.chunks, 1);
+        let empty = vfs_read_plan(node(0), 50, 16).expect("empty plan");
+        assert_eq!(empty.length, 0);
+        assert!(matches!(
+            vfs_read_plan(node(10), 0, 0),
+            Err(FfiError::Validation { .. })
+        ));
+    }
+
+    #[test]
+    fn root_builder_rejects_invalid_names() {
+        assert!(matches!(
+            vfs_root_node("root".to_string(), String::new()),
+            Err(FfiError::Validation { .. })
+        ));
+    }
+}
