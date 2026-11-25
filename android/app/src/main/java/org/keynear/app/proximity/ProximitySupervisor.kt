@@ -8,6 +8,7 @@ import android.ranging.RangingPreference
 import android.ranging.RangingSession
 import android.ranging.raw.RawInitiatorRangingConfig
 import android.ranging.raw.RawRangingDevice
+import android.ranging.uwb.UwbAddress
 import android.ranging.uwb.UwbRangingParams
 import java.util.concurrent.Executors
 import uniffi.keynear_core.FfiRangingSample
@@ -25,7 +26,7 @@ class ProximitySupervisor(
 
     private val capabilitiesCallback = object : RangingManager.RangingCapabilitiesCallback {
         override fun onRangingCapabilities(capabilities: RangingCapabilities) {
-            if (capabilities.uwbCapabilities?.isUwbSupported == true) {
+            if (capabilities.uwbCapabilities?.isDistanceMeasurementSupported == true) {
                 startUwbSession()
             } else {
                 onFallback()
@@ -56,7 +57,7 @@ class ProximitySupervisor(
     private fun startUwbSession() {
         val manager = context.getSystemService(RangingManager::class.java) ?: return
         val callback = RangingCallback(peerDeviceId, onSample)
-        val address = parseMac(peerBluetoothAddress)
+        val address = UwbAddress.fromBytes(parseMac(peerBluetoothAddress).copyOf(8))
         val params = UwbRangingParams.Builder(
             SESSION_ID,
             UwbRangingParams.CONFIG_UNICAST_DS_TWR,

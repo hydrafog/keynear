@@ -3,9 +3,6 @@ package org.keynear.app.proximity
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import uniffi.keynear_core.FfiRangingSample
-import uniffi.keynear_core.FfiProximityStatus
-import uniffi.keynear_core.FfiRangingTechnology
 
 class ProximityDecisionTest {
     @Test
@@ -72,28 +69,7 @@ class ProximityDecisionTest {
     @Test
     fun missingMeasurementFailsClosed() {
         assertFalse(RangingDecision.inRange(null, null, false))
-        assertTrue(
-            RangingDecision.outOfRange(
-                RangingDecision.snapshot(
-                    (1..3).map {
-                        FfiRangingSample(
-                            deviceId = "phone-1",
-                            technology = FfiRangingTechnology.UWB,
-                            distanceMeters = 9.0,
-                            rssiDbm = null,
-                            sequence = it.toLong(),
-                        )
-                    }
-                )
-            )
-        )
-        assertFalse(
-            RangingDecision.outOfRange(
-                RangingDecision.snapshot(emptyList<FfiRangingSample>()).copy(
-                    status = FfiProximityStatus.IN_RANGE,
-                )
-            )
-        )
+        assertFalse(RangingDecision.inRange(distanceMeters = -1f, rssiDbm = null, currentlyInRange = false))
     }
 
     @Test

@@ -46,16 +46,16 @@ class RangingCallback(
     private val deviceId: String,
     private val onSample: (FfiRangingSample) -> Unit,
 ) : RangingSession.Callback {
-    private var sequence = 0L
+    private var sequence = 0uL
 
     override fun onResults(peer: RangingDevice, data: RangingData) {
-        sequence += 1
+        sequence += 1uL
         onSample(
             FfiRangingSample(
                 deviceId = deviceId,
                 technology = FfiRangingTechnology.UWB,
-                distanceMeters = data.distanceMeters.toDouble(),
-                rssiDbm = null,
+                distanceMeters = data.distance?.measurement,
+                rssiDbm = if (data.hasRssi()) data.rssi else null,
                 sequence = sequence,
             )
         )
