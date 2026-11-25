@@ -1,5 +1,7 @@
 package org.keynear.app.proximity
 
+import androidx.annotation.RequiresApi
+
 import android.content.Context
 import android.os.Build
 import android.ranging.RangingCapabilities
@@ -13,6 +15,7 @@ import android.ranging.uwb.UwbRangingParams
 import java.util.concurrent.Executors
 import uniffi.keynear_core.FfiRangingSample
 
+@RequiresApi(36)
 class ProximitySupervisor(
     private val context: Context,
     private val peerDeviceId: String,

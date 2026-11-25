@@ -1,5 +1,7 @@
 package org.keynear.app.proximity
 
+import androidx.annotation.RequiresApi
+
 import android.ranging.RangingData
 import android.ranging.RangingDevice
 import android.ranging.RangingSession
@@ -42,6 +44,7 @@ object RangingDecision {
         snapshot.status == FfiProximityStatus.OUT_OF_RANGE
 }
 
+@RequiresApi(36)
 class RangingCallback(
     private val deviceId: String,
     private val onSample: (FfiRangingSample) -> Unit,
