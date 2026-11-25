@@ -144,3 +144,42 @@ pub async fn switch_profile(profile: AudioSinkProfile, method: &str) -> Result<(
         .map_err(backend_error)?;
     Ok(())
 }
+
+async fn volume_transport(profile: AudioSinkProfile) -> Result<(zbus::Connection, String), KeynearError> {
+    let path = transport_path_for(profile)
+        .await?
+        .ok_or_else(|| backend_error("no BlueZ transport for volume handoff".to_string()))?;
+    Ok((system_bus().await?, path))
+}
+
+pub async fn vcp_volume(profile: AudioSinkProfile) -> Result<u16, KeynearError> {
+    let (connection, path) = volume_transport(profile).await?;
+    let reply = connection
+        .call_method(
+            Some(BLUEZ_DEST),
+            path.as_str(),
+            Some("org.freedesktop.DBus.Properties"),
+            "Get",
+            &(BLUEZ_PROFILE_IFACE, "Volume"),
+        )
+        .await
+        .map_err(backend_error)?;
+    let body = reply.body();
+    let value: zbus::Variant<'_> = body.deserialize().map_err(backend_error)?;
+    value.downcast_ref::<u16>().map_err(backend_error)
+}
+
+pub async fn set_vcp_volume(profile: AudioSinkProfile, volume: u16) -> Result<(), KeynearError> {
+    let (connection, path) = volume_transport(profile).await?;
+    connection
+        .call_method(
+            Some(BLUEZ_DEST),
+            path.as_str(),
+            Some("org.freedesktop.DBus.Properties"),
+            "Set",
+            &(BLUEZ_PROFILE_IFACE, "Volume", zbus::Variant::from(volume)),
+        )
+        .await
+        .map_err(backend_error)?;
+    Ok(())
+}

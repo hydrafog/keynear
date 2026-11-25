@@ -14,6 +14,7 @@ use zeroize::Zeroizing;
 
 use crate::ble::DEFAULT_CAPABILITY_FLAGS;
 use crate::clipboard::{start_clipboard_monitor, ClipboardChange, ClipboardMonitorHandle};
+use crate::proximity::{Login1SessionLock, ProximitySupervisor};
 
 use super::{RuntimeOptions, RuntimeState};
 
@@ -29,6 +30,7 @@ pub(crate) struct RuntimeServices {
     pub known_peers: Arc<Mutex<HashSet<String>>>,
     pub quic_node: Option<Arc<OrionQuicNode>>,
     pub mdns: Option<Arc<MdnsDiscovery>>,
+    pub phoenix_supervisor: Option<Arc<Mutex<ProximitySupervisor<Login1SessionLock>>>>,
 }
 
 type ClipboardInit = (

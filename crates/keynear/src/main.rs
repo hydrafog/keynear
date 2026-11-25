@@ -4,7 +4,6 @@
     clippy::too_many_arguments
 )]
 
-// TODO: drive VegaAudioController from the peer audio-control stream once its QUIC demux lands.
 mod audio;
 mod ble;
 mod call;
@@ -17,6 +16,7 @@ mod keyring_oo7;
 mod media;
 mod notifications;
 mod portal;
+mod proximity;
 mod service;
 mod tray;
 mod vega;

@@ -16,6 +16,7 @@ keynear-ipc = { path = "../keynear-ipc" }
 keynear-protocol = { path = "../keynear-protocol" }
 ksni.workspace = true
 oo7.workspace = true
+pipewire.workspace = true
 rand.workspace = true
 serde.workspace = true
 sha2.workspace = true

@@ -9,7 +9,7 @@ members = [
 ]
 
 [workspace.package]
-version = "1.2.0"
+version = "1.3.0"
 edition = "2021"
 license = "GPL-3.0-only"
 repository = "https://github.com/hydrafog/keynear"
@@ -25,6 +25,7 @@ iroh = { version = "1.4.1", default-features = false, features = ["tls-aws-lc-rs
 ksni = "0.3.7"
 mdns-sd = "0.22.0"
 oo7 = "0.7"
+pipewire = "0.10.1"
 proptest = "1.12.0"
 prost = "0.14"
 prost-build = "0.14"

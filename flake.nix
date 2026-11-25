@@ -85,6 +85,7 @@
               cargo-deny
               cargo-llvm-cov
               rustc.llvmPackages.llvm
+              llvmPackages.libclang
               protobuf
               pkg-config
               jdk21
@@ -102,6 +103,8 @@
 
             LLVM_COV = "${pkgs.rustc.llvmPackages.llvm}/bin/llvm-cov";
             LLVM_PROFDATA = "${pkgs.rustc.llvmPackages.llvm}/bin/llvm-profdata";
+            LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
+            BINDGEN_EXTRA_CLANG_ARGS = "-I${pkgs.glibc.dev}/include";
 
             shellHook = ''
               for tool in cargo cargo-audit cargo-deny cargo-llvm-cov llvm-profdata llvm-cov rustc protoc java gradle; do

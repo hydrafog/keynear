@@ -8,6 +8,7 @@ pub mod callbacks;
 pub mod clipboard;
 pub mod continuity;
 pub mod pairing;
+pub mod phoenix;
 pub mod transfer;
 pub mod vega;
 pub mod vfs;
@@ -36,6 +37,11 @@ pub use continuity::{
 pub use pairing::{
     FfiEveryoneNearbyBeacon, FfiNoisePairingSession, FfiPairedBeaconState, FfiPairingCompleted,
     FfiPairingRole, FfiPairingState, FfiPairingStep, FfiStaticKeypair,
+};
+pub use phoenix::{
+    evaluate_ranging_sequence, negotiate_phoenix_capabilities, percent_to_vcp_volume,
+    phoenix_capability_bits, phoenix_capability_flags, vcp_volume_to_percent, FfiProximitySnapshot,
+    FfiProximityStatus, FfiRangingSample, FfiRangingTechnology,
 };
 pub use transfer::{FfiTransferDirection, FfiTransferItem, FfiTransferSession, FfiTransferState};
 pub use vega::{

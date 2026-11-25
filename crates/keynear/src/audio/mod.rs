@@ -1,8 +1,10 @@
 pub mod controller;
-mod dbus;
+pub(crate) mod dbus;
+pub(crate) mod pipewire;
 
 pub use controller::{DbusHandoffControl, VegaAudioController};
 pub use dbus::observe_sink_profile;
+pub(crate) use dbus::{call_players, set_vcp_volume, switch_profile, vcp_volume};
 
 use keynear_core::AudioSinkProfile;
 

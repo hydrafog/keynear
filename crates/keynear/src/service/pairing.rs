@@ -4,15 +4,17 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 use keynear_core::{
-    parse_endpoint_id_bytes, MdnsDiscovery, OrionQuicNode, PairedDeviceStore, SecretStore,
-    TransferEngine,
+    parse_endpoint_id_bytes, MdnsDiscovery, OrionQuicNode, PairedDeviceStore, RangingSample,
+    RangingTechnology, SecretStore, TransferEngine,
 };
 use keynear_protocol::{v1, KeynearError, VisibilityMode};
 use tokio::sync::{mpsc, watch, Mutex};
 use tokio::task::JoinHandle;
 use tracing::{info, warn};
 
+use crate::ble::advertiser::DecodedBleBeacon;
 use crate::ble::gatt::PairingUiEvent;
+use crate::ble::adapter::DiscoveredBlePeer;
 use crate::ble::{BleDriverParams, BlePeerDriver, DEFAULT_CAPABILITY_FLAGS};
 use crate::ipc::IpcDispatchContext;
 use crate::notifications::NotificationsClient;
@@ -182,6 +184,7 @@ pub(crate) struct BluezLoopParams<'a> {
     pub(crate) quic_node: Option<&'a Arc<OrionQuicNode>>,
     pub(crate) pairing_decision_rx: Option<mpsc::Receiver<bool>>,
     pub(crate) pairing_event_tx: Option<mpsc::Sender<PairingUiEvent>>,
+    pub(crate) ranging_tx: Option<mpsc::Sender<RangingSample>>,
 }
 
 fn log_ble_lan_ignored(peer_device_id: &str, err: &KeynearError) {
@@ -214,6 +217,31 @@ pub(crate) fn spawn_bluez_loops(params: BluezLoopParams<'_>, tasks: &mut Vec<Joi
         return;
     };
     let (ble_lan_tx, ble_lan_rx) = mpsc::channel::<v1::LanEndpoint>(LAN_ENDPOINT_CHANNEL_SLOTS);
+    let (discovered_tx, mut discovered_rx) = mpsc::channel::<DiscoveredBlePeer>(LAN_ENDPOINT_CHANNEL_SLOTS);
+    if let Some(ranging_tx) = params.ranging_tx {
+        tasks.push(tokio::spawn(async move {
+            let mut sequence = 0u64;
+            while let Some(peer) = discovered_rx.recv().await {
+                let DecodedBleBeacon::Paired { device_id, .. } = &peer.beacon else {
+                    continue;
+                };
+                let Some(rssi) = peer.rssi else {
+                    continue;
+                };
+                sequence += 1;
+                let sample = RangingSample {
+                    device_id: device_id.clone(),
+                    technology: RangingTechnology::BleRssi,
+                    distance_meters: None,
+                    rssi_dbm: Some(i32::from(rssi)),
+                    sequence,
+                };
+                if ranging_tx.send(sample).await.is_err() {
+                    break;
+                }
+            }
+        }));
+    }
     if let Some(node) = params.quic_node {
         let store = params.device_store.clone();
         let secrets = Arc::clone(secrets);
@@ -229,7 +257,7 @@ pub(crate) fn spawn_bluez_loops(params: BluezLoopParams<'_>, tasks: &mut Vec<Joi
         visibility_rx: params.visibility_rx.clone(),
         secret_store: Arc::clone(secrets),
         device_store: params.device_store.clone(),
-        discovered_tx: None,
+        discovered_tx: Some(discovered_tx),
         pairing_decision_rx: params.pairing_decision_rx,
         pairing_event_tx: params.pairing_event_tx,
         local_lan_endpoint_rx: Some(params.lan_watch_rx),

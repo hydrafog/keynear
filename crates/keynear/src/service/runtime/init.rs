@@ -1,7 +1,12 @@
 use std::sync::Arc;
 
-use keynear_core::{DaemonConfig, PairedDeviceStore, SecretStore};
+use tokio::sync::Mutex;
+
+use keynear_core::{DaemonConfig, PairedDeviceStore, ProximityConfig, SecretStore};
 use keynear_protocol::KeynearError;
+use tracing::{info, warn};
+
+use crate::proximity::{Login1SessionLock, ProximitySupervisor};
 
 use super::services::{bind_quic_node, init_clipboard, setup_mdns, RuntimeServices};
 use super::{sync_initial_peers, RuntimeOptions, RuntimeState, SyncPeersParams};
@@ -34,6 +39,7 @@ pub(super) async fn init_services(params: InitParams<'_>) -> Result<RuntimeServi
     })
     .await;
     let mdns = setup_mdns(params.options, quic_node.as_ref());
+    let phoenix_supervisor = init_phoenix(params.config)?;
 
     Ok(RuntimeServices {
         device_store: params.device_store.clone(),
@@ -47,5 +53,34 @@ pub(super) async fn init_services(params: InitParams<'_>) -> Result<RuntimeServi
         known_peers,
         quic_node,
         mdns,
+        phoenix_supervisor: phoenix_supervisor.map(|value| Arc::new(Mutex::new(value))),
     })
+}
+
+fn init_phoenix(config: &DaemonConfig) -> Result<Option<ProximitySupervisor<Login1SessionLock>>, KeynearError> {
+    if !config.proximity_lock_enabled && !config.presence_gating_enabled {
+        return Ok(None);
+    }
+    let bounds = ProximityConfig {
+        enter_distance_meters: (config.proximity_distance_meters * 0.6).max(0.5),
+        exit_distance_meters: config.proximity_distance_meters,
+        ..ProximityConfig::default()
+    };
+    let session_id = std::env::var("XDG_SESSION_ID").unwrap_or_default();
+    let supervisor = ProximitySupervisor::new(
+        Login1SessionLock,
+        bounds,
+        session_id,
+        config.proximity_lock_enabled,
+    )?;
+    if config.audio_continuity_enabled {
+        tokio::spawn(async {
+            match tokio::task::spawn_blocking(crate::audio::pipewire::observe_sinks).await {
+                Ok(Ok(sinks)) => info!(event = "phoenix_pipewire_sinks", count = sinks.len()),
+                Ok(Err(err)) => warn!(event = "phoenix_pipewire_unavailable", error = %err),
+                Err(err) => warn!(event = "phoenix_pipewire_task_failed", error = %err),
+            }
+        });
+    }
+    Ok(Some(supervisor))
 }

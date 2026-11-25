@@ -129,6 +129,7 @@ enum SinkProfile {
   SINK_BAP = 1;
   SINK_A2DP = 2;
   SINK_HFP_HF = 3;
+  SINK_BAP_SOURCE = 4;
 }
 
 message AudioHandoff {

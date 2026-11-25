@@ -77,6 +77,10 @@ fn uniffi_bridge_daemon_config_roundtrips_all_prototype_fields() {
             "  x-kde-passwordManagerHint  ".to_string(),
         ],
         notify_auto_accept_complete: false,
+        audio_continuity_enabled: true,
+        proximity_lock_enabled: true,
+        presence_gating_enabled: true,
+        proximity_distance_meters: 3.0,
     };
     let saved = handle
         .save_daemon_config(cfg_str.clone(), updated)

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use keynear_core::{PairedDeviceStore, SecretStore};
+use keynear_core::{PairedDeviceStore, RangingSample, SecretStore};
 use tokio::sync::mpsc;
 use tokio::sync::watch::Sender;
 use tokio::task::JoinHandle;
@@ -70,6 +70,10 @@ fn spawn_clipboard_and_bluez(
     tasks: &mut Vec<JoinHandle<()>>,
 ) -> Sender<Option<keynear_protocol::v1::LanEndpoint>> {
     let services = &mut *ctx.services;
+    let (ranging_tx, ranging_rx) = mpsc::channel::<RangingSample>(32);
+    if let Some(supervisor) = services.phoenix_supervisor.clone() {
+        crate::proximity::spawn_proximity_loop(supervisor, ranging_rx, tasks);
+    }
     spawn_clipboard_loops(
         ClipboardLoopParams {
             quic_node: services.quic_node.as_ref(),
@@ -104,6 +108,7 @@ fn spawn_clipboard_and_bluez(
             quic_node: services.quic_node.as_ref(),
             pairing_decision_rx: ctx.pairing_decision_rx.take(),
             pairing_event_tx: ctx.pairing_event_tx.take(),
+            ranging_tx: Some(ranging_tx),
         },
         tasks,
     );

@@ -119,7 +119,7 @@ pub struct CoreStatus {
     pub ready: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
 pub struct FfiDaemonConfig {
     pub visibility_mode: FfiVisibilityMode,
     pub incoming_directory: String,
@@ -130,6 +130,10 @@ pub struct FfiDaemonConfig {
     pub audio_handoff_enabled: bool,
     pub ignored_mime_types: Vec<String>,
     pub notify_auto_accept_complete: bool,
+    pub audio_continuity_enabled: bool,
+    pub proximity_lock_enabled: bool,
+    pub presence_gating_enabled: bool,
+    pub proximity_distance_meters: f64,
 }
 
 impl From<DaemonConfig> for FfiDaemonConfig {
@@ -144,6 +148,10 @@ impl From<DaemonConfig> for FfiDaemonConfig {
             audio_handoff_enabled: value.audio_handoff_enabled,
             ignored_mime_types: value.ignored_mime_types,
             notify_auto_accept_complete: value.notify_auto_accept_complete,
+            audio_continuity_enabled: value.audio_continuity_enabled,
+            proximity_lock_enabled: value.proximity_lock_enabled,
+            presence_gating_enabled: value.presence_gating_enabled,
+            proximity_distance_meters: f64::from(value.proximity_distance_meters),
         }
     }
 }
@@ -165,6 +173,10 @@ impl From<FfiDaemonConfig> for DaemonConfig {
                 .filter(|m| !m.is_empty())
                 .collect(),
             notify_auto_accept_complete: value.notify_auto_accept_complete,
+            audio_continuity_enabled: value.audio_continuity_enabled,
+            proximity_lock_enabled: value.proximity_lock_enabled,
+            presence_gating_enabled: value.presence_gating_enabled,
+            proximity_distance_meters: value.proximity_distance_meters as f32,
         }
     }
 }
