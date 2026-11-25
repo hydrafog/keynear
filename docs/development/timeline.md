@@ -14,9 +14,8 @@ The milestones are listed in dependency order.
 | 6 | 1.0.0-vega | Smart audio handoff and fallbacks |
 | 7 | 1.1.0-perseus | Resumable transfers and virtual filesystem |
 | 8 | 1.2.0-carina | Notification mirror and media controls |
-| 9 | 1.3.0-pegasus | Ephemeral camera, mic, and screen pipes |
-| 10 | 1.4.0-phoenix | Proximity lock, SSH agent, and FIDO2 bridge |
-| 11 | 1.5.0-andromeda | Multi-peer mesh and input handoff |
+| 9 | 1.3.0-phoenix | Automatic audio continuity and proximity lock |
+| 10 | 1.4.0-andromeda | Multi-device mesh and closest-peer routing |
 
 ## Lyra
 
@@ -89,29 +88,20 @@ Carina (1.2.0-carina, `versionCode` 8) layers ephemeral notification mirroring, 
 - Telephony call alerts surface `Answer`, `Decline`, and `Mute` actions on the desktop that coordinate directly with Android `TelecomManager` and Vega's PipeWire `hfp_hf` and `bap_sink` headset handoff.
 - Bidirectional media session bridging links Linux `MPRIS2` players and Android `MediaSession` state so track metadata and playback controls appear in the Linux tray menu and Android Quick Settings media carousel.
 
-## Pegasus
-
-Pegasus (1.3.0-pegasus, `versionCode` 9) introduces low-latency audio and video peripheral continuity over Vega's PipeWire graph and Orion's QUIC streams.
-
-- Android `Camera2` (`HardwareBuffer` and hardware `MediaCodec` H.264/AV1) and microphone capture stream over QUIC into a native Linux PipeWire virtual camera and audio source selectable through the `xdg-desktop-portal` Camera portal without kernel `v4l2loopback` modules.
-- Linux `xdg-desktop-portal` `ScreenCast` and PipeWire DMA-BUF capture stream a selected desktop window or virtual monitor to the Android companion app for low-latency second-screen viewing.
-- Congestion-aware media pacing adapts bitrate, resolution, and frame rate dynamically using `iroh` QUIC RTT and packet-loss metrics across Wi-Fi LAN and Wi-Fi Aware NAN Data Paths.
-- Hardware-enforced privacy controls surface active camera, microphone, and screen-cast indicators with instant one-tap termination in both `KeynearTileService` and the Linux `StatusNotifierItem` tray menu.
-
 ## Phoenix
 
-Phoenix (1.4.0-phoenix, `versionCode` 10) combines Vega's `RangingManager` closeness gating with Cygnus's hardware-backed keyrings to provide proximity session locking, remote SSH signing, and FIDO2 passkey bridging.
+Phoenix (1.3.0-phoenix, `versionCode` 9) turns Vega's audio handoff and ranging primitives into automatic headset continuity and proximity-aware session locking.
 
-- Proximity session supervision integrates with `org.freedesktop.login1` (`logind`) on Linux. It locks the desktop when the paired phone leaves the calibrated BLE Channel Sounding or UWB distance bound, and prepares to unlock when the phone returns.
-- `keynear daemon` exposes an optional `SSH_AUTH_SOCK` agent forwarding signing requests over QUIC to hardware-backed Ed25519 and ECDSA keys in Android Keystore (`StrongBox` and TEE) gated by `BiometricPrompt`.
-- A Linux UHID CTAP2 virtual security key bridge routes WebAuthn and FIDO2 ceremony requests over the authenticated QUIC channel to Android `CredentialManager` passkeys.
-- Cryptographic challenge binding ties every unlock, SSH signature, and FIDO2 assertion to both the active `X25519MLKEM768` TLS session transcript and a live hardware ranging measurement.
+- Automatic bidirectional audio continuity observes active playback and voice streams across PipeWire, MPRIS2, and Android audio sessions so shared LE Audio (`bap_sink`), `a2dp_sink`, and `hfp_hf` headsets follow whichever device starts playing without manual switching.
+- Coordinated profile and volume handoff pairs BlueZ with PipeWire LE Audio (`bap_sink`, `bap_source`, and VCP) so headset volume and abort-and-reclaim recovery stay consistent across switches instead of stalling playback or dropping into degraded hands-free profiles.
+- Proximity session supervision calls `org.freedesktop.login1` (`LockSession`) on Linux to lock the desktop when the paired phone leaves a calibrated distance bound, using background UWB `RangingManager` sessions on supported hardware and `CompanionDeviceManager` presence with smoothed BLE RSSI hysteresis everywhere else because Android restricts third-party background ranging on non-UWB radios.
+- Presence-gated continuity pauses background clipboard sync, OTP forwarding, and auto-accept transfers while the phone is out of desk range or the desktop session is locked, resuming once the device returns.
 
 ## Andromeda
 
-Andromeda (1.5.0-andromeda, `versionCode` 11) scales Keynear from a single desktop-to-phone link into a multi-peer personal continuity mesh with cross-device input handoff.
+Andromeda (1.4.0-andromeda, `versionCode` 10) scales Keynear from a single desktop-to-phone link into a multi-device personal mesh routed by Phoenix's proximity layer.
 
-- `PairedDeviceStore` and `OrionQuicNode` multiplex concurrent sessions across multiple paired Linux workstations, laptops, and Android phones or tablets, using `RangingManager` distance and BLE RSSI hysteresis to route proximity actions to the closest active peer.
-- Cross-screen input and cursor handoff uses `libei` (Emulated Input Server) and `xdg-desktop-portal` `RemoteDesktop` on Wayland alongside an Android tablet pointer receiver to move keyboard and pointer focus smoothly across screen edges.
-- Mesh key lifecycle management adds zero-downtime pairwise rotation (`irk`, `reconnect_secret`, and `quic_ed25519`) and signed revocation broadcasts across all paired devices in `oo7` and Android Keystore.
-- Multi-target fan-out enables simultaneous clipboard broadcast and parallel QUIC file drops to selected device groups from the tray menu and Android Share Sheet.
+- Concurrent multi-peer sessions extend `PairedDeviceStore` and `OrionQuicNode` to keep multiplexed `iroh` QUIC links open across multiple paired Linux workstations, laptops, phones, and tablets at once.
+- Closest-peer routing applies Phoenix's calibrated UWB ranging and BLE RSSI hysteresis so clipboard updates, OTP codes, notification mirrors, and audio handoff target only the nearest active, unlocked machine.
+- Multi-recipient file drops allow selecting more than one paired device from the existing Linux picker or Android `ShareActivity` to stream parallel QUIC transfers without adding group-management dashboards.
+- Mesh key lifecycle management performs zero-downtime pairwise rotation (`irk`, `reconnect_secret`, and `quic_ed25519`) across `oo7` and Android Keystore and broadcasts signed revocations to remaining paired peers when a device is unpaired or lost.

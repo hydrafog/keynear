@@ -19,4 +19,17 @@ object RangingPolicy {
             RangingMethod.NONE -> false
         }
     }
+
+    fun preferredMethod(
+        negotiatedFlags: UInt,
+        sdkInt: Int,
+        hasUwbHardware: Boolean,
+    ): RangingMethod = when {
+        sdkInt >= RANGING_SDK_FLOOR &&
+            hasUwbHardware &&
+            negotiatedFlags and CAP_RANGING_UWB != 0u -> RangingMethod.UWB
+        sdkInt >= RANGING_SDK_FLOOR &&
+            negotiatedFlags and CAP_RANGING_CS != 0u -> RangingMethod.BLE_CHANNEL_SOUNDING
+        else -> RangingMethod.NONE
+    }
 }

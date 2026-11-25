@@ -1,6 +1,6 @@
 # Clipboard and OTP Pass-Through
 
-Keynear (`1.2.0-carina`) synchronizes copied text and images in the background while respecting OS privacy boundaries.
+Keynear (`1.3.0-phoenix`) synchronizes copied text and images in the background while respecting OS privacy boundaries.
 
 ## Linux Clipboard Sync
 

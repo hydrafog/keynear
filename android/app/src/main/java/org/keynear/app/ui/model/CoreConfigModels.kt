@@ -86,6 +86,10 @@ data class DaemonConfigUi(
     val audioHandoffEnabled: Boolean = false,
     val ignoredMimeTypes: List<String> = DEFAULT_IGNORED_MIMES,
     val notifyAutoAcceptComplete: Boolean = false,
+    val audioContinuityEnabled: Boolean = true,
+    val proximityLockEnabled: Boolean = true,
+    val presenceGatingEnabled: Boolean = true,
+    val proximityDistanceMeters: Double = 3.0,
     val darkTheme: Boolean = false,
     val accentColorHex: String = KeynearAccents.DEFAULT_HEX,
 ) {
@@ -99,6 +103,10 @@ data class DaemonConfigUi(
         audioHandoffEnabled = audioHandoffEnabled,
         ignoredMimeTypes = ignoredMimeTypes,
         notifyAutoAcceptComplete = notifyAutoAcceptComplete,
+        audioContinuityEnabled = audioContinuityEnabled,
+        proximityLockEnabled = proximityLockEnabled,
+        presenceGatingEnabled = presenceGatingEnabled,
+        proximityDistanceMeters = proximityDistanceMeters,
     )
 
     companion object {
@@ -120,6 +128,10 @@ data class DaemonConfigUi(
             audioHandoffEnabled = ffi.audioHandoffEnabled,
             ignoredMimeTypes = ffi.ignoredMimeTypes,
             notifyAutoAcceptComplete = ffi.notifyAutoAcceptComplete,
+            audioContinuityEnabled = ffi.audioContinuityEnabled,
+            proximityLockEnabled = ffi.proximityLockEnabled,
+            presenceGatingEnabled = ffi.presenceGatingEnabled,
+            proximityDistanceMeters = ffi.proximityDistanceMeters,
             darkTheme = darkTheme,
             accentColorHex = accentColorHex,
         )

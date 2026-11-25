@@ -49,3 +49,12 @@ Keynear applies the following security controls.
   - `PairedDeviceStore::rename` and `DaemonConfig::save_to_path` enforce `MAX_DISPLAY_NAME_LEN` (`64`), `validate_display_name`, and atomic temp-file writes.
   - `ksni` tray and `zbus` desktop notification handlers enqueue non-blocking daemon commands without reading key material.
   - `keynear send --` and the Nautilus, Dolphin, and Yazi integrations pass literal paths past `--` without shell interpolation.
+
+## Proximity and Continuity Controls
+
+Phoenix gates physical proximity actions and presence-gated data.
+
+- `ProximityEvaluator` accepts only finite, in-range distance readings and valid RSSI values, rejects stale sequences, and requires two consecutive samples before changing lock state. A spoofed single ranging report cannot unlock or lock the desktop.
+- `Login1SessionLock` converts D-Bus failures into typed errors. `ProximitySupervisor` never unlocks the desktop and only calls `LockSession`, so a compromised ranging stream cannot bypass the screen lock.
+- `PresenceGate` fails closed when presence is unknown or the session is locked, blocking clipboard, OTP, and auto-accept paths until a trusted in-range measurement arrives.
+- Continuity commands carry monotonic sequences and stable owner ids. Stale or replayed observations cannot move a headset away from its current owner.

@@ -102,6 +102,36 @@ internal fun GeneralStorageSection(
                 },
             )
         }
+        SettingRow(
+            title = "Proximity lock",
+            subtitle = "Lock the desktop when your phone leaves desk range",
+        ) {
+            KeynearSwitch(
+                checked = config.proximityLockEnabled,
+                onCheckedChange = { checked ->
+                    actions.onUpdateConfig { it.copy(proximityLockEnabled = checked) }
+                },
+            )
+        }
+        SettingRow(
+            title = "Desk distance",
+            subtitle = "Calibrated proximity bound, tap to increase by 0.5 m",
+            onClick = {
+                actions.onUpdateConfig { current ->
+                    val next = current.proximityDistanceMeters + 0.5
+                    current.copy(
+                        proximityDistanceMeters = if (next > 10.0) 0.5 else next,
+                    )
+                }
+            },
+        ) {
+            Text(
+                text = "%.1f m".format(config.proximityDistanceMeters),
+                color = palette.textPrimary,
+                fontSize = KeynearTypeSizes.Description,
+                fontWeight = FontWeight.Bold,
+            )
+        }
     }
 }
 
@@ -119,6 +149,28 @@ internal fun AudioNotificationSection(
                 checked = config.audioHandoffEnabled,
                 onCheckedChange = { checked ->
                     actions.onUpdateConfig { it.copy(audioHandoffEnabled = checked) }
+                },
+            )
+        }
+        SettingRow(
+            title = "Automatic audio continuity",
+            subtitle = "Follow playback across paired devices",
+        ) {
+            KeynearSwitch(
+                checked = config.audioContinuityEnabled,
+                onCheckedChange = { checked ->
+                    actions.onUpdateConfig { it.copy(audioContinuityEnabled = checked) }
+                },
+            )
+        }
+        SettingRow(
+            title = "Presence gating",
+            subtitle = "Pause clipboard, codes, and auto-accept away from desk",
+        ) {
+            KeynearSwitch(
+                checked = config.presenceGatingEnabled,
+                onCheckedChange = { checked ->
+                    actions.onUpdateConfig { it.copy(presenceGatingEnabled = checked) }
                 },
             )
         }

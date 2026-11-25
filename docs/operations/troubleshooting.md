@@ -73,3 +73,13 @@ Check these items when clipboard sync misbehaves.
 
   The module logs `clipboard_backend_selected` as `ext-data-control-v1`, `zwlr-data-control-v1`, `x11`, or `headless-unavailable`. Install and enable the bridge when it reports `headless-unavailable`.
 - When clipboard images or password-manager entries appear skipped, verify `clipboardImagesEnabled` and `ignoredMimeTypes` (`x-kde-passwordManagerHint`, `application/x-password`, max `128` IPC entries) with `keynear settings show` or in `~/.config/keynear/config.toml`. On Android devices without Google Play services, SMS User Consent posts an availability status notification while manual clipboard sync continues working.
+
+## Automatic Continuity and Proximity Lock (`1.3.0-phoenix`)
+
+Check the following when a headset does not follow playback or the desktop does not lock at desk range.
+
+- If the headset stays on the old device, inspect the `phoenix_vcp_release_volume` and `vega_handoff_dispatch_failed` log events. Missing BlueZ transports leave the daemon running and log `vega_sink_release_unavailable`.
+- If PipeWire sinks are not discovered, inspect `phoenix_pipewire_unavailable`. The observer requires a running PipeWire instance and the native `pipewire` bindings from the dev shell.
+- If the desktop does not lock, inspect `phoenix_ranging_rejected`, `phoenix_locked_hint_unavailable`, and `phoenix_proximity_lock_failed`. Confirm that `proximityLockEnabled` is true and that `org.freedesktop.login1` is reachable on the system bus.
+- If clipboard, OTP, or auto-accept stays paused, inspect `phoenix_proximity_update`. The `blocked_operations` field counts the gated paths while the phone is away, the session is locked, or presence is unknown.
+- If UWB ranging never starts on Android, confirm API 36 or later, the `RANGING` permission, and hardware support in `RangingPolicy.preferredMethod`. Companion presence and BLE RSSI remain the fallback.

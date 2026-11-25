@@ -1,6 +1,6 @@
 # File Sharing
 
-Keynear (`1.2.0-carina`) streams files and directories directly between paired peers over relay-free `iroh` QUIC.
+Keynear (`1.3.0-phoenix`) streams files and directories directly between paired peers over relay-free `iroh` QUIC.
 
 ## Transfer Pipeline
 

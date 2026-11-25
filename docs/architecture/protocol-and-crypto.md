@@ -54,6 +54,7 @@ Bounded framing and the FFI boundary keep untrusted input from reaching sensitiv
   - The Vega tags `21..23` carry `AudioHandoff`, `CapabilityNegotiation`, and `FallbackProbe`.
   - The Perseus tags `24..26` carry `TransferCheckpoint`, `TransferResumeRequest`, and `TransferResumeAck`.
   - The Carina tags `27..32` carry `MirroredNotification`, `NotificationAction`, `CallAlert`, `CallAction`, `MediaSessionState`, and `MediaCommand`.
+  - The Phoenix tags `33..36` carry `AudioContinuityObservation`, `AudioContinuityCommand`, `RangingReport`, and `ProximityState`.
 - Vega capability bits extend the existing `capability_flags` bitmask above `0x07`.
   - `0x08` audio handoff.
   - `0x10` BLE Channel Sounding ranging.
@@ -61,7 +62,7 @@ Bounded framing and the FFI boundary keep untrusted input from reaching sensitiv
   - `0x40` Wi-Fi Aware NAN.
   - `0x80` Wi-Fi Direct R2.
 
-  Perseus adds `0x100` for resumable transfers, and lower bits stay unchanged. Carina adds `0x200` for notification mirroring, `0x400` for media bridging, and `0x800` for call alerts. All earlier bits stay unchanged.
+  Perseus adds `0x100` for resumable transfers, and lower bits stay unchanged. Carina adds `0x200` for notification mirroring, `0x400` for media bridging, and `0x800` for call alerts. Phoenix adds `0x1000` for audio continuity, `0x2000` for proximity lock, and `0x4000` for presence gating. All earlier bits stay unchanged.
 - A `TransferCheckpoint` carries a bit-packed verified-chunk bitmap bounded at `16_384` bytes, a rolling SHA-256 chain, and a byte count that must match the bitmap. This lets a peer resume a 60 KiB chunk stream after a LAN-to-Wi-Fi-Aware transition without re-sending verified chunks.
 - Control and stream framing applies fixed bounds.
   - The `ControlFrame` helpers `encode_control_frame`, `decode_control_frame`, `envelope_to_control_frame`, and `control_frame_to_envelope` validate `MAX_CONTROL_FRAME_BYTES` (`65_536` bytes) before allocation or decoding.
@@ -69,7 +70,7 @@ Bounded framing and the FFI boundary keep untrusted input from reaching sensitiv
   - QUIC stream helpers define `QuicStreamKind` values `0x01` Control, `0x02` RawFileChunk, `0x03` StoredZipArchive, and `0x04` ClipboardBlob, along with `write_control_envelope` and `read_control_envelope`.
   - `ClipboardOffer` defers outgoing image reads until a peer requests `ClipboardFetch`.
   - `ClipboardBlob` streams rendered images up to `MAX_CLIPBOARD_IMAGE_BYTES` (`16 MiB`) with a SHA-256 trailer outside the `65_536`-byte control frame bound.
-- The FFI layer in `crates/keynear-ffi/src/` contains `lib.rs`, `pairing/`, `transfer.rs`, `clipboard.rs`, `vega.rs`, `vfs.rs`, `continuity.rs`, and `callbacks/`. It exports the following over `libkeynear_core.so` (`cdylib`) to `:core-ffi` and `org.keynear.app` on Android.
+- The FFI layer in `crates/keynear-ffi/src/` contains `lib.rs`, `pairing/`, `transfer.rs`, `clipboard.rs`, `vega.rs`, `vfs.rs`, `continuity.rs`, `phoenix.rs`, and `callbacks/`. It exports the following over `libkeynear_core.so` (`cdylib`) to `:core-ffi` and `org.keynear.app` on Android.
   - `CoreHandle` and `OrionNodeHandle`.
   - `OrionNodeHandle` includes `set_clipboard_config`, `send_clipboard_text`, `send_clipboard_blob`, `poll_incoming_clipboard`, and `fetch_clipboard_offer`.
   - `FfiNoisePairingSession`, `FfiTransferSession`, `FfiClipboardItem`, `FfiLanEndpoint`, and `FfiPairedDevice`.

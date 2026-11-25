@@ -1,6 +1,6 @@
 # Quickstart
 
-Pair a Linux desktop running `keynear` with an Android phone running `org.keynear.app` (`1.2.0-carina`). You can then share files, clipboard items, one-time codes, notifications, and media controls over direct Wi-Fi QUIC.
+Pair a Linux desktop running `keynear` with an Android phone running `org.keynear.app` (`1.3.0-phoenix`). You can then share files, clipboard items, one-time codes, notifications, and media controls over direct Wi-Fi QUIC.
 
 ## Pairing
 
@@ -50,7 +50,7 @@ Keynear handles clipboard and one-time-code continuity in the background.
 
 The current release supports the following handoff and fallback behavior.
 
-- `1.2.0-carina` is the current production release. Three features stand out.
+- `1.3.0-phoenix` is the current production release. Four features stand out.
   - Interrupted multi-gigabyte drops resume from the last verified 60 KiB chunk, and paired shared directories are browsable on demand through a Linux FUSE mount and an Android `DocumentsProvider`. The daemon selects the `FuserAdapter` mount when `KEYNEAR_FUSE` is set and the `fuse` feature is compiled, and otherwise keeps IPC and transfers active without a mount.
   - Smart audio handoff pauses MPRIS2 playback and releases the matching `bap_sink`, `a2dp_sink`, or `hfp_hf` profile through BlueZ `org.bluez.MediaTransport1` before the phone claims a shared headset, then reclaims it on release. When the session or system bus is absent, the handoff logs a warning and keeps the daemon running.
   - Opted-in notifications mirror to the desktop with reply, mark-as-read, and dismiss actions, call alerts expose Answer, Decline, and Mute, and media state appears in the Linux tray menu and the Android Quick Settings media carousel.

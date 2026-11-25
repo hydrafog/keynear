@@ -37,8 +37,8 @@ android {
         applicationId = "org.keynear.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 8
-        versionName = "1.2.0-carina"
+        versionCode = 9
+        versionName = "1.3.0-phoenix"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")

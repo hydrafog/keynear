@@ -1,6 +1,6 @@
 # Android Build
 
-The Android companion app (`org.keynear.app`, `versionCode = 8`, `versionName = "1.2.0-carina"`) compiles `keynear-ffi` into `libkeynear_core.so`. The build uses `cargo-ndk` with 16 KB ELF page alignment and places the library in `android/core-ffi/src/main/jniLibs` before assembling the multi-module Gradle build (`:core-ffi`, `:designsystem`, `:app`). It ships these launcher assets.
+The Android companion app (`org.keynear.app`, `versionCode = 9`, `versionName = "1.3.0-phoenix"`) compiles `keynear-ffi` into `libkeynear_core.so`. The build uses `cargo-ndk` with 16 KB ELF page alignment and places the library in `android/core-ffi/src/main/jniLibs` before assembling the multi-module Gradle build (`:core-ffi`, `:designsystem`, `:app`). It ships these launcher assets.
 
 - An Adaptive Icon (`mipmap-anydpi-v26/ic_launcher.xml`) with background, foreground, and Android 13+ monochrome layers.
 - Fallback `mipmap-*/ic_launcher*.png` rasters.

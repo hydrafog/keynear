@@ -5,3 +5,4 @@ This section covers the core continuity capabilities shared across Linux and And
 - [File Sharing](./file-sharing.md)
 - [Clipboard and OTP Pass-Through](./clipboard-and-otp.md)
 - [Smart Audio Handoff](./audio-handoff.md)
+- [Proximity and Presence](./proximity-and-presence.md)

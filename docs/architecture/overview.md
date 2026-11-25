@@ -1,6 +1,6 @@
 # System Overview
 
-Keynear (`1.2.0-carina`) is a single monorepo with a shared Rust core, a unified Linux daemon and CLI binary, Protocol Buffers schemas, and an Android companion app.
+Keynear (`1.3.0-phoenix`) is a single monorepo with a shared Rust core, a unified Linux daemon and CLI binary, Protocol Buffers schemas, and an Android companion app.
 
 ## Module Topology
 
@@ -59,16 +59,18 @@ The workspace is organized into the following crates and modules.
 
   - Audio handoff and path fallbacks add a `zbus` BlueZ/MPRIS2 sink observer and handoff controller (`audio/`), a graded `wpa_supplicant` no-LAN prober (`fallback.rs`), and startup capability advertisement (`vega.rs`). A headless GNOME Shell D-Bus clipboard bridge lives under `packaging/gnome/keynear-clipboard@hydrafog.github.com/`.
   - Resumable transfers and the virtual filesystem add a typed FUSE mount controller with an injectable backend and an explicit `fuse_backend_unavailable` log event when kernel FUSE or `libfuse3` is absent (`fuse/`, `fuse/probe.rs`, `fuse/backend.rs`). The real `fuser` adapter is optional behind the `fuse` Cargo feature so the default build stays headless.
+  - Phoenix adds a `zbus` login1 session lock, a BLE RSSI proximity supervisor (`proximity/`), a PipeWire sink observer (`audio/pipewire.rs`), and a VCP volume controller (`audio/dbus.rs`).
   - Notification and media continuity extends the notification client with mirrored reply, mark-as-read, and dismiss actions (`notifications/`, `notifications/mirror.rs`), adds an MPRIS2 media observer and a `Now playing` tray group (`media.rs`, `tray/media_menu.rs`), and routes call actions through a typed dispatcher (`call.rs`, `ipc/handlers/actions.rs`).
 - The wire schema at `proto/keynear/v1/envelope.proto` defines `Envelope` and four groups of payloads.
   - The base payloads are `HandshakePayload` (`auth_proof`), `TransferOffer`, `ClipboardPayload`, `AudioStatePayload`, `ControlAck`, `LanEndpoint`, `TransferConsent`, `TransferCancel`, `TransferComplete`, `ClipboardOffer`, and `ClipboardFetch`.
   - The audio and fallback messages (`1.0.0-vega`) are `AudioHandoff`, `CapabilityNegotiation`, and `FallbackProbe`.
   - The resumable transfer messages (`1.1.0-perseus`) are `TransferCheckpoint`, `TransferResumeRequest`, and `TransferResumeAck` at tags `24..26`.
   - The continuity messages (`1.2.0-carina`) are `MirroredNotification`, `NotificationAction`, `CallAlert`, `CallAction`, `MediaSessionState`, and `MediaCommand` at tags `27..32`.
+  - The Phoenix messages (`1.3.0-phoenix`) are `AudioContinuityObservation`, `AudioContinuityCommand`, `RangingReport`, and `ProximityState` at tags `33..36`.
 - The Android companion in `android/` splits into three Gradle modules.
   - `:core-ffi` holds Gradle-generated UniFFI Kotlin bindings and 16 KB ELF page-aligned `jniLibs/`.
   - `:designsystem` holds `Tokens.kt`, `Theme.kt`, `KeynearIcons.kt`, and split `Controls*` components in `org.keynear.designsystem`.
-  - `:app` (`org.keynear.app`, `versionCode = 8`, `versionName = "1.2.0-carina"`) separates several concerns:
+  - `:app` (`org.keynear.app`, `versionCode = 9`, `versionName = "1.3.0-phoenix"`) separates several concerns:
     - BLE: `BleScanner`, `BleAdvertiser`, `GattSession`, and `PairingNotifier`.
     - Core bridge and event loop: `bridge/{CoreBridge,EventQueue,KeystoreSecretStore}`.
     - Repositories and LAN discovery: `data/{DeviceRepo,TransferRepo,PairingRepo,LanManager}`.

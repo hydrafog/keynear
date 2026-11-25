@@ -1,6 +1,6 @@
 # Permissions and Privacy
 
-Keynear (`1.2.0-carina`) requests only the OS permissions needed for local peer discovery, notifications, clipboard continuity, direct Wi-Fi QUIC transfers, and negotiated proximity features.
+Keynear (`1.3.0-phoenix`) requests only the OS permissions needed for local peer discovery, notifications, clipboard continuity, direct Wi-Fi QUIC transfers, and negotiated proximity features.
 
 ## Android Permissions
 
@@ -26,6 +26,7 @@ Android requests the following permissions.
 - `RUN_USER_INITIATED_JOBS` allows `KeynearTransferJobService` to schedule `User-Initiated Data Transfer Jobs` (`setUserInitiated(true)` on API 34 and later) for active file transfers.
 - `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` lets the collapsible onboarding card in `MainActivity` invite users to exempt Keynear from OEM background restriction when needed.
 - `REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE` enables `KeynearCompanionDeviceService` hardware presence callbacks through `AssociationInfo` on API 33 to 35 and `ObservingDevicePresenceRequest` on API 36 and later.
+- `RANGING` (API 36 and later) supports UWB ranging sessions through `RangingManager`. It belongs to the `NEARBY_DEVICES_PERMISSIONS` group granted during onboarding, and third-party background ranging stays limited to UWB.
 - `NEARBY_WIFI_DEVICES`, `ACCESS_LOCAL_NETWORK`, `ACCESS_NETWORK_STATE`, and `INTERNET` support local `NsdManager` (`_keynear._udp.`) LAN discovery and direct peer-to-peer `iroh` QUIC transfers without cloud relays. On `compileSdk = 36`, `LanManager` handles local-network access.
   - It checks `ACCESS_LOCAL_NETWORK`.
   - It guards `NsdManager.DiscoveryRequest` and `FLAG_SHOW_PICKER` behind `SDK_INT >= 37` reflection.

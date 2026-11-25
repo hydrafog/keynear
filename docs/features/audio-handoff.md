@@ -1,6 +1,6 @@
 # Smart Audio Handoff
 
-Keynear (`1.2.0-carina`) coordinates shared Bluetooth audio peripherals (earbuds, headphones, and speakers) between Linux and Android without a mid-stream disconnect. The Linux daemon observes BlueZ transports and MPRIS2 players over D-Bus. Incoming call alerts reuse the same handoff engine: an incoming call releases the matching `hfp_hf` or `bap_sink` profile, and a decline or end reclaims it. It models `bap_sink`, `a2dp_sink`, and `hfp_hf` as typed sink profiles and drives an ordered handoff state machine before the peer claims the headset.
+Keynear (`1.3.0-phoenix`) coordinates shared Bluetooth audio peripherals (earbuds, headphones, and speakers) between Linux and Android without a mid-stream disconnect. The Linux daemon observes BlueZ transports and MPRIS2 players over D-Bus. Incoming call alerts reuse the same handoff engine: an incoming call releases the matching `hfp_hf` or `bap_sink` profile, and a decline or end reclaims it. It models `bap_sink`, `bap_source`, `a2dp_sink`, and `hfp_hf` as typed sink profiles and drives an ordered handoff state machine before the peer claims the headset. Phoenix extends this one-shot flow with automatic bidirectional continuity and coordinated LE Audio volume.
 
 ## Handoff Sequence
 
@@ -16,6 +16,15 @@ sequenceDiagram
   A->>L: Publish sink release
   L->>P: Reclaim sink and resume playback
 ```
+
+## Automatic Continuity
+
+Phoenix follows whichever paired device starts playback or voice.
+
+- `crates/keynear-core/src/continuity.rs` owns `PhoenixContinuityEngine`. It rejects stale observations, breaks same-sequence ties by stable device id, and emits an ordered release, claim, and resume sequence. A failed claim produces an abort-and-reclaim command that returns the headset to the previous owner instead of stalling playback.
+- `AudioContinuityObservation` and `AudioContinuityCommand` control frames carry device id, peripheral id, volume percentage, sink profile, and sequence at tags `33` and `34`. `crates/keynear/src/service/audio_control.rs` dispatches each command to MPRIS2 playback and BlueZ profile switches.
+- The Linux backend observes PipeWire sink nodes through the `pipewire` crate and reads and writes `org.bluez.MediaTransport1.Volume` for VCP volume handoff. The `flake.nix` dev shell supplies `llvmPackages.libclang` and glibc includes so the native bindings build reproducibly.
+- Capability bits `0x1000` (audio continuity), `0x2000` (proximity lock), and `0x4000` (presence gating) let peers negotiate Phoenix support without changing earlier bits.
 
 ## Coordination Details
 
