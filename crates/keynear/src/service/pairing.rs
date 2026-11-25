@@ -12,9 +12,9 @@ use tokio::sync::{mpsc, watch, Mutex};
 use tokio::task::JoinHandle;
 use tracing::{info, warn};
 
+use crate::ble::adapter::DiscoveredBlePeer;
 use crate::ble::advertiser::DecodedBleBeacon;
 use crate::ble::gatt::PairingUiEvent;
-use crate::ble::adapter::DiscoveredBlePeer;
 use crate::ble::{BleDriverParams, BlePeerDriver, DEFAULT_CAPABILITY_FLAGS};
 use crate::ipc::IpcDispatchContext;
 use crate::notifications::NotificationsClient;
@@ -209,6 +209,32 @@ async fn forward_ble_lan_endpoints(
     }
 }
 
+async fn forward_ranging_samples(
+    mut discovered_rx: mpsc::Receiver<DiscoveredBlePeer>,
+    ranging_tx: mpsc::Sender<RangingSample>,
+) {
+    let mut sequence = 0u64;
+    while let Some(peer) = discovered_rx.recv().await {
+        let DecodedBleBeacon::Paired { device_id, .. } = &peer.beacon else {
+            continue;
+        };
+        let Some(rssi) = peer.rssi else {
+            continue;
+        };
+        sequence += 1;
+        let sample = RangingSample {
+            device_id: device_id.clone(),
+            technology: RangingTechnology::BleRssi,
+            distance_meters: None,
+            rssi_dbm: Some(i32::from(rssi)),
+            sequence,
+        };
+        if ranging_tx.send(sample).await.is_err() {
+            break;
+        }
+    }
+}
+
 pub(crate) fn spawn_bluez_loops(params: BluezLoopParams<'_>, tasks: &mut Vec<JoinHandle<()>>) {
     if !params.enable_bluez {
         return;
@@ -217,30 +243,13 @@ pub(crate) fn spawn_bluez_loops(params: BluezLoopParams<'_>, tasks: &mut Vec<Joi
         return;
     };
     let (ble_lan_tx, ble_lan_rx) = mpsc::channel::<v1::LanEndpoint>(LAN_ENDPOINT_CHANNEL_SLOTS);
-    let (discovered_tx, mut discovered_rx) = mpsc::channel::<DiscoveredBlePeer>(LAN_ENDPOINT_CHANNEL_SLOTS);
+    let (discovered_tx, discovered_rx) =
+        mpsc::channel::<DiscoveredBlePeer>(LAN_ENDPOINT_CHANNEL_SLOTS);
     if let Some(ranging_tx) = params.ranging_tx {
-        tasks.push(tokio::spawn(async move {
-            let mut sequence = 0u64;
-            while let Some(peer) = discovered_rx.recv().await {
-                let DecodedBleBeacon::Paired { device_id, .. } = &peer.beacon else {
-                    continue;
-                };
-                let Some(rssi) = peer.rssi else {
-                    continue;
-                };
-                sequence += 1;
-                let sample = RangingSample {
-                    device_id: device_id.clone(),
-                    technology: RangingTechnology::BleRssi,
-                    distance_meters: None,
-                    rssi_dbm: Some(i32::from(rssi)),
-                    sequence,
-                };
-                if ranging_tx.send(sample).await.is_err() {
-                    break;
-                }
-            }
-        }));
+        tasks.push(tokio::spawn(forward_ranging_samples(
+            discovered_rx,
+            ranging_tx,
+        )));
     }
     if let Some(node) = params.quic_node {
         let store = params.device_store.clone();

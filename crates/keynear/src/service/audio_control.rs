@@ -1,6 +1,6 @@
 use keynear_core::{
-    percent_to_vcp_volume, AudioContinuityObservation, AudioSinkProfile, ContinuityCommandKind,
-    ContinuityPlan, KeynearError, PhoenixContinuityEngine,
+    percent_to_vcp_volume, AudioContinuityCommand, AudioContinuityObservation, AudioSinkProfile,
+    ContinuityCommandKind, ContinuityPlan, KeynearError, PhoenixContinuityEngine,
 };
 use keynear_protocol::v1;
 use tokio::sync::mpsc;
@@ -8,7 +8,8 @@ use tokio::task::JoinHandle;
 use tracing::{info, warn};
 
 use crate::audio::{
-    call_players, set_vcp_volume, switch_profile, vcp_volume, DbusHandoffControl, VegaAudioController,
+    call_players, set_vcp_volume, switch_profile, vcp_volume, DbusHandoffControl,
+    VegaAudioController,
 };
 
 pub(crate) enum AudioHandoffEvent {
@@ -73,27 +74,39 @@ async fn dispatch_event(
 
 async fn apply_continuity_plan(plan: ContinuityPlan) -> Result<(), KeynearError> {
     for command in plan.commands {
-        match command.kind {
-            ContinuityCommandKind::Release => {
-                let current = vcp_volume(command.profile).await.unwrap_or_default();
-                info!(event = "phoenix_vcp_release_volume", volume = current);
-                switch_profile(command.profile, "Release").await?;
-            }
-            ContinuityCommandKind::Claim => {
-                switch_profile(command.profile, "Acquire").await?;
-                set_vcp_volume(command.profile, percent_to_vcp_volume(command.volume)).await?;
-            }
-            ContinuityCommandKind::Resume => {
-                call_players("Play").await?;
-            }
-            ContinuityCommandKind::AbortAndReclaim => {
-                if switch_profile(command.profile, "Release").await.is_ok() {
-                    switch_profile(command.profile, "Acquire").await?;
-                }
-                call_players("Play").await?;
-            }
-        }
+        apply_continuity_command(command).await?;
     }
+    Ok(())
+}
+
+async fn apply_continuity_command(command: AudioContinuityCommand) -> Result<(), KeynearError> {
+    match command.kind {
+        ContinuityCommandKind::Release => apply_release(command.profile).await,
+        ContinuityCommandKind::Claim => apply_claim(command).await,
+        ContinuityCommandKind::Resume => {
+            call_players("Play").await?;
+            Ok(())
+        }
+        ContinuityCommandKind::AbortAndReclaim => apply_reclaim(command.profile).await,
+    }
+}
+
+async fn apply_release(profile: AudioSinkProfile) -> Result<(), KeynearError> {
+    let current = vcp_volume(profile).await.unwrap_or_default();
+    info!(event = "phoenix_vcp_release_volume", volume = current);
+    switch_profile(profile, "Release").await
+}
+
+async fn apply_claim(command: AudioContinuityCommand) -> Result<(), KeynearError> {
+    switch_profile(command.profile, "Acquire").await?;
+    set_vcp_volume(command.profile, percent_to_vcp_volume(command.volume)).await
+}
+
+async fn apply_reclaim(profile: AudioSinkProfile) -> Result<(), KeynearError> {
+    if switch_profile(profile, "Release").await.is_ok() {
+        switch_profile(profile, "Acquire").await?;
+    }
+    call_players("Play").await?;
     Ok(())
 }
 

@@ -173,7 +173,9 @@ impl PhoenixContinuityEngine {
         if seq < self.last_sequence {
             return false;
         }
-        if seq == self.last_sequence && observation.device_id.as_str() >= self.last_device_id.as_str() {
+        if seq == self.last_sequence
+            && observation.device_id.as_str() >= self.last_device_id.as_str()
+        {
             return false;
         }
         self.last_sequence = seq;
@@ -224,7 +226,11 @@ fn validate_id(field: &'static str, value: &str) -> Result<(), KeynearError> {
 mod tests {
     use super::*;
 
-    fn observation(device: &str, seq: u64, kind: ContinuityObservationKind) -> AudioContinuityObservation {
+    fn observation(
+        device: &str,
+        seq: u64,
+        kind: ContinuityObservationKind,
+    ) -> AudioContinuityObservation {
         AudioContinuityObservation {
             device_id: device.to_string(),
             peripheral_id: "AA:BB:CC:DD:EE:FF".to_string(),
@@ -343,11 +349,12 @@ mod tests {
                 ContinuityObservationKind::PlaybackStarted,
             ))
             .expect("handoff");
-        let recovery = engine
-            .plan_recovery(3, "claim_failed")
-            .expect("recovery");
+        let recovery = engine.plan_recovery(3, "claim_failed").expect("recovery");
         assert_eq!(recovery.commands.len(), 1);
-        assert_eq!(recovery.commands[0].kind, ContinuityCommandKind::AbortAndReclaim);
+        assert_eq!(
+            recovery.commands[0].kind,
+            ContinuityCommandKind::AbortAndReclaim
+        );
         assert_eq!(recovery.commands[0].owner_device_id, "phone-1");
         assert_eq!(engine.owner(), Some("phone-1"));
     }
@@ -377,7 +384,10 @@ mod tests {
             ))
             .expect("stop");
         assert_eq!(plan.commands.len(), 1);
-        assert_eq!(plan.commands[0].kind, ContinuityCommandKind::AbortAndReclaim);
+        assert_eq!(
+            plan.commands[0].kind,
+            ContinuityCommandKind::AbortAndReclaim
+        );
         assert_eq!(engine.owner(), None);
     }
 

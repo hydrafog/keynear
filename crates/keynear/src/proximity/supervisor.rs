@@ -18,7 +18,12 @@ pub struct ProximitySupervisor<L: SessionLock> {
 }
 
 impl<L: SessionLock> ProximitySupervisor<L> {
-    pub fn new(lock: L, config: ProximityConfig, session_id: String, lock_enabled: bool) -> Result<Self, KeynearError> {
+    pub fn new(
+        lock: L,
+        config: ProximityConfig,
+        session_id: String,
+        lock_enabled: bool,
+    ) -> Result<Self, KeynearError> {
         Ok(Self {
             evaluator: ProximityEvaluator::new(config)?,
             lock,
@@ -35,32 +40,60 @@ impl<L: SessionLock> ProximitySupervisor<L> {
         PresenceGate.allows(operation, self.evaluator.snapshot())
     }
 
-    pub async fn observe(&mut self, sample: RangingSample) -> Result<ProximitySnapshot, KeynearError> {
+    pub async fn observe(
+        &mut self,
+        sample: RangingSample,
+    ) -> Result<ProximitySnapshot, KeynearError> {
         self.evaluator.update(sample)?;
+        self.refresh_lock_hint().await;
+        if self.should_lock() {
+            self.request_lock().await;
+        }
+        Ok(self.evaluator.snapshot())
+    }
+
+    async fn refresh_lock_hint(&mut self) {
         match self.lock.is_locked().await {
             Ok(locked) => self.evaluator.set_session_locked(locked),
             Err(err) => warn!(event = "phoenix_locked_hint_unavailable", error = %err),
         }
+    }
+
+    fn should_lock(&self) -> bool {
         let snapshot = self.evaluator.snapshot();
-        if self.lock_enabled
+        self.lock_enabled
             && snapshot.status == ProximityStatus::OutOfRange
             && !snapshot.session_locked
-        {
-            let result = if self.session_id.is_empty() {
-                self.lock.lock_all_sessions().await
-            } else {
-                self.lock.lock_session(&self.session_id).await
-            };
-            match result {
-                Ok(()) => {
-                    self.evaluator.set_session_locked(true);
-                    info!(event = "phoenix_proximity_lock");
-                }
-                Err(err) => warn!(event = "phoenix_proximity_lock_failed", error = %err),
-            }
-        }
-        Ok(self.evaluator.snapshot())
     }
+
+    async fn request_lock(&mut self) {
+        let result = self.invoke_lock().await;
+        self.log_lock_result(result);
+    }
+
+    async fn invoke_lock(&self) -> Result<(), KeynearError> {
+        if self.session_id.is_empty() {
+            self.lock.lock_all_sessions().await
+        } else {
+            self.lock.lock_session(&self.session_id).await
+        }
+    }
+
+    fn log_lock_result(&mut self, result: Result<(), KeynearError>) {
+        match result {
+            Ok(()) => self.mark_locked(),
+            Err(err) => log_lock_failure(&err),
+        }
+    }
+
+    fn mark_locked(&mut self) {
+        self.evaluator.set_session_locked(true);
+        info!(event = "phoenix_proximity_lock");
+    }
+}
+
+fn log_lock_failure(err: &KeynearError) {
+    warn!(event = "phoenix_proximity_lock_failed", error = %err);
 }
 
 pub fn spawn_proximity_loop<L: SessionLock + 'static>(
@@ -142,9 +175,11 @@ mod tests {
         let mut supervisor =
             ProximitySupervisor::new(lock, ProximityConfig::default(), "2".to_string(), true)
                 .expect("supervisor");
-        supervisor.observe(sample(1, 1.0)).await.expect("near");
+        for seq in 1..=2 {
+            supervisor.observe(sample(seq, 1.0)).await.expect("near");
+        }
         assert!(supervisor.allows(GatedOperation::ClipboardSync));
-        for seq in 2..=3 {
+        for seq in 3..=4 {
             supervisor.observe(sample(seq, 9.0)).await.expect("far");
         }
         assert_eq!(supervisor.snapshot().status, ProximityStatus::OutOfRange);

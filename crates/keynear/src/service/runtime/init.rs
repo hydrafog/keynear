@@ -57,7 +57,9 @@ pub(super) async fn init_services(params: InitParams<'_>) -> Result<RuntimeServi
     })
 }
 
-fn init_phoenix(config: &DaemonConfig) -> Result<Option<ProximitySupervisor<Login1SessionLock>>, KeynearError> {
+fn init_phoenix(
+    config: &DaemonConfig,
+) -> Result<Option<ProximitySupervisor<Login1SessionLock>>, KeynearError> {
     if !config.proximity_lock_enabled && !config.presence_gating_enabled {
         return Ok(None);
     }

@@ -1,8 +1,8 @@
 use keynear_core::{
     negotiate_capabilities, percent_to_vcp_volume as core_percent_to_vcp,
-    vcp_volume_to_percent as core_vcp_to_percent, CAP_AUDIO_CONTINUITY,
-    CAP_PRESENCE_GATING, CAP_PROXIMITY_LOCK, PhoenixCapabilities, ProximityConfig,
+    vcp_volume_to_percent as core_vcp_to_percent, PhoenixCapabilities, ProximityConfig,
     ProximityEvaluator, ProximitySnapshot, ProximityStatus, RangingSample, RangingTechnology,
+    CAP_AUDIO_CONTINUITY, CAP_PRESENCE_GATING, CAP_PROXIMITY_LOCK,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
@@ -82,7 +82,11 @@ pub fn negotiate_phoenix_capabilities(local: u32, peer: u32) -> u32 {
 
 #[uniffi::export]
 pub fn phoenix_capability_bits() -> Vec<u32> {
-    vec![CAP_AUDIO_CONTINUITY, CAP_PROXIMITY_LOCK, CAP_PRESENCE_GATING]
+    vec![
+        CAP_AUDIO_CONTINUITY,
+        CAP_PROXIMITY_LOCK,
+        CAP_PRESENCE_GATING,
+    ]
 }
 
 #[uniffi::export]

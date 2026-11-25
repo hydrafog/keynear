@@ -145,7 +145,9 @@ pub async fn switch_profile(profile: AudioSinkProfile, method: &str) -> Result<(
     Ok(())
 }
 
-async fn volume_transport(profile: AudioSinkProfile) -> Result<(zbus::Connection, String), KeynearError> {
+async fn volume_transport(
+    profile: AudioSinkProfile,
+) -> Result<(zbus::Connection, String), KeynearError> {
     let path = transport_path_for(profile)
         .await?
         .ok_or_else(|| backend_error("no BlueZ transport for volume handoff".to_string()))?;

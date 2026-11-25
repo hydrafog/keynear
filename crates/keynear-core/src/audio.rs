@@ -35,8 +35,7 @@ impl AudioSinkProfile {
 
 pub fn vcp_volume_to_percent(volume: u16) -> u8 {
     let clamped = volume.clamp(VCP_VOLUME_MIN, VCP_VOLUME_MAX);
-    ((u32::from(clamped) * 100 + u32::from(VCP_VOLUME_MAX) / 2) / u32::from(VCP_VOLUME_MAX))
-        as u8
+    ((u32::from(clamped) * 100 + u32::from(VCP_VOLUME_MAX) / 2) / u32::from(VCP_VOLUME_MAX)) as u8
 }
 
 pub fn percent_to_vcp_volume(percent: u8) -> u16 {

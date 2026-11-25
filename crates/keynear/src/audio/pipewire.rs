@@ -42,10 +42,7 @@ pub fn observe_sinks() -> Result<Vec<SinkObservation>, KeynearError> {
                 return;
             }
             sinks_clone.borrow_mut().push(SinkObservation {
-                node_name: props
-                    .get("node.name")
-                    .unwrap_or("unknown")
-                    .to_string(),
+                node_name: props.get("node.name").unwrap_or("unknown").to_string(),
                 media_class: media_class.to_string(),
                 profile: props
                     .get("api.bluez5.profile")

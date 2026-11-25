@@ -97,75 +97,67 @@ impl ProximityEvaluator {
     }
 
     pub fn update(&mut self, sample: RangingSample) -> Result<ProximitySnapshot, KeynearError> {
-        if sample.device_id.trim().is_empty() {
-            return Err(KeynearError::Validation {
-                field: "device_id",
-                message: "ranging device id must not be empty".to_string(),
-            });
-        }
+        validate_sample(&sample)?;
         if sample.sequence <= self.last_sequence {
             return Ok(self.snapshot());
         }
-        if let Some(distance) = sample.distance_meters {
-            if !distance.is_finite() || distance < 0.0 || distance > MAX_RANGE_METERS {
-                return Err(KeynearError::Validation {
-                    field: "distance_meters",
-                    message: format!("distance must be 0..{MAX_RANGE_METERS} meters"),
-                });
-            }
-        }
-        if let Some(rssi) = sample.rssi_dbm {
-            if !(MIN_RSSI_DBM..=MAX_RSSI_DBM).contains(&rssi) {
-                return Err(KeynearError::Validation {
-                    field: "rssi_dbm",
-                    message: format!("RSSI must be {MIN_RSSI_DBM}..{MAX_RSSI_DBM} dBm"),
-                });
-            }
-        }
         self.last_sequence = sample.sequence;
+        let in_range = self.range_decision(&sample)?;
+        self.apply_hysteresis(in_range);
+        Ok(self.snapshot())
+    }
 
+    fn range_decision(&mut self, sample: &RangingSample) -> Result<bool, KeynearError> {
         let uses_distance = matches!(
             sample.technology,
             RangingTechnology::Uwb | RangingTechnology::BleChannelSounding
         );
-        let in_range = if uses_distance {
-            let distance = sample.distance_meters.ok_or_else(|| KeynearError::Validation {
-                field: "distance_meters",
-                message: "distance-based ranging requires a distance".to_string(),
-            })?;
+        if uses_distance {
+            let distance = sample
+                .distance_meters
+                .ok_or_else(|| KeynearError::Validation {
+                    field: "distance_meters",
+                    message: "distance-based ranging requires a distance".to_string(),
+                })?;
             self.distance_meters = Some(distance);
             let threshold = if self.status == ProximityStatus::InRange {
                 self.config.exit_distance_meters
             } else {
                 self.config.enter_distance_meters
             };
-            distance <= threshold
-        } else {
-            let rssi = sample.rssi_dbm.ok_or_else(|| KeynearError::Validation {
-                field: "rssi_dbm",
-                message: "RSSI ranging requires an RSSI reading".to_string(),
-            })?;
-            let reading = match self.smoothed_rssi_dbm {
-                Some(previous) => {
-                    previous * (1.0 - self.config.smoothing_alpha)
-                        + rssi as f32 * self.config.smoothing_alpha
-                }
-                None => rssi as f32,
-            };
-            self.smoothed_rssi_dbm = Some(reading);
-            let threshold = if self.status == ProximityStatus::InRange {
-                self.config.exit_rssi_dbm
-            } else {
-                self.config.enter_rssi_dbm
-            };
-            reading >= threshold as f32
+            return Ok(distance <= threshold);
+        }
+        let rssi = sample.rssi_dbm.ok_or_else(|| KeynearError::Validation {
+            field: "rssi_dbm",
+            message: "RSSI ranging requires an RSSI reading".to_string(),
+        })?;
+        let reading = match self.smoothed_rssi_dbm {
+            Some(previous) => {
+                previous * (1.0 - self.config.smoothing_alpha)
+                    + rssi as f32 * self.config.smoothing_alpha
+            }
+            None => rssi as f32,
         };
-
-        self.apply_hysteresis(in_range);
-        Ok(self.snapshot())
+        self.smoothed_rssi_dbm = Some(reading);
+        let threshold = if self.status == ProximityStatus::InRange {
+            self.config.exit_rssi_dbm
+        } else {
+            self.config.enter_rssi_dbm
+        };
+        Ok(reading >= threshold as f32)
     }
 
     fn apply_hysteresis(&mut self, in_range: bool) {
+        if self.status == ProximityStatus::Unknown {
+            self.status = if in_range {
+                ProximityStatus::InRange
+            } else {
+                ProximityStatus::OutOfRange
+            };
+            self.pending_in_range = Some(in_range);
+            self.pending_samples = 1;
+            return;
+        }
         if self.pending_in_range == Some(in_range) {
             self.pending_samples += 1;
         } else {
@@ -184,6 +176,32 @@ impl ProximityEvaluator {
     }
 }
 
+fn validate_sample(sample: &RangingSample) -> Result<(), KeynearError> {
+    if sample.device_id.trim().is_empty() {
+        return Err(KeynearError::Validation {
+            field: "device_id",
+            message: "ranging device id must not be empty".to_string(),
+        });
+    }
+    if let Some(distance) = sample.distance_meters {
+        if !distance.is_finite() || distance < 0.0 || distance > MAX_RANGE_METERS {
+            return Err(KeynearError::Validation {
+                field: "distance_meters",
+                message: format!("distance must be 0..{MAX_RANGE_METERS} meters"),
+            });
+        }
+    }
+    if let Some(rssi) = sample.rssi_dbm {
+        if !(MIN_RSSI_DBM..=MAX_RSSI_DBM).contains(&rssi) {
+            return Err(KeynearError::Validation {
+                field: "rssi_dbm",
+                message: format!("RSSI must be {MIN_RSSI_DBM}..{MAX_RSSI_DBM} dBm"),
+            });
+        }
+    }
+    Ok(())
+}
+
 fn validate_config(config: &ProximityConfig) -> Result<(), KeynearError> {
     if !config.enter_distance_meters.is_finite()
         || !config.exit_distance_meters.is_finite()
@@ -193,8 +211,7 @@ fn validate_config(config: &ProximityConfig) -> Result<(), KeynearError> {
     {
         return Err(KeynearError::Validation {
             field: "exit_distance_meters",
-            message: "distance bounds must be positive and exit must not precede enter"
-                .to_string(),
+            message: "distance bounds must be positive and exit must not precede enter".to_string(),
         });
     }
     if !(MIN_RSSI_DBM..=MAX_RSSI_DBM).contains(&config.enter_rssi_dbm)
@@ -225,7 +242,12 @@ fn validate_config(config: &ProximityConfig) -> Result<(), KeynearError> {
 mod tests {
     use super::*;
 
-    fn sample(seq: u64, technology: RangingTechnology, distance: Option<f32>, rssi: Option<i32>) -> RangingSample {
+    fn sample(
+        seq: u64,
+        technology: RangingTechnology,
+        distance: Option<f32>,
+        rssi: Option<i32>,
+    ) -> RangingSample {
         RangingSample {
             device_id: "phone-1".to_string(),
             technology,
@@ -239,7 +261,10 @@ mod tests {
     fn uwb_distance_crosses_the_exit_bound_only_after_hysteresis() {
         let mut evaluator = ProximityEvaluator::new(ProximityConfig::default()).expect("evaluator");
         assert_eq!(
-            evaluator.update(sample(1, RangingTechnology::Uwb, Some(1.0), None)).unwrap().status,
+            evaluator
+                .update(sample(1, RangingTechnology::Uwb, Some(1.0), None))
+                .unwrap()
+                .status,
             ProximityStatus::InRange
         );
         let near_boundary = evaluator

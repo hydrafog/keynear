@@ -50,10 +50,7 @@ fn phoenix_payloads_use_tags_33_through_36() {
         ("ranging_report", [0x9A, 0x02]),
         ("proximity_state", [0xA2, 0x02]),
     ];
-    for (env, (name, key)) in sample_phoenix_envelopes()
-        .iter()
-        .zip(expected_keys.iter())
-    {
+    for (env, (name, key)) in sample_phoenix_envelopes().iter().zip(expected_keys.iter()) {
         let encoded = env.encode_to_vec();
         assert!(
             encoded.windows(2).any(|window| window == key),
@@ -64,9 +61,11 @@ fn phoenix_payloads_use_tags_33_through_36() {
 
     for env in sample_phoenix_envelopes() {
         let frame = envelope_to_control_frame(&env).expect("phoenix control frame");
-        assert!(frame.kind.starts_with("audio_continuity")
-            || frame.kind == "ranging_report"
-            || frame.kind == "proximity_state");
+        assert!(
+            frame.kind.starts_with("audio_continuity")
+                || frame.kind == "ranging_report"
+                || frame.kind == "proximity_state"
+        );
         let decoded = control_frame_to_envelope(&frame).expect("decoded phoenix frame");
         assert_eq!(decoded, env);
     }

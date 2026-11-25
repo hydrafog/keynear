@@ -31,11 +31,11 @@ pub use call::{
     MAX_CALLER_LEN, MAX_CALL_ID_LEN,
 };
 pub use capability::{
-    negotiate_capabilities, ranging_method, RangingMethod, VegaCapabilities, CAP_AUDIO_HANDOFF,
-    CAP_CALL_ALERTS, CAP_CLIPBOARD, CAP_FILE_TRANSFER, CAP_LEGACY_RESERVED, CAP_MEDIA_BRIDGE,
-    CAP_NOTIFICATION_MIRROR, CAP_RANGING_CS, CAP_RANGING_UWB, CAP_RESUMABLE_TRANSFER,
-    CAP_WIFI_AWARE, CAP_WIFI_DIRECT_R2, CAP_AUDIO_CONTINUITY, CAP_PRESENCE_GATING,
-    CAP_PROXIMITY_LOCK, PhoenixCapabilities,
+    negotiate_capabilities, ranging_method, PhoenixCapabilities, RangingMethod, VegaCapabilities,
+    CAP_AUDIO_CONTINUITY, CAP_AUDIO_HANDOFF, CAP_CALL_ALERTS, CAP_CLIPBOARD, CAP_FILE_TRANSFER,
+    CAP_LEGACY_RESERVED, CAP_MEDIA_BRIDGE, CAP_NOTIFICATION_MIRROR, CAP_PRESENCE_GATING,
+    CAP_PROXIMITY_LOCK, CAP_RANGING_CS, CAP_RANGING_UWB, CAP_RESUMABLE_TRANSFER, CAP_WIFI_AWARE,
+    CAP_WIFI_DIRECT_R2,
 };
 pub use clipboard::{
     is_image_mime, normalize_mime_type, pick_preferred_image_mime, read_clipboard_blob,
@@ -83,7 +83,7 @@ pub use pairing::{
 pub use presence::{GatedOperation, PresenceGate};
 pub use proximity::{
     ProximityConfig, ProximityEvaluator, ProximitySnapshot, ProximityStatus, RangingSample,
-    RangingTechnology, MAX_RANGE_METERS, MIN_RSSI_DBM, MAX_RSSI_DBM,
+    RangingTechnology, MAX_RANGE_METERS, MAX_RSSI_DBM, MIN_RSSI_DBM,
 };
 pub use resume::{
     resume_from_checkpoint, CheckpointInput, ChunkBitmap, ResumeDecision, Sha256Chain,
