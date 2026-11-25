@@ -228,3 +228,64 @@ fn daemon_config_save_to_path_roundtrips_with_restricted_mode() {
 
     let _ = fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn config_rejects_invalid_proximity_distance_bounds() {
+    for distance in [0.0, 0.49, 200.01, f32::NAN, f32::INFINITY] {
+        let cfg = DaemonConfig {
+            proximity_distance_meters: distance,
+            ..DaemonConfig::default()
+        };
+        assert!(matches!(
+            cfg.validate(),
+            Err(KeynearError::Validation {
+                field: "proximityDistanceMeters",
+                ..
+            })
+        ));
+    }
+    let cfg = DaemonConfig {
+        proximity_distance_meters: 0.5,
+        ..DaemonConfig::default()
+    };
+    cfg.validate().expect("lower bound accepted");
+    let cfg = DaemonConfig {
+        proximity_distance_meters: 200.0,
+        ..DaemonConfig::default()
+    };
+    cfg.validate().expect("upper bound accepted");
+}
+
+#[test]
+fn config_load_or_default_rejects_malformed_toml() {
+    let path = unique_temp_path("malformed-config");
+    std::fs::write(&path, b"visibilityMode = [not valid toml").expect("write");
+    assert!(matches!(
+        DaemonConfig::load_or_default(&path),
+        Err(KeynearError::Config(_))
+    ));
+    let invalid = DaemonConfig {
+        proximity_distance_meters: f32::NAN,
+        ..DaemonConfig::default()
+    };
+    invalid
+        .save_to_path(&path)
+        .expect_err("invalid config must not be saved");
+    std::fs::remove_file(&path).expect("cleanup");
+}
+
+#[test]
+fn config_save_preserves_all_phoenix_flags() {
+    let path = unique_temp_path("phoenix-config");
+    let cfg = DaemonConfig {
+        audio_continuity_enabled: false,
+        proximity_lock_enabled: false,
+        presence_gating_enabled: false,
+        proximity_distance_meters: 5.5,
+        ..DaemonConfig::default()
+    };
+    cfg.save_to_path(&path).expect("save");
+    let loaded = DaemonConfig::load_or_default(&path).expect("load");
+    assert_eq!(loaded, cfg);
+    std::fs::remove_file(&path).expect("cleanup");
+}

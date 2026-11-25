@@ -261,3 +261,73 @@ async fn control_envelope_stream_roundtrip_and_bounds() {
         }) if size == MAX_CONTROL_FRAME_BYTES + 1
     ));
 }
+
+#[test]
+fn validate_control_envelope_accepts_every_sample_payload() {
+    for env in sample_envelopes() {
+        validate_control_envelope(&env).expect("valid envelope");
+    }
+}
+
+#[test]
+fn validate_control_envelope_rejects_empty_and_unknown_payloads() {
+    let empty = v1::Envelope {
+        version: 1,
+        sequence: 1,
+        timestamp_ms: 1,
+        payload: None,
+    };
+    assert!(matches!(
+        validate_control_envelope(&empty),
+        Err(KeynearError::Protocol(_))
+    ));
+    let frame = ControlFrame {
+        version: 1,
+        sequence: 1,
+        timestamp_ms: 1,
+        kind: "unknown_kind".to_string(),
+        payload: vec![],
+    };
+    assert!(control_frame_to_envelope(&frame).is_err());
+    let oversized = ControlFrame {
+        version: 1,
+        sequence: 1,
+        timestamp_ms: 1,
+        kind: "control_ack".to_string(),
+        payload: vec![0u8; MAX_CONTROL_FRAME_BYTES],
+    };
+    let decoded_oversized = control_frame_to_envelope(&oversized);
+    assert!(
+        decoded_oversized.is_err()
+            || matches!(
+                envelope_to_control_frame(&decoded_oversized.expect("decoded")),
+                Err(KeynearError::FrameTooLarge { .. })
+            )
+    );
+}
+
+#[tokio::test]
+async fn stream_helpers_reject_truncated_and_unknown_frames() {
+    let mut unknown = Vec::new();
+    write_stream_kind(&mut unknown, QuicStreamKind::Control)
+        .await
+        .expect("write kind");
+    unknown.extend_from_slice(&0u32.to_be_bytes());
+    assert!(read_control_envelope(&mut unknown.as_slice())
+        .await
+        .is_err());
+    let mut oversized = Vec::new();
+    write_stream_kind(&mut oversized, QuicStreamKind::Control)
+        .await
+        .expect("write kind");
+    oversized.extend_from_slice(&((MAX_CONTROL_FRAME_BYTES + 1) as u32).to_be_bytes());
+    assert!(matches!(
+        read_control_envelope(&mut oversized.as_slice()).await,
+        Err(KeynearError::FrameTooLarge { .. })
+    ));
+    let mut bad_kind = [0xffu8].as_slice();
+    assert!(matches!(
+        read_stream_kind(&mut bad_kind).await,
+        Err(KeynearError::Protocol(_))
+    ));
+}

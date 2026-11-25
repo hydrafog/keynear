@@ -232,3 +232,112 @@ fn loopback_unix_socket_enforces_0600_permissions_and_roundtrips() {
 
     let _ = fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn daemon_socket_path_lives_in_config_dir() {
+    let path = crate::daemon_socket_path();
+    assert!(path.ends_with("daemon.sock"));
+    assert!(path.to_string_lossy().contains("keynear"));
+}
+
+#[test]
+fn socket_dir_preparation_rejects_non_socket_and_clears_stale_socket() {
+    let dir = temp_sock_dir("prepare");
+    let regular = dir.join("regular.sock");
+    std::fs::create_dir_all(&dir).expect("create dir");
+    std::fs::write(&regular, b"not a socket").expect("write file");
+    assert!(matches!(
+        crate::prepare_daemon_socket_dir(&regular),
+        Err(KeynearError::Config(_))
+    ));
+
+    let stale = dir.join("stale.sock");
+    let listener = UnixListener::bind(&stale).expect("bind stale socket");
+    drop(listener);
+    crate::prepare_daemon_socket_dir(&stale).expect("clear stale socket");
+    assert!(!stale.exists());
+
+    let fresh = dir.join("nested/daemon.sock");
+    crate::prepare_daemon_socket_dir(&fresh).expect("create fresh dir");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = std::fs::metadata(fresh.parent().expect("parent"))
+            .expect("meta")
+            .permissions()
+            .mode()
+            & 0o777;
+        assert_eq!(mode, 0o700);
+    }
+    std::fs::remove_dir_all(&dir).expect("cleanup");
+}
+
+#[test]
+fn socket_permissions_are_restricted_to_owner() {
+    let dir = temp_sock_dir("perms");
+    std::fs::create_dir_all(&dir).expect("create dir");
+    let path = dir.join("daemon.sock");
+    std::fs::write(&path, b"placeholder").expect("write file");
+    crate::set_daemon_socket_permissions(&path).expect("set perms");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = std::fs::metadata(&path).expect("meta").permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600);
+    }
+    std::fs::remove_dir_all(&dir).expect("cleanup");
+}
+
+#[test]
+fn send_request_to_missing_daemon_reports_transport_error() {
+    let path = temp_sock_dir("missing").join("absent.sock");
+    assert!(matches!(
+        crate::send_request_to(&path, &IpcRequest::Status),
+        Err(KeynearError::Transport(_))
+    ));
+}
+
+#[test]
+fn send_request_to_decodes_peer_response_and_rejects_bad_frames() {
+    use std::io::{Read, Write};
+
+    let dir = temp_sock_dir("response");
+    std::fs::create_dir_all(&dir).expect("create dir");
+    let path = dir.join("daemon.sock");
+    let listener = UnixListener::bind(&path).expect("bind");
+
+    let response = IpcResponse::Error {
+        message: "nope".to_string(),
+    };
+    let payload = super::response::encode_response(&response).expect("encode response");
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("accept");
+        let mut len_buf = [0u8; 4];
+        stream.read_exact(&mut len_buf).expect("read len");
+        let len = u32::from_be_bytes(len_buf) as usize;
+        let mut req = vec![0u8; len];
+        stream.read_exact(&mut req).expect("read request");
+        stream
+            .write_all(&(payload.len() as u32).to_be_bytes())
+            .expect("write len");
+        stream.write_all(&payload).expect("write payload");
+    });
+    let decoded = crate::send_request_to(&path, &IpcRequest::Status).expect("response");
+    assert_eq!(decoded, response);
+    server.join().expect("server");
+
+    std::fs::remove_file(&path).expect("remove socket");
+    let bad_listener = UnixListener::bind(&path).expect("rebind");
+    let bad = thread::spawn(move || {
+        let (mut stream, _) = bad_listener.accept().expect("accept");
+        let mut len_buf = [0u8; 4];
+        stream.read_exact(&mut len_buf).expect("read len");
+        stream.write_all(&0u32.to_be_bytes()).expect("zero len");
+    });
+    assert!(matches!(
+        crate::send_request_to(&path, &IpcRequest::Status),
+        Err(KeynearError::Protocol(_))
+    ));
+    bad.join().expect("bad server");
+    std::fs::remove_dir_all(&dir).expect("cleanup");
+}

@@ -159,3 +159,63 @@ fn orion_node_handle_transfers_via_fd_and_cleans_up() {
     receiver.shutdown();
     let _ = fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn node_handle_api_surface_handles_empty_and_invalid_inputs() {
+    use std::net::{IpAddr, Ipv4Addr};
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("clock")
+        .as_nanos();
+    let dir = std::env::temp_dir().join(format!("keynear-ffi-api-{nonce}"));
+    fs::create_dir_all(&dir).expect("mkdir");
+    let loopback = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0);
+    let handle = OrionNodeHandle::build_with_init(OrionNodeInit {
+        device_id: "api-node".to_string(),
+        display_name: "API".to_string(),
+        capability_flags: 1,
+        quic_secret_key: vec![0x73; 32],
+        incoming_directory: dir.to_string_lossy().to_string(),
+        auto_accept_from_paired: false,
+        require_explicit_fd_for_single_file: false,
+        bind_addr: Some(loopback),
+    })
+    .expect("bind node");
+
+    assert!(handle.local_lan_endpoint().endpoint_id.len() >= 16);
+    handle.set_auto_accept_from_paired(true);
+    handle
+        .set_incoming_directory(dir.to_string_lossy().to_string())
+        .expect("dir");
+    assert!(handle.set_incoming_directory(String::new()).is_err());
+    assert!(handle.list_transfers().is_empty());
+    assert!(handle.respond_consent("missing".to_string(), true).is_err());
+    assert!(handle.cancel_transfer("missing".to_string()).is_err());
+    assert!(handle.send_paths("unknown".to_string(), vec![]).is_err());
+    handle.set_clipboard_config(true, true, true, vec!["x-secret".to_string()]);
+    assert!(handle
+        .send_clipboard_text("hello".to_string(), false)
+        .is_err());
+    assert!(handle
+        .send_clipboard_blob("text/plain".to_string(), vec![1, 2, 3])
+        .is_err());
+    assert!(handle.poll_incoming_clipboard().is_empty());
+    assert!(handle
+        .fetch_clipboard_offer(
+            "unknown".to_string(),
+            "missing".to_string(),
+            "text/plain".to_string()
+        )
+        .is_err());
+    assert!(handle
+        .read_remote_vfs_chunk("unknown".to_string(), "../escape".to_string(), 0, 16)
+        .is_err());
+    assert!(handle
+        .read_remote_vfs_chunk("unknown".to_string(), "safe.txt".to_string(), 0, 0)
+        .is_err());
+    handle
+        .remove_peer("unknown".to_string())
+        .expect("remove unknown peer");
+    handle.shutdown();
+    std::fs::remove_dir_all(&dir).expect("cleanup");
+}
