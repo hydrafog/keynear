@@ -134,6 +134,12 @@ fn payload_kind_and_bytes(payload: &v1::envelope::Payload) -> (&'static str, Vec
         P::CallAction(value) => ("call_action", value.encode_to_vec()),
         P::MediaSessionState(value) => ("media_session_state", value.encode_to_vec()),
         P::MediaCommand(value) => ("media_command", value.encode_to_vec()),
+        P::AudioContinuityObservation(value) => {
+            ("audio_continuity_observation", value.encode_to_vec())
+        }
+        P::AudioContinuityCommand(value) => ("audio_continuity_command", value.encode_to_vec()),
+        P::RangingReport(value) => ("ranging_report", value.encode_to_vec()),
+        P::ProximityState(value) => ("proximity_state", value.encode_to_vec()),
     }
 }
 
@@ -192,6 +198,10 @@ fn decode_payload(kind: &str, slice: &[u8]) -> Result<v1::envelope::Payload, Key
         "call_action" => P::CallAction(decode(slice)?),
         "media_session_state" => P::MediaSessionState(decode(slice)?),
         "media_command" => P::MediaCommand(decode(slice)?),
+        "audio_continuity_observation" => P::AudioContinuityObservation(decode(slice)?),
+        "audio_continuity_command" => P::AudioContinuityCommand(decode(slice)?),
+        "ranging_report" => P::RangingReport(decode(slice)?),
+        "proximity_state" => P::ProximityState(decode(slice)?),
         other => {
             return Err(KeynearError::Protocol(format!(
                 "unknown control frame kind '{other}'"

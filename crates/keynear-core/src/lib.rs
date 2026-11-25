@@ -8,19 +8,23 @@ pub mod audio;
 pub mod call;
 pub mod capability;
 pub mod clipboard;
+pub mod continuity;
 pub mod fallback;
 pub mod keyring;
 pub mod media;
 pub mod notifications;
 pub mod pairing;
+pub mod presence;
+pub mod proximity;
 pub mod resume;
 pub mod transfer;
 pub mod transport;
 pub mod vfs;
 
 pub use audio::{
-    AudioHandoffEngine, AudioHandoffPlan, AudioHandoffState, AudioSinkProfile, HandoffPhase,
-    MAX_PERIPHERAL_ID_LEN,
+    percent_to_vcp_volume, vcp_volume_to_percent, AudioHandoffEngine, AudioHandoffPlan,
+    AudioHandoffState, AudioSinkProfile, HandoffPhase, MAX_PERIPHERAL_ID_LEN, VCP_VOLUME_MAX,
+    VCP_VOLUME_MIN,
 };
 pub use call::{
     CallActionKind, CallAlertDescriptor, CallAlertEngine, CallAlertState, CallPhase, CallPlan,
@@ -30,7 +34,8 @@ pub use capability::{
     negotiate_capabilities, ranging_method, RangingMethod, VegaCapabilities, CAP_AUDIO_HANDOFF,
     CAP_CALL_ALERTS, CAP_CLIPBOARD, CAP_FILE_TRANSFER, CAP_LEGACY_RESERVED, CAP_MEDIA_BRIDGE,
     CAP_NOTIFICATION_MIRROR, CAP_RANGING_CS, CAP_RANGING_UWB, CAP_RESUMABLE_TRANSFER,
-    CAP_WIFI_AWARE, CAP_WIFI_DIRECT_R2,
+    CAP_WIFI_AWARE, CAP_WIFI_DIRECT_R2, CAP_AUDIO_CONTINUITY, CAP_PRESENCE_GATING,
+    CAP_PROXIMITY_LOCK, PhoenixCapabilities,
 };
 pub use clipboard::{
     is_image_mime, normalize_mime_type, pick_preferred_image_mime, read_clipboard_blob,
@@ -38,6 +43,11 @@ pub use clipboard::{
     ClipboardPolicy, DelayedClipboardOffer, DelayedRenderCallback, BUILT_IN_IGNORED_MIMES,
     CLIPBOARD_OFFER_TTL_SECS, DEFAULT_TEXT_MIME, MAX_CLIPBOARD_IMAGE_BYTES, MAX_CLIPBOARD_QUEUE,
     MAX_INLINE_CLIPBOARD_BYTES,
+};
+pub use continuity::{
+    AudioContinuityCommand, AudioContinuityObservation, ContinuityCommandKind,
+    ContinuityObservationKind, ContinuityPlan, PhoenixContinuityEngine, MAX_DEVICE_ID_LEN,
+    MAX_REASON_LEN,
 };
 pub use fallback::{
     select_fallback, FallbackChoice, FallbackMedia, FallbackProbeResult, FallbackStatus,
@@ -69,6 +79,11 @@ pub use notifications::{
 pub use pairing::{
     NoisePairingSession, PairingCompleted, PairingPeerMetadata, PairingRole, PairingState,
     EXPORT_CONTRIBUTION_LEN, MAX_GATT_PAIRING_FRAME_BYTES, PAIRING_PROTOCOL,
+};
+pub use presence::{GatedOperation, PresenceGate};
+pub use proximity::{
+    ProximityConfig, ProximityEvaluator, ProximitySnapshot, ProximityStatus, RangingSample,
+    RangingTechnology, MAX_RANGE_METERS, MIN_RSSI_DBM, MAX_RSSI_DBM,
 };
 pub use resume::{
     resume_from_checkpoint, CheckpointInput, ChunkBitmap, ResumeDecision, Sha256Chain,

@@ -1,10 +1,13 @@
 use keynear_protocol::KeynearError;
 
 pub const MAX_PERIPHERAL_ID_LEN: usize = 64;
+pub const VCP_VOLUME_MIN: u16 = 0;
+pub const VCP_VOLUME_MAX: u16 = 255;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AudioSinkProfile {
     BapSink,
+    BapSource,
     A2dpSink,
     HfpHf,
 }
@@ -13,6 +16,7 @@ impl AudioSinkProfile {
     pub fn parse(value: &str) -> Option<Self> {
         match value {
             "bap_sink" => Some(Self::BapSink),
+            "bap_source" => Some(Self::BapSource),
             "a2dp_sink" => Some(Self::A2dpSink),
             "hfp_hf" => Some(Self::HfpHf),
             _ => None,
@@ -22,10 +26,22 @@ impl AudioSinkProfile {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::BapSink => "bap_sink",
+            Self::BapSource => "bap_source",
             Self::A2dpSink => "a2dp_sink",
             Self::HfpHf => "hfp_hf",
         }
     }
+}
+
+pub fn vcp_volume_to_percent(volume: u16) -> u8 {
+    let clamped = volume.clamp(VCP_VOLUME_MIN, VCP_VOLUME_MAX);
+    ((u32::from(clamped) * 100 + u32::from(VCP_VOLUME_MAX) / 2) / u32::from(VCP_VOLUME_MAX))
+        as u8
+}
+
+pub fn percent_to_vcp_volume(percent: u8) -> u16 {
+    let clamped = percent.min(100);
+    ((u32::from(clamped) * u32::from(VCP_VOLUME_MAX) + 50) / 100) as u16
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -269,6 +285,23 @@ mod tests {
         );
         assert_eq!(AudioSinkProfile::parse("unknown"), None);
         assert_eq!(AudioSinkProfile::HfpHf.as_str(), "hfp_hf");
+        assert_eq!(
+            AudioSinkProfile::parse("bap_source"),
+            Some(AudioSinkProfile::BapSource)
+        );
+        assert_eq!(AudioSinkProfile::BapSource.as_str(), "bap_source");
+    }
+
+    #[test]
+    fn vcp_volume_maps_to_percent_and_back() {
+        assert_eq!(vcp_volume_to_percent(0), 0);
+        assert_eq!(vcp_volume_to_percent(255), 100);
+        assert_eq!(vcp_volume_to_percent(128), 50);
+        assert_eq!(percent_to_vcp_volume(0), 0);
+        assert_eq!(percent_to_vcp_volume(100), 255);
+        assert_eq!(percent_to_vcp_volume(50), 128);
+        assert_eq!(vcp_volume_to_percent(1024), 100);
+        assert_eq!(percent_to_vcp_volume(255), 255);
     }
 
     #[test]

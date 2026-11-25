@@ -10,6 +10,9 @@ pub const CAP_RESUMABLE_TRANSFER: u32 = 0x100;
 pub const CAP_NOTIFICATION_MIRROR: u32 = 0x200;
 pub const CAP_MEDIA_BRIDGE: u32 = 0x400;
 pub const CAP_CALL_ALERTS: u32 = 0x800;
+pub const CAP_AUDIO_CONTINUITY: u32 = 0x1000;
+pub const CAP_PROXIMITY_LOCK: u32 = 0x2000;
+pub const CAP_PRESENCE_GATING: u32 = 0x4000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RangingMethod {
@@ -44,6 +47,29 @@ impl VegaCapabilities {
         }
         if self.wifi_direct_r2 {
             flags |= CAP_WIFI_DIRECT_R2;
+        }
+        flags
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct PhoenixCapabilities {
+    pub audio_continuity: bool,
+    pub proximity_lock: bool,
+    pub presence_gating: bool,
+}
+
+impl PhoenixCapabilities {
+    pub fn flags(self) -> u32 {
+        let mut flags = 0u32;
+        if self.audio_continuity {
+            flags |= CAP_AUDIO_CONTINUITY;
+        }
+        if self.proximity_lock {
+            flags |= CAP_PROXIMITY_LOCK;
+        }
+        if self.presence_gating {
+            flags |= CAP_PRESENCE_GATING;
         }
         flags
     }
@@ -111,6 +137,26 @@ mod tests {
         let both = CAP_RANGING_CS | CAP_RANGING_UWB;
         assert_eq!(ranging_method(both), RangingMethod::BleChannelSounding);
         assert_eq!(ranging_method(CAP_RANGING_UWB), RangingMethod::Uwb);
+    }
+
+    #[test]
+    fn phoenix_capability_bits_stay_stable_and_negotiate() {
+        assert_eq!(CAP_AUDIO_CONTINUITY, 0x1000);
+        assert_eq!(CAP_PROXIMITY_LOCK, 0x2000);
+        assert_eq!(CAP_PRESENCE_GATING, 0x4000);
+        let local = PhoenixCapabilities {
+            audio_continuity: true,
+            proximity_lock: true,
+            ..PhoenixCapabilities::default()
+        }
+        .flags();
+        let peer = PhoenixCapabilities {
+            audio_continuity: true,
+            presence_gating: true,
+            ..PhoenixCapabilities::default()
+        }
+        .flags();
+        assert_eq!(negotiate_capabilities(local, peer), CAP_AUDIO_CONTINUITY);
     }
 
     #[test]

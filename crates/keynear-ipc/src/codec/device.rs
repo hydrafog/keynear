@@ -68,6 +68,10 @@ pub(crate) fn write_daemon_config(
         write_str(out, mime)?;
     }
     out.push(u8::from(config.notify_auto_accept_complete));
+    out.push(u8::from(config.audio_continuity_enabled));
+    out.push(u8::from(config.proximity_lock_enabled));
+    out.push(u8::from(config.presence_gating_enabled));
+    write_u32(out, config.proximity_distance_meters.to_bits());
     Ok(())
 }
 
@@ -91,6 +95,10 @@ pub(crate) fn read_daemon_config(cur: &mut Cursor<'_>) -> Result<DaemonConfig, K
         ignored_mime_types.push(cur.read_string()?);
     }
     let notify_auto_accept_complete = cur.read_bool()?;
+    let audio_continuity_enabled = cur.read_bool()?;
+    let proximity_lock_enabled = cur.read_bool()?;
+    let presence_gating_enabled = cur.read_bool()?;
+    let proximity_distance_meters = f32::from_bits(cur.read_u32()?);
     let config = DaemonConfig {
         visibility_mode,
         incoming_directory,
@@ -101,6 +109,10 @@ pub(crate) fn read_daemon_config(cur: &mut Cursor<'_>) -> Result<DaemonConfig, K
         audio_handoff_enabled,
         ignored_mime_types,
         notify_auto_accept_complete,
+        audio_continuity_enabled,
+        proximity_lock_enabled,
+        presence_gating_enabled,
+        proximity_distance_meters,
     };
     config.validate()?;
     Ok(config)

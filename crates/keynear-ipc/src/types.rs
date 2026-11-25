@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum IpcRequest {
     SendFiles {
         device_id: String,
@@ -55,7 +55,7 @@ pub struct DaemonStatus {
     pub incoming_directory: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum IpcResponse {
     Transfer(TransferSession),
     Transfers(Vec<TransferSession>),

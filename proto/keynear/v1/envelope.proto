@@ -31,6 +31,10 @@ message Envelope {
     CallAction call_action = 30;
     MediaSessionState media_session_state = 31;
     MediaCommand media_command = 32;
+    AudioContinuityObservation audio_continuity_observation = 33;
+    AudioContinuityCommand audio_continuity_command = 34;
+    RangingReport ranging_report = 35;
+    ProximityState proximity_state = 36;
   }
 }
 
@@ -281,5 +285,69 @@ message MediaCommand {
   string player_id = 1;
   MediaCommandKind kind = 2;
   uint64 sequence = 3;
+}
+
+enum ContinuityObservationKind {
+  CONTINUITY_OBSERVATION_UNSPECIFIED = 0;
+  CONTINUITY_PLAYBACK_STARTED = 1;
+  CONTINUITY_VOICE_STARTED = 2;
+  CONTINUITY_PLAYBACK_STOPPED = 3;
+  CONTINUITY_VOICE_STOPPED = 4;
+}
+
+message AudioContinuityObservation {
+  string device_id = 1;
+  string peripheral_id = 2;
+  ContinuityObservationKind kind = 3;
+  uint64 sequence = 4;
+  int32 volume = 5;
+  SinkProfile sink_profile = 6;
+}
+
+enum ContinuityCommandKind {
+  CONTINUITY_COMMAND_UNSPECIFIED = 0;
+  CONTINUITY_RELEASE = 1;
+  CONTINUITY_CLAIM = 2;
+  CONTINUITY_RESUME = 3;
+  CONTINUITY_ABORT_AND_RECLAIM = 4;
+}
+
+message AudioContinuityCommand {
+  string owner_device_id = 1;
+  string peripheral_id = 2;
+  ContinuityCommandKind kind = 3;
+  uint64 sequence = 4;
+  int32 volume = 5;
+  SinkProfile sink_profile = 6;
+  string reason = 7;
+}
+
+enum RangingTechnology {
+  RANGING_TECHNOLOGY_UNKNOWN = 0;
+  RANGING_TECHNOLOGY_UWB = 1;
+  RANGING_TECHNOLOGY_BLE_CS = 2;
+  RANGING_TECHNOLOGY_BLE_RSSI = 3;
+}
+
+message RangingReport {
+  string device_id = 1;
+  RangingTechnology technology = 2;
+  float distance_meters = 3;
+  int32 rssi_dbm = 4;
+  uint64 sequence = 5;
+}
+
+enum ProximityStatus {
+  PROXIMITY_UNSPECIFIED = 0;
+  PROXIMITY_IN_RANGE = 1;
+  PROXIMITY_OUT_OF_RANGE = 2;
+}
+
+message ProximityState {
+  string device_id = 1;
+  ProximityStatus status = 2;
+  float distance_meters = 3;
+  bool session_locked = 4;
+  uint64 sequence = 5;
 }
 

@@ -1,6 +1,7 @@
 use super::*;
 
 mod continuity;
+mod phoenix;
 mod resume;
 mod vega;
 
@@ -132,6 +133,7 @@ fn sample_envelopes() -> Vec<v1::Envelope> {
     envelopes.extend(sample_transfer_envelopes());
     envelopes.extend(vega::sample_vega_envelopes());
     envelopes.extend(resume::sample_resume_envelopes());
+    envelopes.extend(phoenix::sample_phoenix_envelopes());
     envelopes
 }
 

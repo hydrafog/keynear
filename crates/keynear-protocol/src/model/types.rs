@@ -85,7 +85,7 @@ pub struct TransferSession {
     pub started_at: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct DaemonConfig {
     pub visibility_mode: VisibilityMode,
@@ -97,6 +97,10 @@ pub struct DaemonConfig {
     pub audio_handoff_enabled: bool,
     pub ignored_mime_types: Vec<String>,
     pub notify_auto_accept_complete: bool,
+    pub audio_continuity_enabled: bool,
+    pub proximity_lock_enabled: bool,
+    pub presence_gating_enabled: bool,
+    pub proximity_distance_meters: f32,
 }
 
 impl Default for DaemonConfig {
@@ -114,6 +118,10 @@ impl Default for DaemonConfig {
                 "application/x-password".to_string(),
             ],
             notify_auto_accept_complete: true,
+            audio_continuity_enabled: true,
+            proximity_lock_enabled: true,
+            presence_gating_enabled: true,
+            proximity_distance_meters: 3.0,
         }
     }
 }
@@ -124,6 +132,14 @@ impl DaemonConfig {
             return Err(KeynearError::Validation {
                 field: "incomingDirectory",
                 message: "incoming directory must not be empty".to_string(),
+            });
+        }
+        if !self.proximity_distance_meters.is_finite()
+            || !(0.5..=200.0).contains(&self.proximity_distance_meters)
+        {
+            return Err(KeynearError::Validation {
+                field: "proximityDistanceMeters",
+                message: "proximity distance must be 0.5..200 meters".to_string(),
             });
         }
         Ok(())
