@@ -6,6 +6,10 @@ fn log_device_toggle(err: KeynearError) {
     tracing::warn!(event = "tray_device_toggle_failed", error = %err);
 }
 
+fn log_device_removal(err: KeynearError) {
+    tracing::warn!(event = "tray_device_remove_failed", error = %err);
+}
+
 fn log_otp_copy(err: KeynearError) {
     tracing::warn!(event = "copy_latest_otp_failed", error = %err);
 }
@@ -170,6 +174,11 @@ async fn handle_config_tray(cmd: &TrayCommand, ctx: &IpcDispatchContext) -> bool
         }
         TrayCommand::SetDeviceAutoAccept { device_id, enabled } => {
             toggle_device_auto_accept(device_id.clone(), *enabled, ctx);
+        }
+        TrayCommand::UnpairDevice { device_id } => {
+            if let Err(err) = super::dispatch::unpair_device(device_id, ctx).await {
+                log_device_removal(err);
+            }
         }
         _ => return false,
     }

@@ -222,6 +222,7 @@ internal fun GattSession.completeGattClientPairing(
         completed.reconnectSecret.fill(0)
     }
     activeSession = null
+    activePeerAddress = null
     client.setPendingPairing(null)
     if (deferLanExchange) {
         pendingLanExchangePeerId = completed.peerDeviceId

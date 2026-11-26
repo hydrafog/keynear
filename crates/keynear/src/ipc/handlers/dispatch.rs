@@ -60,19 +60,23 @@ fn set_device_auto_accept_response(
     }
 }
 
-async fn unpair_response(device_id: String, ctx: &IpcDispatchContext) -> IpcResponse {
+pub(crate) async fn unpair_device(
+    device_id: &str,
+    ctx: &IpcDispatchContext,
+) -> Result<(), KeynearError> {
     let remove_result = match ctx.secret_store {
-        Some(ref secrets) => remove_paired_device(&ctx.device_store, secrets.as_ref(), &device_id),
-        None => ctx.device_store.remove(&device_id),
+        Some(ref secrets) => remove_paired_device(&ctx.device_store, secrets.as_ref(), device_id),
+        None => ctx.device_store.remove(device_id),
     };
-    match remove_result {
-        Ok(_) => {
-            if let Err(err) = sync_ipc_context(ctx).await {
-                return error_response(&err);
-            }
-            ctx.refresh_notify.notify_waiters();
-            IpcResponse::Unpaired { device_id }
-        }
+    remove_result?;
+    sync_ipc_context(ctx).await?;
+    ctx.refresh_notify.notify_waiters();
+    Ok(())
+}
+
+async fn unpair_response(device_id: String, ctx: &IpcDispatchContext) -> IpcResponse {
+    match unpair_device(&device_id, ctx).await {
+        Ok(()) => IpcResponse::Unpaired { device_id },
         Err(err) => error_response(&err),
     }
 }

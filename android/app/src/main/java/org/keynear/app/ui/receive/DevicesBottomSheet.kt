@@ -1,6 +1,7 @@
 package org.keynear.app.ui.receive
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.VectorConverter
@@ -124,18 +125,24 @@ internal fun DevicesBottomSheet(
                 ),
             verticalArrangement = Arrangement.spacedBy(KeynearLayout.CompactGap),
         ) {
-            if (visiblePins.isEmpty()) {
-                SheetHandle()
-                EmptyDevicesSheetContent()
-            } else {
-                PopulatedDevicesSheetContent(
-                    pins = pins,
-                    visibleCount = visiblePins.size,
-                    hasBanner = hasBanner,
-                    expanded = expanded,
-                    onSetExpanded = onSetExpanded,
-                    actions = actions,
-                )
+            Crossfade(
+                targetState = visiblePins.isEmpty(),
+                animationSpec = tween(KeynearMotion.MORPH_DURATION_MS, easing = KeynearMotion.SpringEasing),
+                label = "devicesSheetState",
+            ) { isEmpty ->
+                if (isEmpty) {
+                    SheetHandle()
+                    EmptyDevicesSheetContent()
+                } else {
+                    PopulatedDevicesSheetContent(
+                        pins = pins,
+                        visibleCount = visiblePins.size,
+                        hasBanner = hasBanner,
+                        expanded = expanded,
+                        onSetExpanded = onSetExpanded,
+                        actions = actions,
+                    )
+                }
             }
         }
     }

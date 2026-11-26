@@ -18,6 +18,9 @@ import uniffi.keynear_core.FfiNoisePairingSession
 object GattSession {
     internal const val TAG = "GattSession"
 
+    internal fun shouldIgnorePairingTap(activePeerAddress: String?, requestedAddress: String): Boolean =
+        activePeerAddress?.equals(requestedAddress, ignoreCase = true) == true
+
     @Volatile
     internal var gattServer: BluetoothGattServer? = null
 
@@ -94,17 +97,21 @@ object GattSession {
     }
 
     @SuppressLint("MissingPermission")
-    fun initiatePairing(context: Context, peerAddress: String) {
+    fun initiatePairing(context: Context, peerAddress: String): Boolean {
         if (!KeynearBleConstants.hasConnectPermission(context)) {
             CoreClientProvider.init(context).updateBluetoothStatus(
                 BluetoothStatus.MISSING_PERMISSION,
                 "Bluetooth connect permission is required to pair.",
             )
-            return
+            return false
         }
-        val manager = context.getSystemService(BluetoothManager::class.java) ?: return
-        val adapter = manager.adapter ?: return
-        val device = runCatching { adapter.getRemoteDevice(peerAddress) }.getOrNull() ?: return
+        val manager = context.getSystemService(BluetoothManager::class.java) ?: return false
+        val adapter = manager.adapter ?: return false
+        val device = runCatching { adapter.getRemoteDevice(peerAddress) }.getOrNull() ?: return false
+        if (activeSession != null) {
+            if (shouldIgnorePairingTap(activePeerAddress, peerAddress)) return false
+            rejectActivePairing(context)
+        }
         val client = CoreClientProvider.init(context)
         val privKey = client.getOrCreateStaticPrivateKey()
         try {
@@ -127,9 +134,11 @@ object GattSession {
                 buildGattClientCallback(context.applicationContext, peerAddress),
                 BluetoothDevice.TRANSPORT_LE,
             )
+            return true
         } catch (t: Throwable) {
             Log.w(TAG, "initiate_pairing_failed")
             client.updateBluetoothStatus(BluetoothStatus.READY, t.message)
+            return false
         } finally {
             privKey.fill(0)
         }

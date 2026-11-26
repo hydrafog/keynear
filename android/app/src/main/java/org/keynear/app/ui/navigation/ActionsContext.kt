@@ -144,9 +144,9 @@ internal fun ActionsContext.openAppSettings() {
 
 internal fun ActionsContext.initiatePairing(addr: String) {
     scope.launch {
-        withContext(Dispatchers.IO) { GattSession.initiatePairing(context, addr) }
+        val started = withContext(Dispatchers.IO) { GattSession.initiatePairing(context, addr) }
         onStateUpdated(withContext(Dispatchers.IO) { bridge.loadState() })
-        onShowSnackbar("Pairing requested")
+        if (started) onShowSnackbar("Pairing requested")
     }
 }
 

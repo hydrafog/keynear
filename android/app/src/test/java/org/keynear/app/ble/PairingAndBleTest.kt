@@ -121,5 +121,17 @@ class PairingAndBleTest {
         assertEquals("007 042", PairingNotifier.formatCode("007042"))
         assertEquals("bad", PairingNotifier.formatCode("bad"))
     }
+
+    @Test
+    fun repeatedTapForSamePeerWhilePairingIsInFlightIsIgnored() {
+        assertTrue(GattSession.shouldIgnorePairingTap("AA:BB:CC:DD:EE:FF", "AA:BB:CC:DD:EE:FF"))
+        assertTrue(GattSession.shouldIgnorePairingTap("aa:bb:cc:dd:ee:ff", "AA:BB:CC:DD:EE:FF"))
+    }
+
+    @Test
+    fun tapForDifferentOrNoActivePeerStartsPairing() {
+        assertFalse(GattSession.shouldIgnorePairingTap(null, "AA:BB:CC:DD:EE:FF"))
+        assertFalse(GattSession.shouldIgnorePairingTap("11:22:33:44:55:66", "AA:BB:CC:DD:EE:FF"))
+    }
 }
 

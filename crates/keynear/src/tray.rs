@@ -32,6 +32,9 @@ pub enum TrayCommand {
         device_id: String,
         enabled: bool,
     },
+    UnpairDevice {
+        device_id: String,
+    },
     CopyLatestOtp,
     LaunchSendPicker {
         device_id: Option<String>,

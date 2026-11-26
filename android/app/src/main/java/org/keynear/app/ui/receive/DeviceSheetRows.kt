@@ -133,25 +133,6 @@ internal fun DeviceSheetRow(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
-                if (!pin.isPaired) {
-                    TactileSurface(
-                        shape = KeynearShapes.Lg,
-                        containerColor = palette.loadingTonal,
-                        tone = TactileTone.ACCENT_TONAL,
-                        cornerRadius = KeynearRadii.Lg,
-                    ) {
-                        Text(
-                            text = "Pair",
-                            color = palette.onLoadingTonal,
-                            fontSize = KeynearTypeSizes.Caption,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(
-                                horizontal = KeynearLayout.ContentGap,
-                                vertical = KeynearDimensions.Dp2,
-                            ),
-                        )
-                    }
-                }
             }
             Text(
                 text = pin.rssi?.let { "${pin.statusLabel} · $it dBm" } ?: pin.statusLabel,

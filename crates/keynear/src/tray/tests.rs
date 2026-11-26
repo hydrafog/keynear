@@ -172,3 +172,49 @@ fn tray_menu_groups_send_files_by_device_when_multiple_paired() {
         Some(MenuItem::SubMenu(sub)) if sub.label == "Send folder..." && sub.submenu.len() == 2
     ));
 }
+
+#[test]
+fn tray_menu_offers_immediate_device_removal() {
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    let mut tray = KeynearTray {
+        state: TrayState {
+            paired_devices: vec![sample_paired_device("pixel-9", "Pixel 9", false)],
+            ..Default::default()
+        },
+        cmd_tx: tx,
+    };
+    let menu = tray.menu();
+    let paired = menu
+        .iter()
+        .find_map(|item| match item {
+            MenuItem::SubMenu(sub) if sub.label == "Paired devices (1)" => Some(sub),
+            _ => None,
+        })
+        .expect("paired devices submenu");
+    let device = paired
+        .submenu
+        .iter()
+        .find_map(|item| match item {
+            MenuItem::SubMenu(sub) if sub.label == "Pixel 9" => Some(sub),
+            _ => None,
+        })
+        .expect("device submenu");
+    let labels: Vec<&str> = device.submenu.iter().filter_map(item_label).collect();
+    assert!(labels.contains(&"Remove device"));
+    assert!(!labels.iter().any(|label| label.contains("Confirm")));
+    let remove = device
+        .submenu
+        .iter()
+        .find_map(|item| match item {
+            MenuItem::Standard(item) if item.label == "Remove device" => Some(item),
+            _ => None,
+        })
+        .expect("remove item");
+    (remove.activate)(&mut tray);
+    assert_eq!(
+        rx.try_recv().expect("command"),
+        TrayCommand::UnpairDevice {
+            device_id: "pixel-9".to_string()
+        }
+    );
+}

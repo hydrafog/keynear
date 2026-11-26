@@ -247,21 +247,24 @@ export function ReceiveScreen() {
       </div>
 
       <section aria-label="Devices in range" className="relative z-20 mx-4 mb-4 shrink-0 rounded-kn-3xl px-4 pb-3 pt-2.5 kn-surface">
-        {visiblePins.length === 0 ? (
-          <div className="flex flex-col items-center">
-            <span aria-hidden="true" className="h-1.5 w-12 rounded-full kn-sheet-handle" />
-            <div className="flex flex-col items-center gap-2 px-3 py-4 text-center">
-              <span className="flex h-11 w-11 items-center justify-center rounded-kn-xl kn-loading-tonal">
-                <Radio className="h-5 w-5" aria-hidden="true" />
-              </span>
-              <div className="text-kn-sm font-kn-bold kn-text-primary">No computers nearby</div>
-              <div className="text-kn-xs kn-text-muted">
-                Switch visibility to {VISIBILITY_LABELS.pairedOnly.full} or {VISIBILITY_LABELS.everyoneNearby.full}
+        <div className="relative">
+          <div aria-hidden={visiblePins.length !== 0} inert={visiblePins.length !== 0 || undefined}
+            className={`transition-opacity duration-(--kn-duration-morph) ease-(--ease-kn-spring) ${visiblePins.length === 0 ? 'opacity-100' : 'pointer-events-none absolute inset-0 opacity-0'}`}>
+            <div className="flex flex-col items-center">
+              <span aria-hidden="true" className="h-1.5 w-12 rounded-full kn-sheet-handle" />
+              <div className="flex flex-col items-center gap-2 px-3 py-4 text-center">
+                <span className="flex h-11 w-11 items-center justify-center rounded-kn-xl kn-loading-tonal">
+                  <Radio className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <div className="text-kn-sm font-kn-bold kn-text-primary">No computers nearby</div>
+                <div className="text-kn-xs kn-text-muted">
+                  Switch visibility to {VISIBILITY_LABELS.pairedOnly.full} or {VISIBILITY_LABELS.everyoneNearby.full}
+                </div>
               </div>
             </div>
           </div>
-        ) : (
-          <>
+          <div aria-hidden={visiblePins.length === 0} inert={visiblePins.length === 0 || undefined}
+            className={`transition-opacity duration-(--kn-duration-morph) ease-(--ease-kn-spring) ${visiblePins.length === 0 ? 'pointer-events-none absolute inset-0 opacity-0' : 'opacity-100'}`}>
             <button
               type="button"
               onPointerDown={onSheetDown}
@@ -309,7 +312,6 @@ export function ReceiveScreen() {
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="truncate text-kn-base font-kn-semibold">{pin.displayName}</span>
-                            {!pin.isPaired && <span className="rounded-kn-lg px-2.5 py-0.5 text-kn-xs font-kn-bold kn-loading-tonal">Pair</span>}
                           </div>
                           <div className="truncate text-kn-xs tabular-nums kn-text-muted">{joinMeta(pin.state, `${pin.rssi} dBm`)}</div>
                         </div>
@@ -320,8 +322,8 @@ export function ReceiveScreen() {
                 </div>
               ))}
             </div>
-          </>
-        )}
+          </div>
+        </div>
       </section>
     </div>
   );

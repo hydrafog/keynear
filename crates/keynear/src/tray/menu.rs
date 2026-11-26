@@ -132,6 +132,13 @@ impl KeynearTray {
                     ..Default::default()
                 }
                 .into(),
+                MenuItem::Separator,
+                command_item(
+                    "Remove device",
+                    TrayCommand::UnpairDevice {
+                        device_id: device.device_id.clone(),
+                    },
+                ),
             ],
             ..Default::default()
         }
