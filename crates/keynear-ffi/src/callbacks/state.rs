@@ -178,3 +178,82 @@ pub(crate) fn rename_paired_device_impl(
     let updated = store.rename(&device_id, &new_display_name)?;
     Ok(FfiPairedDevice::from(updated))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn to_key_32_accepts_32_bytes_and_rejects_other_lengths() {
+        let key = to_key_32(&[0x11; 32], "testKey").expect("32 bytes");
+        assert_eq!(key, [0x11; 32]);
+        for len in [0, 31, 33] {
+            let err = to_key_32(&vec![0u8; len], "testKey").expect_err("wrong length");
+            assert!(matches!(
+                err,
+                KeynearError::Validation {
+                    field: "testKey",
+                    ..
+                }
+            ));
+        }
+    }
+
+    #[test]
+    fn refresh_reverts_expired_everyone_deadline_and_keeps_live_one() {
+        let now = Instant::now();
+        let mut inner = VisibilityStateInner::default();
+        inner.set_mode(VisibilityMode::EveryoneNearby, now);
+
+        inner.refresh(now + Duration::from_secs(599));
+        assert_eq!(inner.mode, VisibilityMode::EveryoneNearby);
+        assert!(inner.deadline.is_some());
+
+        inner.refresh(now + Duration::from_secs(600));
+        assert_eq!(inner.mode, VisibilityMode::PairedOnly);
+        assert!(inner.deadline.is_none());
+    }
+
+    #[test]
+    fn remaining_secs_truncates_and_returns_zero_outside_everyone() {
+        let now = Instant::now();
+        let mut inner = VisibilityStateInner::default();
+        inner.set_mode(VisibilityMode::EveryoneNearby, now);
+        assert_eq!(inner.remaining_secs(now + Duration::from_millis(1900)), 598);
+
+        assert_eq!(
+            inner.set_mode(VisibilityMode::Hidden, now),
+            VisibilityMode::Hidden
+        );
+        assert_eq!(inner.remaining_secs(now), 0);
+        inner.set_mode(VisibilityMode::PairedOnly, now);
+        assert_eq!(inner.remaining_secs(now), 0);
+    }
+
+    #[test]
+    fn cycle_visibility_mode_impl_cycles_modes_without_timing() {
+        let lock = Mutex::new(VisibilityStateInner::default());
+        assert_eq!(
+            cycle_visibility_mode_impl(&lock),
+            FfiVisibilityMode::EveryoneNearby
+        );
+        assert_eq!(cycle_visibility_mode_impl(&lock), FfiVisibilityMode::Hidden);
+        assert_eq!(
+            cycle_visibility_mode_impl(&lock),
+            FfiVisibilityMode::PairedOnly
+        );
+    }
+
+    #[test]
+    fn validate_config_toml_impl_accepts_valid_and_rejects_malformed() {
+        let mode = validate_config_toml_impl(
+            "visibilityMode = \"hidden\"\nproximityDistanceMeters = 2.5\n".to_string(),
+        )
+        .expect("valid toml");
+        assert_eq!(mode, FfiVisibilityMode::Hidden);
+
+        let err =
+            validate_config_toml_impl("visibilityMode = ".to_string()).expect_err("malformed toml");
+        assert!(matches!(err, FfiError::Config { .. }));
+    }
+}

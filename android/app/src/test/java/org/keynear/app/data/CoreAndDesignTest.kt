@@ -2,6 +2,7 @@ package org.keynear.app.data
 
 import androidx.compose.ui.graphics.Color
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.keynear.app.bridge.CoreBridge
@@ -14,7 +15,12 @@ import org.keynear.designsystem.DarkKeynearPalette
 import org.keynear.designsystem.KeynearAccents
 import org.keynear.designsystem.KeynearSpacing
 import org.keynear.designsystem.LightKeynearPalette
+import org.keynear.designsystem.mixOklch
+import org.keynear.designsystem.mixSrgb
 import org.keynear.designsystem.normalizeAccentHex
+import org.keynear.designsystem.parseAccentHexOrNull
+import org.keynear.designsystem.toColor
+import org.keynear.designsystem.toOklch
 import org.keynear.designsystem.withAccentHex
 
 class CoreAndDesignTest {
@@ -130,6 +136,57 @@ class CoreAndDesignTest {
         assertEquals(Color(0xFFE79750), amberDark.accent)
         assertEquals(Color(0xFFE79750), amberDark.focusRing)
         assertEquals(Color(0xFFFFFFFF), amberDark.onAccent)
+    }
+
+    @Test
+    fun parseAccentHexOrNullAcceptsSixDigitHexAndRejectsMalformedInput() {
+        assertEquals(Color(0xFF4ABBD5), parseAccentHexOrNull("4ABBD5"))
+        assertEquals(Color(0xFF4ABBD5), parseAccentHexOrNull("  #4abbd5  "))
+        assertEquals(Color(0xFF000000), parseAccentHexOrNull("000000"))
+        assertNull(parseAccentHexOrNull("#GGGGGG"))
+        assertNull(parseAccentHexOrNull("12AB"))
+    }
+
+    @Test
+    fun normalizeAccentHexUppercasesValidHexAndFallsBackOnMalformedInput() {
+        assertEquals("#C594E9", normalizeAccentHex("c594e9"))
+        assertEquals("#4ABBD5", normalizeAccentHex("  #4abbd5  "))
+        assertEquals(KeynearAccents.DEFAULT_HEX, normalizeAccentHex("#12345G"))
+    }
+
+    @Test
+    fun oklchRoundTripPreservesColorWithinTolerance() {
+        val original = parseAccentHexOrNull("4ABBD5")!!
+        assertColorNear(original, original.toOklch().toColor())
+    }
+
+    @Test
+    fun mixSrgbReturnsItsEndpointsAtZeroAndOne() {
+        val from = Color(0xFF112233)
+        val to = Color(0xFFAABBCC)
+        assertEquals(from, mixSrgb(from, to, 0f))
+        assertEquals(to, mixSrgb(from, to, 1f))
+    }
+
+    @Test
+    fun mixOklchReturnsBaseAndAccentAtEndpoints() {
+        val accent = Color(0xFF4ABBD5)
+        val base = Color(0xFF0D1115)
+        assertColorNear(base, mixOklch(accent, base, 0f))
+        assertColorNear(accent, mixOklch(accent, base, 1f))
+    }
+
+    @Test
+    fun withAccentHexProducesTwoDistinctGradientColors() {
+        val palette = LightKeynearPalette.withAccentHex("#4ABBD5")
+        assertTrue(palette.accentSheen != palette.accentShift)
+    }
+
+    private fun assertColorNear(expected: Color, actual: Color, delta: Float = 0.02f) {
+        assertEquals(expected.red.toDouble(), actual.red.toDouble(), delta.toDouble())
+        assertEquals(expected.green.toDouble(), actual.green.toDouble(), delta.toDouble())
+        assertEquals(expected.blue.toDouble(), actual.blue.toDouble(), delta.toDouble())
+        assertEquals(expected.alpha.toDouble(), actual.alpha.toDouble(), 0.0)
     }
 }
 

@@ -14,6 +14,65 @@ fn node_config(device_id: &str, seed_byte: u8) -> OrionNodeConfig {
     }
 }
 
+async fn spawn_control_ack_rig(
+    server_seed: u8,
+    client_seed: u8,
+    secret: [u8; 32],
+) -> (
+    OrionQuicNode,
+    OrionQuicNode,
+    tokio::task::JoinHandle<Option<v1::envelope::Payload>>,
+) {
+    let server = OrionQuicNode::bind(
+        node_config("linux-host", server_seed),
+        Some(loopback_addr()),
+    )
+    .await
+    .expect("bind server");
+    let client = OrionQuicNode::bind(
+        node_config("pixel-phone", client_seed),
+        Some(loopback_addr()),
+    )
+    .await
+    .expect("bind client");
+    let server_addrs: Vec<SocketAddr> = server.endpoint_addr().ip_addrs().copied().collect();
+    let client_addrs: Vec<SocketAddr> = client.endpoint_addr().ip_addrs().copied().collect();
+    server
+        .register_peer("pixel-phone", client.endpoint_id(), client_addrs, secret)
+        .expect("register client");
+    client
+        .register_peer("linux-host", server.endpoint_id(), server_addrs, secret)
+        .expect("register server");
+    let server_clone = server.clone();
+    let recv_task = tokio::spawn(async move {
+        let (_peer, conn) = server_clone
+            .accept_authenticated()
+            .await
+            .expect("accept")
+            .expect("conn");
+        let (mut send, mut recv) = conn.accept_bi().await.expect("bi");
+        assert_eq!(
+            read_stream_kind(&mut recv).await.expect("kind"),
+            QuicStreamKind::Control
+        );
+        let env = read_control_envelope(&mut recv).await.expect("env");
+        let ack = v1::Envelope {
+            version: 1,
+            sequence: env.sequence,
+            timestamp_ms: 1,
+            payload: Some(v1::envelope::Payload::ControlAck(v1::ControlAck {
+                acked_sequence: env.sequence,
+                accepted: true,
+                reason: String::new(),
+            })),
+        };
+        write_control_envelope(&mut send, &ack).await.expect("ack");
+        let _ = send.finish();
+        env.payload
+    });
+    (server, client, recv_task)
+}
+
 #[tokio::test]
 async fn endpoint_disables_relays_and_negotiates_x25519mlkem768() {
     let provider = build_orion_crypto_provider();
@@ -159,54 +218,12 @@ async fn rejects_unpaired_and_invalid_hmac() {
 
 #[tokio::test]
 async fn send_proximity_state_roundtrips_and_peer_lifecycle_works() {
-    let server = OrionQuicNode::bind(node_config("linux-host", 0x61), Some(loopback_addr()))
-        .await
-        .expect("bind server");
-    let client = OrionQuicNode::bind(node_config("pixel-phone", 0x62), Some(loopback_addr()))
-        .await
-        .expect("bind client");
-    let secret = [0x77; 32];
-    let server_ep = server.local_lan_endpoint();
-    assert_eq!(server_ep.device_id, "linux-host");
-    let server_addrs: Vec<SocketAddr> = server.endpoint_addr().ip_addrs().copied().collect();
-    let client_addrs: Vec<SocketAddr> = client.endpoint_addr().ip_addrs().copied().collect();
-
-    server
-        .register_peer("pixel-phone", client.endpoint_id(), client_addrs, secret)
-        .expect("register client");
-    client
-        .register_peer("linux-host", server.endpoint_id(), server_addrs, secret)
-        .expect("register server");
+    let (server, client, recv_task) = spawn_control_ack_rig(0x61, 0x62, [0x77; 32]).await;
+    assert_eq!(server.local_lan_endpoint().device_id, "linux-host");
     assert_eq!(
         server.peer_device_id(&client.endpoint_id()).as_deref(),
         Some("pixel-phone")
     );
-
-    let server_clone = server.clone();
-    let recv_task = tokio::spawn(async move {
-        let (_peer, conn) = server_clone
-            .accept_authenticated()
-            .await
-            .expect("accept")
-            .expect("conn");
-        let (mut send, mut recv) = conn.accept_bi().await.expect("bi");
-        let kind = read_stream_kind(&mut recv).await.expect("kind");
-        assert_eq!(kind, QuicStreamKind::Control);
-        let env = read_control_envelope(&mut recv).await.expect("env");
-        let ack = v1::Envelope {
-            version: 1,
-            sequence: env.sequence,
-            timestamp_ms: 1,
-            payload: Some(v1::envelope::Payload::ControlAck(v1::ControlAck {
-                acked_sequence: env.sequence,
-                accepted: true,
-                reason: String::new(),
-            })),
-        };
-        write_control_envelope(&mut send, &ack).await.expect("ack");
-        let _ = send.finish();
-        env.payload
-    });
 
     let state = v1::ProximityState {
         device_id: "pixel-phone".to_string(),
@@ -256,6 +273,28 @@ async fn send_proximity_state_roundtrips_and_peer_lifecycle_works() {
     server.remove_peer("pixel-phone").expect("remove peer");
     assert!(server.peer_device_id(&client.endpoint_id()).is_none());
 
+    client.close().await;
+    server.close().await;
+}
+
+#[tokio::test]
+async fn send_ranging_report_reaches_control_dispatch_and_is_accepted() {
+    let (server, client, recv_task) = spawn_control_ack_rig(0x71, 0x72, [0x88; 32]).await;
+    let report = v1::RangingReport {
+        device_id: "pixel-phone".to_string(),
+        technology: v1::RangingTechnology::BleRssi as i32,
+        distance_meters: 2.5,
+        rssi_dbm: -58,
+        sequence: 7,
+    };
+    client
+        .send_ranging_report("linux-host", report.clone())
+        .await
+        .expect("send ranging report");
+    assert_eq!(
+        recv_task.await.expect("join"),
+        Some(v1::envelope::Payload::RangingReport(report))
+    );
     client.close().await;
     server.close().await;
 }

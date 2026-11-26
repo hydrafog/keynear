@@ -188,3 +188,53 @@ pub(crate) fn prune_incoming_offers(
     let ttl = Duration::from_secs(CLIPBOARD_OFFER_TTL_SECS);
     offers.retain(|_, entry| now.saturating_duration_since(entry.created_at) < ttl);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalize_mime_type_strips_parameters_trims_and_lowercases() {
+        assert_eq!(
+            normalize_mime_type("  IMAGE/PNG ; charset=utf-8 "),
+            "image/png"
+        );
+        assert_eq!(
+            normalize_mime_type("text/plain;charset=utf-8"),
+            "text/plain"
+        );
+        assert_eq!(normalize_mime_type("   "), "");
+    }
+
+    #[test]
+    fn is_image_mime_detects_image_types_with_parameters() {
+        assert!(is_image_mime("IMAGE/JPEG; charset=binary"));
+        assert!(is_image_mime("image/webp"));
+        assert!(!is_image_mime("text/plain; charset=utf-8"));
+        assert!(!is_image_mime("application/image+json"));
+    }
+
+    #[test]
+    fn pick_preferred_image_mime_honors_preference_regardless_of_order() {
+        let mimes = [
+            "image/bmp",
+            "application/octet-stream",
+            "image/webp",
+            "image/jpeg; q=0.9",
+            "image/png",
+        ]
+        .map(String::from)
+        .to_vec();
+        assert_eq!(
+            pick_preferred_image_mime(&mimes),
+            Some("image/png".to_string())
+        );
+
+        let fallbacks = ["image/gif", "image/svg+xml"].map(String::from).to_vec();
+        assert_eq!(
+            pick_preferred_image_mime(&fallbacks),
+            Some("image/gif".to_string())
+        );
+        assert_eq!(pick_preferred_image_mime(&[]), None);
+    }
+}

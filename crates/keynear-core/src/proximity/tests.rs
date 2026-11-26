@@ -150,7 +150,7 @@ fn invalid_configuration_is_rejected() {
 }
 
 #[test]
-fn desk_distance_calibrates_rssi_and_update_config_reloads_live() {
+fn desk_distance_calibrates_rssi_thresholds() {
     let near_cfg = ProximityConfig::from_desk_distance(1.0);
     let far_cfg = ProximityConfig::from_desk_distance(6.0);
     assert!(near_cfg.exit_rssi_dbm > far_cfg.exit_rssi_dbm);
@@ -162,7 +162,12 @@ fn desk_distance_calibrates_rssi_and_update_config_reloads_live() {
             .abs()
             < 0.01
     );
+}
 
+#[test]
+fn update_config_reloads_live_and_rejects_invalid_config() {
+    let near_cfg = ProximityConfig::from_desk_distance(1.0);
+    let far_cfg = ProximityConfig::from_desk_distance(6.0);
     let mut evaluator = ProximityEvaluator::new(far_cfg).expect("evaluator");
     evaluator.set_session_locked(true);
     for seq in 1..=2 {
