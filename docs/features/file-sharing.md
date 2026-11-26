@@ -15,7 +15,7 @@ flowchart LR
 
 ## Streaming Mechanics
 
-Keynear uses two streaming paths depending on the source.
+Keynear uses two streaming paths over `iroh` QUIC connections configured with a 15-second keep-alive interval and a 180-second idle timeout. If a send encounters a stale transport connection (`KeynearError::Transport`), `TransferEngine` invalidates the cached connection and retries once on a fresh connection.
 
 - Individual files stream in 60 KiB (`61_440`-byte, `STREAM_CHUNK_BYTES`) chunks over `QuicStreamKind::RawFileChunk`. On Android, `CoreClient` handles the receive side.
   - It inserts a `MediaStore.Downloads` row with `IS_PENDING = 1`.
@@ -23,7 +23,7 @@ Keynear uses two streaming paths depending on the source.
   - It clears `IS_PENDING = 0` on completion.
   - It deletes the pending row on error or cancellation.
 - Directories and multi-file batches stream as uncompressed `CompressionMethod::Stored` zip archives (`zip::ZipWriter::new_stream`) over `QuicStreamKind::StoredZipArchive`. They use `1 MiB` (`1_048_576`-byte, `ZIP_IO_BUFFER_BYTES`) buffered I/O. Sender and receiver handle archives as follows.
-  - Senders skip symlinks with `symlink_metadata`. On Android, `SafFolderHelper` stages selected SAF folder trees recursively into a temporary directory preserving nested and empty subdirectories before streaming via `OrionNodeHandle.send_paths`.
+  - Senders skip symlinks with `symlink_metadata`, bound each archive file read to its planned `expected_size`, and propagate zip writer errors to cancel the transfer cleanly. On Android, `SafFolderHelper` stages selected SAF folder trees recursively into a temporary directory preserving nested and empty subdirectories before streaming via `OrionNodeHandle.send_paths`, and raises an `IllegalStateException` if SAF child-directory queries fail rather than sending an empty folder.
   - Receivers spool the archive, validate SHA-256 against `TransferComplete`, unpack it with `ZipArchive`, and atomically promote each top-level folder or file into `incoming_directory` (default `~/Downloads/Keynear` on Linux) while preserving empty directories and avoiding filename scattering on folder collisions.
   - On Android, `TransferSyncHandler` and `AndroidFolderExporter` export completed incoming folders and batches out of private staging into either the persisted SAF Save Folder (preserving empty directories) or `MediaStore.Downloads` with full `RELATIVE_PATH` subdirectories, then remove the temporary private copy.
   - Receivers reject path traversal (`enclosed_name()`), symlinks, encrypted entries, non-`Stored` entries, and byte counts exceeding `TransferOffer.total_bytes`.

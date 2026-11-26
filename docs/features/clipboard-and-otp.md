@@ -27,4 +27,4 @@ Android clipboard and one-time-code handling works as follows.
   - `com.google.android.gms` consent intent verification.
   - `Activity.RESULT_OK`.
 
-  Keynear posts a status notification when Play Services is absent. Verified codes forward as `ClipboardPayload { is_otp: true }` to the desktop clipboard. They stay strictly in daemon RAM (`latest_otp`) for the **Copy latest OTP** action in the `ksni` tray menu.
+  On GMS builds, Keynear posts a status notification when Play Services is absent. FOSS builds suppress that notification and clear any lingering status alert with the same notification ID. Verified codes forward as `ClipboardPayload { is_otp: true }` to the desktop clipboard. They stay strictly in daemon RAM (`latest_otp`) for the **Copy latest OTP** action in the `ksni` tray menu.
