@@ -20,7 +20,6 @@ import org.keynear.app.ui.model.CoreState
 import uniffi.keynear_core.FfiRangingSample
 import uniffi.keynear_core.FfiRangingTechnology
 
-@RequiresApi(36)
 class ProximitySupervisor(
     private val context: Context,
     private val peerDeviceId: String,
@@ -37,26 +36,33 @@ class ProximitySupervisor(
     @Volatile
     private var rssiSupplier: (() -> Int?)? = null
 
-    private val capabilitiesCallback = object : RangingManager.RangingCapabilitiesCallback {
-        override fun onRangingCapabilities(capabilities: RangingCapabilities) {
-            val uwbAvailable = capabilities.uwbCapabilities?.isDistanceMeasurementSupported == true
-            when (RangingDecision.selectTechnology(uwbAvailable)) {
-                FfiRangingTechnology.UWB -> startUwbSession()
-                else -> activateFallback()
-            }
-        }
-    }
+    private var capabilitiesCallback: RangingManager.RangingCapabilitiesCallback? = null
 
     fun start() {
         if (Build.VERSION.SDK_INT < RANGING_SDK_FLOOR) {
             activateFallback()
             return
         }
+        registerRangingCapabilities()
+    }
+
+    @RequiresApi(36)
+    private fun registerRangingCapabilities() {
         val manager = context.getSystemService(RangingManager::class.java) ?: run {
             activateFallback()
             return
         }
-        manager.registerCapabilitiesCallback(executor, capabilitiesCallback)
+        val callback = object : RangingManager.RangingCapabilitiesCallback {
+            override fun onRangingCapabilities(capabilities: RangingCapabilities) {
+                val uwbAvailable = capabilities.uwbCapabilities?.isDistanceMeasurementSupported == true
+                when (RangingDecision.selectTechnology(uwbAvailable)) {
+                    FfiRangingTechnology.UWB -> startUwbSession()
+                    else -> activateFallback()
+                }
+            }
+        }
+        capabilitiesCallback = callback
+        manager.registerCapabilitiesCallback(executor, callback)
     }
 
     fun acceptBleRssi(rssiDbm: Int) {
@@ -84,15 +90,26 @@ class ProximitySupervisor(
     }
 
     fun stop() {
-        session?.stop()
+        if (Build.VERSION.SDK_INT >= RANGING_SDK_FLOOR) {
+            stopRanging()
+        }
         session = null
+        capabilitiesCallback = null
         fallbackActive = false
         rssiSupplier = null
-        context.getSystemService(RangingManager::class.java)
-            ?.unregisterCapabilitiesCallback(capabilitiesCallback)
         executor.shutdown()
     }
 
+    @RequiresApi(36)
+    private fun stopRanging() {
+        session?.stop()
+        capabilitiesCallback?.let { callback ->
+            context.getSystemService(RangingManager::class.java)
+                ?.unregisterCapabilitiesCallback(callback)
+        }
+    }
+
+    @RequiresApi(36)
     private fun startUwbSession() {
         val manager = context.getSystemService(RangingManager::class.java) ?: return
         val callback = RangingCallback(peerDeviceId, onSample, ::activateFallback)
