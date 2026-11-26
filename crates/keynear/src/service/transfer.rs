@@ -211,19 +211,28 @@ async fn run_quic_accept_loop(state: AcceptLoopState) {
                 tokio::spawn(async move {
                     match kind {
                         QuicStreamKind::RawFileChunk | QuicStreamKind::StoredZipArchive => {
-                            let _ = eng.handle_incoming_stream_with_kind(&peer, kind, send, recv).await;
+                            let _ = eng
+                                .handle_incoming_stream_with_kind(&peer, kind, send, recv)
+                                .await;
                         }
                         QuicStreamKind::Control => {
                             if let Ok(env) = read_control_envelope(&mut recv).await {
-                                if handle_proximity_or_ranging(&ctrl, &peer, &env, &mut send).await {
+                                if handle_proximity_or_ranging(&ctrl, &peer, &env, &mut send).await
+                                {
                                     let _ = send.finish();
                                 } else {
-                                    let _ = ctrl.clipboard.handle_control_envelope(&peer, env, &mut send).await;
+                                    let _ = ctrl
+                                        .clipboard
+                                        .handle_control_envelope(&peer, env, &mut send)
+                                        .await;
                                 }
                             }
                         }
                         _ => {
-                            let _ = ctrl.clipboard.handle_incoming_stream_with_kind(&peer, kind, send, recv).await;
+                            let _ = ctrl
+                                .clipboard
+                                .handle_incoming_stream_with_kind(&peer, kind, send, recv)
+                                .await;
                         }
                     }
                 });
