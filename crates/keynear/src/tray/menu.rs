@@ -255,7 +255,7 @@ impl Tray for KeynearTray {
             icon_name: snap.icon_name,
             icon_pixmap: Vec::new(),
             title: snap.title,
-            description: snap.status_summary,
+            description: snap.visibility_labels[snap.visibility_selected].clone(),
         }
     }
 

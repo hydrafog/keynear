@@ -120,7 +120,7 @@ fn tray_trait_exposes_app_title_tooltip_icon_and_activation() {
 
     let tooltip = tray.tool_tip();
     assert_eq!(tooltip.title, "Keynear");
-    assert_eq!(tooltip.description, "Keynear — Paired devices only");
+    assert_eq!(tooltip.description, "Paired devices only");
     assert_eq!(tooltip.icon_name, "org.keynear.Keynear-symbolic");
 
     let theme_path = tray.icon_theme_path();
