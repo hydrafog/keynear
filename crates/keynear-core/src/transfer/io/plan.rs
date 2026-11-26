@@ -280,3 +280,7 @@ pub fn sanitize_relative_path(raw: &str) -> Result<PathBuf, KeynearError> {
     }
     Ok(out)
 }
+
+#[cfg(test)]
+#[path = "plan/tests.rs"]
+mod tests;

@@ -267,3 +267,7 @@ fn fd_channels(
         (None, None)
     }
 }
+
+#[cfg(test)]
+#[path = "registry/tests.rs"]
+mod tests;

@@ -15,4 +15,5 @@ use transfer::wrap_raw_fd;
 
 mod bridge;
 mod core;
+mod core_handle;
 mod node;

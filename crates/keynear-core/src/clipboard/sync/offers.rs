@@ -202,3 +202,87 @@ pub(super) fn validate_rendered_payload(data: &[u8]) -> Result<(), KeynearError>
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn engine() -> ClipboardEngine {
+        ClipboardEngine::new(ClipboardPolicy::default())
+    }
+
+    #[test]
+    fn validate_rendered_payload_bounds_empty_and_oversized_data() {
+        assert!(validate_rendered_payload(b"payload").is_ok());
+        assert!(matches!(
+            validate_rendered_payload(&[]),
+            Err(KeynearError::Transfer(_))
+        ));
+        assert!(matches!(
+            validate_rendered_payload(&vec![0u8; MAX_CLIPBOARD_IMAGE_BYTES + 1]),
+            Err(KeynearError::FrameTooLarge { .. })
+        ));
+    }
+
+    #[test]
+    fn outgoing_offer_lookup_returns_metadata_and_rejects_unknown_ids() {
+        let engine = engine();
+        let offer = engine
+            .register_delayed_offer(
+                vec!["text/plain".to_string()],
+                false,
+                false,
+                2,
+                Arc::new(|_| Ok(b"ok".to_vec())),
+            )
+            .expect("register");
+        let (mimes, _, is_image, is_otp) = engine
+            .lookup_outgoing_offer(&offer.offer_id)
+            .expect("lookup");
+        assert_eq!(mimes, vec!["text/plain".to_string()]);
+        assert!(!is_image && !is_otp);
+        assert!(matches!(
+            engine.lookup_outgoing_offer("missing"),
+            Err(KeynearError::Transfer(_))
+        ));
+    }
+
+    #[test]
+    fn incoming_enqueue_queues_items_and_lookup_reports_unknown_offers() {
+        let engine = engine();
+        let item = ClipboardItem {
+            id: "item-1".to_string(),
+            peer_device_id: "phone-1".to_string(),
+            mime_type: "text/plain".to_string(),
+            data: b"hello".to_vec(),
+            is_otp: false,
+            is_image_offer: false,
+            offer_id: String::new(),
+            offered_mimes: Vec::new(),
+        };
+        engine.enqueue_incoming(item.clone());
+        assert_eq!(engine.poll_incoming(), vec![item]);
+        assert!(engine.lookup_incoming_offer("missing").is_none());
+
+        let mut offers = engine
+            .incoming_offers
+            .lock()
+            .unwrap_or_else(|p| p.into_inner());
+        offers.insert(
+            "offer-1".to_string(),
+            IncomingOfferEntry {
+                peer_device_id: "phone-1".to_string(),
+                mime_types: vec!["image/png".to_string()],
+                is_image: true,
+                is_otp: false,
+                created_at: Instant::now(),
+            },
+        );
+        drop(offers);
+        let found = engine.lookup_incoming_offer("offer-1").expect("found");
+        assert_eq!(found.0, "phone-1");
+        assert_eq!(found.1, vec!["image/png".to_string()]);
+        assert!(found.2);
+        assert!(!found.3);
+    }
+}

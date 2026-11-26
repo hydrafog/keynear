@@ -134,3 +134,30 @@ fn lan_endpoint_codec_roundtrips_and_rejects_tampering() {
             .expect("decode_any matches pixel-9");
     assert_eq!(matched, payload);
 }
+
+#[test]
+fn presence_token_is_deterministic_and_domain_bound() {
+    let key = test_key();
+    let token = derive_presence_token("pixel-9", 7, &key).expect("token");
+    assert_eq!(token.len(), PRESENCE_TOKEN_LEN);
+    assert_eq!(
+        derive_presence_token("pixel-9", 7, &key).expect("recomputed"),
+        token
+    );
+    assert_ne!(
+        derive_presence_token("pixel-9", 8, &key).expect("counter"),
+        token
+    );
+    assert_ne!(
+        derive_presence_token("other-9", 7, &key).expect("device"),
+        token
+    );
+    assert_ne!(
+        derive_presence_token("pixel-9", 7, &[0x43; 32]).expect("key"),
+        token
+    );
+    assert!(matches!(
+        derive_presence_token("", 7, &key),
+        Err(KeynearError::Validation { .. })
+    ));
+}

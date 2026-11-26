@@ -113,3 +113,103 @@ impl<'a> Cursor<'a> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn integer_primitives_write_big_endian_boundaries() {
+        let mut out = Vec::new();
+        write_u32(&mut out, 0x0102_0304);
+        write_u64(&mut out, u64::MAX);
+        assert_eq!(&out[..4], &[0x01u8, 0x02, 0x03, 0x04][..]);
+
+        let mut cur = Cursor::new(&out);
+        assert_eq!(cur.read_u32().expect("read u32"), 0x0102_0304);
+        assert_eq!(cur.read_u64().expect("read u64"), u64::MAX);
+        cur.ensure_exhausted().expect("no trailing bytes");
+
+        let zero = [0u8; 12];
+        let mut zero_cur = Cursor::new(&zero);
+        assert_eq!(zero_cur.read_u32().expect("zero u32"), 0);
+        assert_eq!(zero_cur.read_u64().expect("zero u64"), 0);
+    }
+
+    #[test]
+    fn string_primitives_roundtrip_empty_and_unicode() {
+        let mut out = Vec::new();
+        write_str(&mut out, "").expect("write empty string");
+        write_str(&mut out, "héllo\n").expect("write unicode string");
+
+        let mut cur = Cursor::new(&out);
+        assert_eq!(cur.read_string().expect("read empty"), "");
+        assert_eq!(cur.read_string().expect("read unicode"), "héllo\n");
+        cur.ensure_exhausted().expect("no trailing bytes");
+    }
+
+    #[test]
+    fn optional_string_primitives_roundtrip_none_and_some() {
+        let mut out = Vec::new();
+        write_opt_str(&mut out, None).expect("write none");
+        assert_eq!(out, vec![0]);
+        write_opt_str(&mut out, Some("x")).expect("write some");
+        assert_eq!(&out[1..], &[1u8, 0, 0, 0, 1, b'x'][..]);
+
+        let mut cur = Cursor::new(&out);
+        assert_eq!(cur.read_opt_string().expect("read none"), None);
+        assert_eq!(
+            cur.read_opt_string().expect("read some"),
+            Some("x".to_string())
+        );
+        cur.ensure_exhausted().expect("no trailing bytes");
+    }
+
+    #[test]
+    fn read_u8_and_read_bool_reject_bad_and_truncated_bytes() {
+        let bytes = [1u8, 0, 2];
+        let mut cur = Cursor::new(&bytes);
+        assert_eq!(cur.read_u8().expect("read u8"), 1);
+        assert!(!cur.read_bool().expect("read false"));
+        assert!(matches!(cur.read_bool(), Err(KeynearError::Protocol(_))));
+
+        let empty: [u8; 0] = [];
+        let mut empty_cur = Cursor::new(&empty);
+        assert!(matches!(
+            empty_cur.read_u8(),
+            Err(KeynearError::Protocol(_))
+        ));
+        assert!(matches!(
+            empty_cur.read_bool(),
+            Err(KeynearError::Protocol(_))
+        ));
+    }
+
+    #[test]
+    fn read_string_rejects_oversized_length_and_invalid_utf8() {
+        let mut oversized = Vec::new();
+        write_u32(&mut oversized, (MAX_IPC_FRAME_BYTES + 1) as u32);
+        assert!(matches!(
+            Cursor::new(&oversized).read_string(),
+            Err(KeynearError::FrameTooLarge { .. })
+        ));
+
+        let invalid_utf8 = [0u8, 0, 0, 1, 0xff];
+        assert!(matches!(
+            Cursor::new(&invalid_utf8).read_string(),
+            Err(KeynearError::Protocol(_))
+        ));
+    }
+
+    #[test]
+    fn ensure_exhausted_rejects_trailing_bytes() {
+        let bytes = [0u8, 0, 0, 1, 0x42, 0x99];
+        let mut cur = Cursor::new(&bytes);
+        assert_eq!(cur.read_u32().expect("read length"), 1);
+        assert_eq!(cur.read_exact(1).expect("read payload")[0], 0x42);
+        assert!(matches!(
+            cur.ensure_exhausted(),
+            Err(KeynearError::Protocol(_))
+        ));
+    }
+}

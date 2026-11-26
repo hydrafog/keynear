@@ -102,3 +102,55 @@ impl FfiNoisePairingSession {
         Ok(FfiPairingCompleted::from(completed))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn initiator() -> FfiNoisePairingSession {
+        FfiNoisePairingSession::new_initiator(
+            vec![0x11; 32],
+            "phone-1".to_string(),
+            "Pixel 9".to_string(),
+            FfiDeviceRole::Mobile,
+            0x03,
+        )
+        .expect("initiator session")
+    }
+
+    #[test]
+    fn state_starts_at_handshake_m1_for_both_roles() {
+        assert_eq!(initiator().state(), FfiPairingState::HandshakeM1);
+        let responder = FfiNoisePairingSession::new_responder(
+            vec![0x22; 32],
+            "linux-1".to_string(),
+            "Workstation".to_string(),
+            FfiDeviceRole::Desktop,
+            0x07,
+        )
+        .expect("responder session");
+        assert_eq!(responder.state(), FfiPairingState::HandshakeM1);
+    }
+
+    #[test]
+    fn reject_moves_to_rejected_and_second_reject_fails() {
+        let session = initiator();
+        session.reject().expect("first reject succeeds");
+        assert_eq!(session.state(), FfiPairingState::Rejected);
+        assert!(matches!(session.reject(), Err(FfiError::PairingRejected)));
+    }
+
+    #[test]
+    fn new_initiator_rejects_invalid_static_private_key() {
+        assert!(matches!(
+            FfiNoisePairingSession::new_initiator(
+                vec![0u8; 5],
+                "phone-1".to_string(),
+                "Pixel 9".to_string(),
+                FfiDeviceRole::Mobile,
+                0x03,
+            ),
+            Err(FfiError::Validation { .. })
+        ));
+    }
+}

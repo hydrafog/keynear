@@ -181,3 +181,11 @@ fn invalid_observation_is_rejected_before_state_change() {
     ));
     assert_eq!(engine.owner(), None);
 }
+
+#[test]
+fn observation_kind_marks_only_start_events() {
+    assert!(ContinuityObservationKind::PlaybackStarted.is_start());
+    assert!(ContinuityObservationKind::VoiceStarted.is_start());
+    assert!(!ContinuityObservationKind::PlaybackStopped.is_start());
+    assert!(!ContinuityObservationKind::VoiceStopped.is_start());
+}

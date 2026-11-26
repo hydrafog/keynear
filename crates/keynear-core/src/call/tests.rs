@@ -96,3 +96,83 @@ fn invalid_caller_is_rejected_before_state_change() {
         .expect_err("long caller rejected");
     assert!(matches!(err, KeynearError::Validation { .. }));
 }
+
+#[test]
+fn clear_drops_the_active_alert() {
+    let mut engine = CallAlertEngine::new();
+    begin(&mut engine, 1);
+    assert!(engine.snapshot().is_some());
+    engine.clear();
+    assert!(engine.snapshot().is_none());
+    let plan = begin(&mut engine, 2);
+    assert!(plan.release_sink);
+}
+
+#[test]
+fn invalid_call_id_is_rejected_before_state_change() {
+    let mut engine = CallAlertEngine::new();
+    let err = engine
+        .begin(
+            1,
+            CallAlertDescriptor {
+                call_id: "",
+                caller: "Pixel 9",
+                sink_profile: AudioSinkProfile::HfpHf,
+            },
+        )
+        .expect_err("empty call id rejected");
+    assert!(matches!(err, KeynearError::Validation { .. }));
+    assert!(engine.snapshot().is_none());
+    let long_id = "x".repeat(MAX_CALL_ID_LEN + 1);
+    let err = engine
+        .begin(
+            2,
+            CallAlertDescriptor {
+                call_id: &long_id,
+                caller: "Pixel 9",
+                sink_profile: AudioSinkProfile::HfpHf,
+            },
+        )
+        .expect_err("long call id rejected");
+    assert!(matches!(err, KeynearError::Validation { .. }));
+    let err = engine
+        .begin(
+            3,
+            CallAlertDescriptor {
+                call_id: "call\nid",
+                caller: "Pixel 9",
+                sink_profile: AudioSinkProfile::HfpHf,
+            },
+        )
+        .expect_err("control character rejected");
+    assert!(matches!(err, KeynearError::Validation { .. }));
+}
+
+#[test]
+fn apply_and_end_without_an_alert_are_rejected() {
+    let mut engine = CallAlertEngine::new();
+    assert!(matches!(
+        engine.apply(1, "call-1", CallActionKind::Answer),
+        Err(KeynearError::Protocol(_))
+    ));
+    assert!(matches!(
+        engine.end(2, "call-1"),
+        Err(KeynearError::Protocol(_))
+    ));
+}
+
+#[test]
+fn end_rejects_a_stale_sequence_and_a_foreign_call() {
+    let mut engine = CallAlertEngine::new();
+    begin(&mut engine, 5);
+    let stale = engine.end(5, "call-1").expect("stale sequence");
+    assert_eq!(stale, CallPlan::default());
+    assert!(matches!(
+        engine.end(6, "call-2"),
+        Err(KeynearError::Protocol(_))
+    ));
+    let ended = engine.end(7, "call-1").expect("end");
+    assert!(ended.reclaim_sink);
+    let already_ended = engine.end(8, "call-1").expect("end again");
+    assert!(!already_ended.reclaim_sink);
+}

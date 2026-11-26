@@ -11,6 +11,8 @@ use keynear_protocol::{
 
 mod exports;
 mod state;
+#[cfg(test)]
+mod state_mapping_tests;
 mod types;
 
 pub use exports::{

@@ -1,3 +1,5 @@
+#![allow(clippy::cognitive_complexity)]
+
 use super::*;
 
 fn flags() -> (u32, u32) {
@@ -132,4 +134,52 @@ fn rolling_chain_rejects_oversized_chunk() {
         .extend(&vec![0u8; STREAM_CHUNK_BYTES + 1])
         .expect_err("oversized chunk must fail");
     assert!(matches!(err, KeynearError::Transfer(_)));
+}
+
+#[test]
+fn bitmap_exposes_verified_prefix_and_raw_bytes() {
+    let map = bitmap(5, 12);
+    assert_eq!(map.verified_chunks(), 5);
+    assert_eq!(map.bytes().len(), 2);
+    assert_eq!(map.bytes()[0], 0b0001_1111);
+    assert!(map.is_verified(4));
+    assert!(!map.is_verified(5));
+}
+
+#[test]
+fn bitmap_rejects_zero_count_and_wrong_byte_length() {
+    assert!(matches!(
+        ChunkBitmap::new(0, vec![]),
+        Err(KeynearError::Validation { .. })
+    ));
+    assert!(matches!(
+        ChunkBitmap::new(12, vec![0u8; 1]),
+        Err(KeynearError::Validation { .. })
+    ));
+    assert!(ChunkBitmap::new(8, vec![0xFF]).is_ok());
+}
+
+#[test]
+fn chain_digest_is_non_consuming_and_empty_chunks_are_rejected() {
+    let mut chain = Sha256Chain::new();
+    let empty_digest: [u8; 32] = Sha256::digest(b"").into();
+    assert_eq!(chain.chunks(), 0);
+    assert_eq!(chain.digest(), empty_digest);
+    assert!(matches!(chain.extend(&[]), Err(KeynearError::Transfer(_))));
+    assert_eq!(chain.chunks(), 0);
+    chain.extend(&[0xAA; 16]).expect("extend first");
+    let first = chain.digest();
+    assert_eq!(chain.digest(), first);
+    assert_ne!(first, empty_digest);
+    assert_eq!(chain.chunks(), 1);
+    chain.extend(&[0xBB; 16]).expect("extend second");
+    let expected: [u8; 32] = {
+        let mut hasher = Sha256::new();
+        hasher.update([0xAA; 16]);
+        hasher.update([0xBB; 16]);
+        hasher.finalize().into()
+    };
+    assert_eq!(chain.digest(), expected);
+    assert_eq!(chain.chunks(), 2);
+    assert_eq!(chain.finalize(), expected);
 }

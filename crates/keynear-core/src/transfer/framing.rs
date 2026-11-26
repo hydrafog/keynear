@@ -294,3 +294,7 @@ impl Write for ChannelChunkWriter {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "framing/tests.rs"]
+mod tests;

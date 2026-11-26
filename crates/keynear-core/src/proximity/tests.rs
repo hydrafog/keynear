@@ -1,3 +1,5 @@
+#![allow(clippy::cognitive_complexity)]
+
 use super::*;
 
 fn sample(
@@ -192,4 +194,92 @@ fn update_config_reloads_live_and_rejects_invalid_config() {
         ..near_cfg
     };
     assert!(evaluator.update_config(bad).is_err());
+}
+
+#[test]
+fn session_lock_can_be_cleared_and_survives_ranging_updates() {
+    let mut evaluator = ProximityEvaluator::new(ProximityConfig::default()).expect("evaluator");
+    evaluator.set_session_locked(true);
+    assert!(evaluator.snapshot().session_locked);
+    evaluator.set_session_locked(false);
+    assert!(!evaluator.snapshot().session_locked);
+    evaluator
+        .update(sample(1, RangingTechnology::Uwb, Some(1.0), None))
+        .expect("sample");
+    assert!(!evaluator.snapshot().session_locked);
+    assert_eq!(evaluator.snapshot().status, ProximityStatus::Unknown);
+}
+
+#[test]
+fn update_config_rejects_bounds_alpha_and_zero_hysteresis() {
+    let mut evaluator = ProximityEvaluator::new(ProximityConfig::default()).expect("evaluator");
+    for bad in [
+        ProximityConfig {
+            smoothing_alpha: -0.1,
+            ..ProximityConfig::default()
+        },
+        ProximityConfig {
+            smoothing_alpha: 1.1,
+            ..ProximityConfig::default()
+        },
+        ProximityConfig {
+            samples_to_switch: 0,
+            ..ProximityConfig::default()
+        },
+        ProximityConfig {
+            enter_distance_meters: f32::NAN,
+            ..ProximityConfig::default()
+        },
+        ProximityConfig {
+            enter_distance_meters: 0.0,
+            ..ProximityConfig::default()
+        },
+    ] {
+        assert!(matches!(
+            evaluator.update_config(bad),
+            Err(KeynearError::Validation { .. })
+        ));
+    }
+    assert_eq!(evaluator.snapshot().status, ProximityStatus::Unknown);
+}
+
+#[test]
+fn update_rejects_blank_ids_and_bad_rssi_and_accepts_channel_sounding() {
+    let mut evaluator = ProximityEvaluator::new(ProximityConfig::default()).expect("evaluator");
+    let mut blank = sample(1, RangingTechnology::Uwb, Some(1.0), None);
+    blank.device_id = "  ".to_string();
+    assert!(matches!(
+        evaluator.update(blank),
+        Err(KeynearError::Validation { field, .. }) if field == "device_id"
+    ));
+    let weak_rssi = sample(1, RangingTechnology::BleRssi, None, Some(-200));
+    assert!(matches!(
+        evaluator.update(weak_rssi),
+        Err(KeynearError::Validation { field, .. }) if field == "rssi_dbm"
+    ));
+    let missing_rssi = sample(1, RangingTechnology::BleRssi, None, None);
+    assert!(matches!(
+        evaluator.update(missing_rssi),
+        Err(KeynearError::Validation { field, .. }) if field == "rssi_dbm"
+    ));
+
+    let first = evaluator
+        .update(sample(
+            2,
+            RangingTechnology::BleChannelSounding,
+            Some(1.0),
+            None,
+        ))
+        .expect("channel sounding sample");
+    assert_eq!(first.status, ProximityStatus::Unknown);
+    let confirmed = evaluator
+        .update(sample(
+            3,
+            RangingTechnology::BleChannelSounding,
+            Some(1.0),
+            None,
+        ))
+        .expect("channel sounding sample");
+    assert_eq!(confirmed.status, ProximityStatus::InRange);
+    assert_eq!(confirmed.distance_meters, Some(1.0));
 }

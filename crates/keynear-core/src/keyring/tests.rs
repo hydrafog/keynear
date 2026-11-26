@@ -89,3 +89,15 @@ fn in_memory_quic_secret_key_is_stable() {
     assert_eq!(*first, *second);
     assert_ne!(*first, [0u8; 32]);
 }
+
+#[test]
+fn static_keypair_from_private_bytes_derives_the_matching_public_key() {
+    let private = [0x11u8; 32];
+    let keypair = StaticKeypairRecord::from_private_bytes(private);
+    let expected = PublicKey::from(&StaticSecret::from(private)).to_bytes();
+    assert_eq!(keypair.private_key, private);
+    assert_eq!(keypair.public_key, expected);
+    assert_ne!(keypair.private_key, keypair.public_key);
+    let other = StaticKeypairRecord::from_private_bytes([0x22; 32]);
+    assert_ne!(other.public_key, keypair.public_key);
+}

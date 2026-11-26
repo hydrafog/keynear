@@ -117,3 +117,126 @@ pub(crate) fn read_daemon_config(cur: &mut Cursor<'_>) -> Result<DaemonConfig, K
     config.validate()?;
     Ok(config)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_device() -> PairedDevice {
+        PairedDevice {
+            device_id: "pixel-9".to_string(),
+            display_name: "Pixel 9".to_string(),
+            device_role: DeviceRole::Mobile,
+            static_x25519_pubkey: "pubkey-hex".to_string(),
+            last_ble_address: "AA:BB:CC:DD:EE:FF".to_string(),
+            last_lan_address: "192.168.1.42:5555".to_string(),
+            last_endpoint_id: "ef".repeat(32),
+            capability_flags: 0x0102,
+            auto_accept_files: true,
+            paired_at: "2026-11-14T00:00:00Z".to_string(),
+        }
+    }
+
+    fn sample_config() -> DaemonConfig {
+        DaemonConfig {
+            visibility_mode: VisibilityMode::EveryoneNearby,
+            incoming_directory: "/tmp/keynear-in".to_string(),
+            auto_accept_from_paired: true,
+            clipboard_sync_enabled: false,
+            clipboard_images_enabled: true,
+            otp_passthrough_enabled: false,
+            audio_handoff_enabled: true,
+            ignored_mime_types: vec!["text/plain".to_string(), "image/png".to_string()],
+            notify_auto_accept_complete: false,
+            audio_continuity_enabled: true,
+            proximity_lock_enabled: true,
+            presence_gating_enabled: false,
+            proximity_distance_meters: 4.25,
+        }
+    }
+
+    #[test]
+    fn paired_device_codec_preserves_every_field() {
+        let mut out = Vec::new();
+        write_paired_device(&mut out, &sample_device()).expect("encode device");
+        let decoded = read_paired_device(&mut Cursor::new(&out)).expect("decode device");
+        assert_eq!(decoded, sample_device());
+    }
+
+    #[test]
+    fn paired_device_codec_rejects_truncated_and_invalid_fields() {
+        let mut out = Vec::new();
+        write_paired_device(&mut out, &sample_device()).expect("encode device");
+        assert!(matches!(
+            read_paired_device(&mut Cursor::new(&out[..out.len() - 1])),
+            Err(KeynearError::Protocol(_))
+        ));
+
+        let mut bad_id = Vec::new();
+        write_paired_device(
+            &mut bad_id,
+            &PairedDevice {
+                device_id: "../evil".to_string(),
+                ..sample_device()
+            },
+        )
+        .expect("encode bad id");
+        assert!(matches!(
+            read_paired_device(&mut Cursor::new(&bad_id)),
+            Err(KeynearError::Validation {
+                field: "deviceId",
+                ..
+            })
+        ));
+
+        let mut bad_role = Vec::new();
+        write_str(&mut bad_role, "pixel-9").expect("write id");
+        write_str(&mut bad_role, "Pixel 9").expect("write name");
+        bad_role.push(0x7f);
+        assert!(matches!(
+            read_paired_device(&mut Cursor::new(&bad_role)),
+            Err(KeynearError::Protocol(_))
+        ));
+    }
+
+    #[test]
+    fn daemon_config_codec_preserves_all_flags_and_mime_types() {
+        let mut out = Vec::new();
+        write_daemon_config(&mut out, &sample_config()).expect("encode config");
+        let decoded = read_daemon_config(&mut Cursor::new(&out)).expect("decode config");
+        assert_eq!(decoded, sample_config());
+    }
+
+    #[test]
+    fn daemon_config_codec_rejects_oversized_mimes_and_bad_values() {
+        let too_many = DaemonConfig {
+            ignored_mime_types: vec!["text/plain".to_string(); MAX_IPC_MIMES + 1],
+            ..sample_config()
+        };
+        assert!(matches!(
+            write_daemon_config(&mut Vec::new(), &too_many),
+            Err(KeynearError::FrameTooLarge { .. })
+        ));
+
+        let mut out = Vec::new();
+        write_daemon_config(&mut out, &sample_config()).expect("encode config");
+        assert!(matches!(
+            read_daemon_config(&mut Cursor::new(&out[..out.len() - 1])),
+            Err(KeynearError::Protocol(_))
+        ));
+
+        let invalid = DaemonConfig {
+            proximity_distance_meters: f32::NAN,
+            ..sample_config()
+        };
+        let mut invalid_out = Vec::new();
+        write_daemon_config(&mut invalid_out, &invalid).expect("encode invalid config");
+        assert!(matches!(
+            read_daemon_config(&mut Cursor::new(&invalid_out)),
+            Err(KeynearError::Validation {
+                field: "proximityDistanceMeters",
+                ..
+            })
+        ));
+    }
+}

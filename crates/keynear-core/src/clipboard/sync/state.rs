@@ -57,3 +57,20 @@ impl ClipboardEngine {
         check_policy(&policy, mimes, is_image, is_otp).is_ok()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn policy_returns_the_current_policy_after_updates() {
+        let engine = ClipboardEngine::new(ClipboardPolicy::default());
+        assert_eq!(engine.policy(), ClipboardPolicy::default());
+        let updated = ClipboardPolicy {
+            clipboard_sync_enabled: false,
+            ..ClipboardPolicy::default()
+        };
+        engine.set_policy(updated.clone());
+        assert_eq!(engine.policy(), updated);
+    }
+}

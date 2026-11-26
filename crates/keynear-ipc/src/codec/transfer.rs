@@ -133,3 +133,46 @@ fn read_state(cur: &mut Cursor<'_>) -> Result<TransferState, KeynearError> {
         ))),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validate_transfer_id_accepts_trimmed_id_at_length_boundary() {
+        let longest = "a".repeat(MAX_TRANSFER_ID_BYTES);
+        assert_eq!(
+            validate_transfer_id(&format!("  {longest}  ")).expect("longest valid id"),
+            longest
+        );
+        assert_eq!(
+            validate_transfer_id("tx-1_2.3").expect("separators allowed"),
+            "tx-1_2.3"
+        );
+    }
+
+    #[test]
+    fn validate_transfer_id_rejects_empty_and_bad_characters() {
+        for raw in ["", "   ", "tx/1", "tx 1", "txé", "tx\n1"] {
+            assert!(matches!(
+                validate_transfer_id(raw),
+                Err(KeynearError::Validation {
+                    field: "transferId",
+                    ..
+                })
+            ));
+        }
+    }
+
+    #[test]
+    fn validate_transfer_id_rejects_overlong_id() {
+        let overlong = "a".repeat(MAX_TRANSFER_ID_BYTES + 1);
+        assert!(matches!(
+            validate_transfer_id(&overlong),
+            Err(KeynearError::Validation {
+                field: "transferId",
+                ..
+            })
+        ));
+    }
+}

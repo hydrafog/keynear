@@ -66,3 +66,47 @@ fn read_plan_rejects_zero_and_oversized_requests() {
         Err(KeynearError::Validation { .. })
     ));
 }
+
+#[test]
+fn root_rejects_blank_and_unsafe_labels() {
+    assert!(matches!(
+        RemoteVfsNode::root("", "Phone"),
+        Err(KeynearError::Validation { .. })
+    ));
+    assert!(matches!(
+        RemoteVfsNode::root("phone-1", ""),
+        Err(KeynearError::Validation { .. })
+    ));
+    assert!(matches!(
+        RemoteVfsNode::root("phone-1", "bad\nname"),
+        Err(KeynearError::Validation { .. })
+    ));
+}
+
+#[test]
+fn page_documents_returns_the_exact_page_and_empty_beyond_the_end() {
+    let nodes: Vec<RemoteVfsNode> = (0..3)
+        .map(|idx| {
+            RemoteVfsNode::child("phone-1", &format!("f{idx}"), false, idx).expect("valid node")
+        })
+        .collect();
+    let page = page_documents(&nodes, 1, 2);
+    assert_eq!(page.len(), 2);
+    assert_eq!(page[0].name, "f1");
+    assert!(page_documents(&nodes, 3, 2).is_empty());
+}
+
+#[test]
+fn read_plan_handles_empty_files_and_chunk_boundaries() {
+    let empty = read_plan(0, 0, STREAM_CHUNK_BYTES).expect("empty plan");
+    assert_eq!(empty.offset, 0);
+    assert_eq!(empty.length, 0);
+    assert_eq!(empty.chunks, 0);
+    let exact = read_plan(STREAM_CHUNK_BYTES as u64, 0, STREAM_CHUNK_BYTES).expect("exact plan");
+    assert_eq!(exact.length, STREAM_CHUNK_BYTES);
+    assert_eq!(exact.chunks, 1);
+    let capped = read_plan((STREAM_CHUNK_BYTES * 2) as u64, 0, STREAM_CHUNK_BYTES)
+        .expect("one-chunk capped plan");
+    assert_eq!(capped.length, STREAM_CHUNK_BYTES);
+    assert_eq!(capped.chunks, 1);
+}

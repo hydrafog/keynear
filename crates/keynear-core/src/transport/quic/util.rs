@@ -81,4 +81,19 @@ mod tests {
         let parsed = parse_endpoint_id_bytes(&bytes).expect("32 bytes parse");
         assert_eq!(parsed.as_bytes(), &bytes);
     }
+
+    #[test]
+    fn now_millis_stays_between_surrounding_wall_clock_readings() {
+        let before = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_millis() as i64;
+        let observed = now_millis();
+        let after = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_millis() as i64;
+        assert!((before..=after).contains(&observed));
+        assert!(observed > 0);
+    }
 }

@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 use super::*;
 
 mod continuity;
@@ -304,6 +306,91 @@ fn validate_control_envelope_rejects_empty_and_unknown_payloads() {
                 Err(KeynearError::FrameTooLarge { .. })
             )
     );
+}
+
+fn all_payload_cases() -> Vec<(&'static str, v1::envelope::Payload)> {
+    use v1::envelope::Payload as P;
+    vec![
+        ("handshake", P::Handshake(Default::default())),
+        ("transfer_offer", P::TransferOffer(Default::default())),
+        ("clipboard", P::Clipboard(Default::default())),
+        ("audio_state", P::AudioState(Default::default())),
+        ("control_ack", P::ControlAck(Default::default())),
+        ("lan_endpoint", P::LanEndpoint(Default::default())),
+        ("transfer_consent", P::TransferConsent(Default::default())),
+        ("transfer_cancel", P::TransferCancel(Default::default())),
+        ("transfer_complete", P::TransferComplete(Default::default())),
+        ("clipboard_offer", P::ClipboardOffer(Default::default())),
+        ("clipboard_fetch", P::ClipboardFetch(Default::default())),
+        ("audio_handoff", P::AudioHandoff(Default::default())),
+        (
+            "capability_negotiation",
+            P::CapabilityNegotiation(Default::default()),
+        ),
+        ("fallback_probe", P::FallbackProbe(Default::default())),
+        (
+            "transfer_checkpoint",
+            P::TransferCheckpoint(Default::default()),
+        ),
+        (
+            "transfer_resume_request",
+            P::TransferResumeRequest(Default::default()),
+        ),
+        (
+            "transfer_resume_ack",
+            P::TransferResumeAck(Default::default()),
+        ),
+        (
+            "mirrored_notification",
+            P::MirroredNotification(Default::default()),
+        ),
+        (
+            "notification_action",
+            P::NotificationAction(Default::default()),
+        ),
+        ("call_alert", P::CallAlert(Default::default())),
+        ("call_action", P::CallAction(Default::default())),
+        (
+            "media_session_state",
+            P::MediaSessionState(Default::default()),
+        ),
+        ("media_command", P::MediaCommand(Default::default())),
+        (
+            "audio_continuity_observation",
+            P::AudioContinuityObservation(Default::default()),
+        ),
+        (
+            "audio_continuity_command",
+            P::AudioContinuityCommand(Default::default()),
+        ),
+        ("ranging_report", P::RangingReport(Default::default())),
+        ("proximity_state", P::ProximityState(Default::default())),
+    ]
+}
+
+#[test]
+fn payload_kind_and_bytes_cover_every_oneof_tag() {
+    for (expected_kind, payload) in all_payload_cases() {
+        let (kind, bytes) = payload_kind_and_bytes(&payload);
+        assert_eq!(kind, expected_kind);
+
+        let restored = decode_payload(kind, &bytes).expect("decode payload bytes");
+        let (restored_kind, restored_bytes) = payload_kind_and_bytes(&restored);
+        assert_eq!(restored_kind, expected_kind);
+        assert_eq!(restored_bytes, bytes);
+    }
+}
+
+#[test]
+fn decode_payload_rejects_unknown_kind_and_malformed_bytes() {
+    assert!(matches!(
+        decode_payload("no_such_kind", &[]),
+        Err(KeynearError::Protocol(_))
+    ));
+    assert!(matches!(
+        decode_payload("control_ack", &[0xff, 0xff]),
+        Err(KeynearError::Protocol(_))
+    ));
 }
 
 #[tokio::test]

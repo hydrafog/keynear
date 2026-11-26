@@ -1,3 +1,5 @@
+#![allow(clippy::cognitive_complexity)]
+
 use super::*;
 
 fn begin(engine: &mut AudioHandoffEngine, seq: u64) -> AudioHandoffPlan {
@@ -103,4 +105,50 @@ fn out_of_order_transition_returns_typed_error() {
     let mut engine = AudioHandoffEngine::new();
     let err = engine.mark_released(1).expect_err("no active handoff");
     assert!(matches!(err, KeynearError::Protocol(_)));
+}
+
+#[test]
+fn clear_drops_the_active_handoff() {
+    let mut engine = AudioHandoffEngine::new();
+    begin(&mut engine, 1);
+    assert!(engine.snapshot().is_some());
+    engine.clear();
+    assert!(engine.snapshot().is_none());
+    let plan = begin(&mut engine, 2);
+    assert!(plan.release_sink);
+    assert_eq!(engine.snapshot().expect("state").sequence, 2);
+}
+
+#[test]
+fn transitions_require_the_expected_phase() {
+    let mut engine = AudioHandoffEngine::new();
+    begin(&mut engine, 1);
+    assert!(matches!(
+        engine.peer_claimed(2),
+        Err(KeynearError::Protocol(_))
+    ));
+    assert!(matches!(engine.release(3), Err(KeynearError::Protocol(_))));
+    engine.mark_released(4).expect("released");
+    assert!(matches!(
+        engine.mark_released(5),
+        Err(KeynearError::Protocol(_))
+    ));
+    assert!(matches!(engine.release(6), Err(KeynearError::Protocol(_))));
+    engine.peer_claimed(7).expect("claimed");
+    assert!(matches!(
+        engine.peer_claimed(8),
+        Err(KeynearError::Protocol(_))
+    ));
+}
+
+#[test]
+fn transitions_without_a_state_are_no_ops() {
+    let mut engine = AudioHandoffEngine::new();
+    assert!(matches!(
+        engine.peer_claimed(1),
+        Err(KeynearError::Protocol(_))
+    ));
+    assert!(matches!(engine.release(2), Err(KeynearError::Protocol(_))));
+    assert!(engine.abort(3).is_none());
+    assert!(engine.snapshot().is_none());
 }

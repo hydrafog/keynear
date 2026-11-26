@@ -80,3 +80,63 @@ pub(crate) fn decode_lan_endpoint_impl(
     let decoded = LanEndpointCodec::decode(&encoded, &expected_device_id, &key)?;
     Ok(FfiLanEndpoint::from(decoded))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_endpoint() -> FfiLanEndpoint {
+        FfiLanEndpoint {
+            device_id: "pixel-9".to_string(),
+            endpoint_id: vec![0xAA; 32],
+            socket_addrs: vec!["192.168.1.10:5000".to_string()],
+            capability_flags: 3,
+            issued_at_ms: 1_763_000_000_000,
+        }
+    }
+
+    #[test]
+    fn derive_presence_token_bytes_impl_matches_core_derivation() {
+        let token = derive_presence_token_bytes_impl("pixel-9".to_string(), 7, vec![0x55; 32])
+            .expect("derive token");
+        let expected =
+            keynear_core::derive_presence_token("pixel-9", 7, &[0x55; 32]).expect("core token");
+        assert_eq!(token, expected.to_vec());
+        assert!(matches!(
+            derive_presence_token_bytes_impl("pixel-9".to_string(), 7, vec![0u8; 5]),
+            Err(FfiError::Validation { .. })
+        ));
+    }
+
+    #[test]
+    fn lan_endpoint_impl_roundtrips_and_rejects_invalid_inputs() {
+        let endpoint = sample_endpoint();
+        let key = vec![0x33; 32];
+        let encoded =
+            encode_lan_endpoint_impl(endpoint.clone(), key.clone()).expect("encode endpoint");
+        assert_eq!(
+            decode_lan_endpoint_impl(encoded.clone(), "pixel-9".to_string(), key.clone())
+                .expect("decode endpoint"),
+            endpoint
+        );
+
+        assert!(matches!(
+            encode_lan_endpoint_impl(
+                FfiLanEndpoint {
+                    endpoint_id: vec![0xAA; 31],
+                    ..endpoint
+                },
+                key.clone()
+            ),
+            Err(FfiError::Validation { .. })
+        ));
+        assert!(matches!(
+            decode_lan_endpoint_impl(encoded, "other-dev".to_string(), key.clone()),
+            Err(FfiError::Crypto { .. })
+        ));
+        assert!(matches!(
+            decode_lan_endpoint_impl(vec![0u8; 2], "pixel-9".to_string(), key),
+            Err(FfiError::Validation { .. })
+        ));
+    }
+}

@@ -33,3 +33,6 @@ pub use validation::{sanitize_device_id, validate_display_name};
 #[cfg(test)]
 #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
 mod tests;
+
+#[cfg(test)]
+mod mapping_tests;

@@ -170,4 +170,53 @@ mod tests {
         assert_eq!(flags & 0x07, 0);
         assert_eq!(flags, CAP_AUDIO_HANDOFF | CAP_WIFI_AWARE);
     }
+
+    #[test]
+    fn flags_build_from_empty_and_full_configurations() {
+        assert_eq!(VegaCapabilities::default().flags(), 0);
+        let all_vega = VegaCapabilities {
+            audio_handoff: true,
+            ranging_cs: true,
+            ranging_uwb: true,
+            wifi_aware: true,
+            wifi_direct_r2: true,
+        };
+        assert_eq!(
+            all_vega.flags(),
+            CAP_AUDIO_HANDOFF
+                | CAP_RANGING_CS
+                | CAP_RANGING_UWB
+                | CAP_WIFI_AWARE
+                | CAP_WIFI_DIRECT_R2
+        );
+        assert_eq!(PhoenixCapabilities::default().flags(), 0);
+        let all_phoenix = PhoenixCapabilities {
+            audio_continuity: true,
+            proximity_lock: true,
+            presence_gating: true,
+        };
+        assert_eq!(
+            all_phoenix.flags(),
+            CAP_AUDIO_CONTINUITY | CAP_PROXIMITY_LOCK | CAP_PRESENCE_GATING
+        );
+    }
+
+    #[test]
+    fn negotiate_and_ranging_method_cover_empty_inputs() {
+        assert_eq!(negotiate_capabilities(0, CAP_FILE_TRANSFER), 0);
+        assert_eq!(negotiate_capabilities(CAP_FILE_TRANSFER, 0), 0);
+        assert_eq!(
+            negotiate_capabilities(CAP_FILE_TRANSFER, CAP_FILE_TRANSFER),
+            CAP_FILE_TRANSFER
+        );
+        assert_eq!(ranging_method(0), RangingMethod::None);
+        assert_eq!(
+            ranging_method(CAP_RANGING_CS),
+            RangingMethod::BleChannelSounding
+        );
+        assert_eq!(
+            ranging_method(CAP_RANGING_UWB | CAP_FILE_TRANSFER),
+            RangingMethod::Uwb
+        );
+    }
 }

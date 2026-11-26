@@ -37,3 +37,42 @@ pub(crate) fn derive_reconnect_secret(
         .map_err(|_| KeynearError::Crypto("hkdf expand failed".to_string()))?;
     Ok(reconnect_secret)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn verification_code_from_hash_is_six_digits_and_wraps_modulo() {
+        let mut zeroed = [0u8; 32];
+        assert_eq!(verification_code_from_hash(&zeroed), "000000");
+        zeroed[3] = 5;
+        assert_eq!(verification_code_from_hash(&zeroed), "000005");
+        assert_eq!(verification_code_from_hash(&[0xFF; 32]), "967295");
+    }
+
+    #[test]
+    fn derive_reconnect_secret_is_deterministic_and_domain_separated() {
+        let handshake_hash = [0x11; 32];
+        let ikm = [0x22; 64];
+        let first = derive_reconnect_secret(&handshake_hash, &ikm).expect("first secret");
+        assert_eq!(
+            first,
+            derive_reconnect_secret(&handshake_hash, &ikm).expect("repeat secret")
+        );
+
+        let mut other_hash = handshake_hash;
+        other_hash[0] = 0x33;
+        assert_ne!(
+            first,
+            derive_reconnect_secret(&other_hash, &ikm).expect("other hash")
+        );
+        let mut other_ikm = ikm;
+        other_ikm[0] = 0x44;
+        assert_ne!(
+            first,
+            derive_reconnect_secret(&handshake_hash, &other_ikm).expect("other ikm")
+        );
+        assert_eq!(first.len(), 32);
+    }
+}

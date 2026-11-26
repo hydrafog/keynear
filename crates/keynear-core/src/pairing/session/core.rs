@@ -158,3 +158,7 @@ impl NoisePairingSession {
         Ok(buf)
     }
 }
+
+#[cfg(test)]
+#[path = "tests.rs"]
+mod tests;

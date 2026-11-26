@@ -136,3 +136,12 @@ fn forget_clears_a_single_key_without_touching_others() {
         .expect("still remembered")
         .is_none());
 }
+
+#[test]
+fn package_exclusion_matches_only_exact_names() {
+    let exclusions = vec!["com.secret.chat".to_string(), "org.blocked".to_string()];
+    assert!(is_package_excluded("com.secret.chat", &exclusions));
+    assert!(is_package_excluded("org.blocked", &exclusions));
+    assert!(!is_package_excluded("com.secret.chat.beta", &exclusions));
+    assert!(!is_package_excluded("org.example.chat", &[]));
+}

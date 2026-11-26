@@ -89,3 +89,22 @@ fn oversized_or_unsafe_metadata_is_rejected() {
         Err(KeynearError::Validation { .. })
     ));
 }
+
+#[test]
+fn clear_removes_all_players_and_allows_a_fresh_observation() {
+    let mut bridge = MediaSessionBridge::new();
+    bridge
+        .observe(metadata("player-1", "Track A", 1))
+        .expect("first");
+    bridge
+        .observe(metadata("player-2", "Track B", 1))
+        .expect("second");
+    assert_eq!(bridge.players().count(), 2);
+    bridge.clear();
+    assert_eq!(bridge.players().count(), 0);
+    assert!(bridge.snapshot("player-1").is_none());
+    assert!(bridge
+        .observe(metadata("player-1", "Track C", 1))
+        .expect("reobserve"));
+    assert_eq!(bridge.snapshot("player-1").expect("state").title, "Track C");
+}

@@ -56,3 +56,78 @@ pub fn verify_handshake_auth_proof(
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[allow(clippy::cognitive_complexity)]
+mod tests {
+    use super::*;
+
+    fn endpoint(byte: u8) -> EndpointId {
+        SecretKey::from_bytes(&[byte; 32]).public()
+    }
+
+    #[test]
+    fn handshake_auth_proof_is_deterministic_and_binds_every_input() {
+        let secret = [0xAB; 32];
+        let local = endpoint(0x11);
+        let remote = endpoint(0x22);
+        let proof =
+            compute_handshake_auth_proof(&secret, &local, &remote, "linux-host").expect("proof");
+        assert_eq!(proof.len(), 32);
+        assert_eq!(
+            proof,
+            compute_handshake_auth_proof(&secret, &local, &remote, "linux-host").expect("repeat")
+        );
+        assert_ne!(
+            proof,
+            compute_handshake_auth_proof(&[0xAC; 32], &local, &remote, "linux-host")
+                .expect("other secret")
+        );
+        assert_ne!(
+            proof,
+            compute_handshake_auth_proof(&secret, &endpoint(0x33), &remote, "linux-host")
+                .expect("other local id")
+        );
+        assert_ne!(
+            proof,
+            compute_handshake_auth_proof(&secret, &local, &endpoint(0x44), "linux-host")
+                .expect("other remote id")
+        );
+        assert_ne!(
+            proof,
+            compute_handshake_auth_proof(&secret, &local, &remote, "other-host")
+                .expect("other device id")
+        );
+    }
+
+    #[test]
+    fn verify_handshake_auth_proof_accepts_a_match_and_rejects_mismatches() {
+        let secret = [0xAB; 32];
+        let sender = endpoint(0x11);
+        let receiver = endpoint(0x22);
+        let proof =
+            compute_handshake_auth_proof(&secret, &sender, &receiver, "linux-host").expect("proof");
+
+        assert!(
+            verify_handshake_auth_proof(&secret, &sender, &receiver, "linux-host", &proof).is_ok()
+        );
+        assert!(matches!(
+            verify_handshake_auth_proof(&secret, &sender, &receiver, "linux-host", &proof[..31]),
+            Err(KeynearError::UnauthorizedPeer(message)) if message.contains("length")
+        ));
+        let mut flipped = proof;
+        flipped[0] ^= 0x01;
+        assert!(matches!(
+            verify_handshake_auth_proof(&secret, &sender, &receiver, "linux-host", &flipped),
+            Err(KeynearError::UnauthorizedPeer(message)) if message.contains("verification failed")
+        ));
+        assert!(matches!(
+            verify_handshake_auth_proof(&[0xAC; 32], &sender, &receiver, "linux-host", &proof),
+            Err(KeynearError::UnauthorizedPeer(_))
+        ));
+        assert!(matches!(
+            verify_handshake_auth_proof(&secret, &sender, &receiver, "other-host", &proof),
+            Err(KeynearError::UnauthorizedPeer(_))
+        ));
+    }
+}

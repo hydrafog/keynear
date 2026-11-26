@@ -32,3 +32,22 @@ pub fn everyone_nearby_timeout_secs() -> u64 {
 pub fn pairing_timeout_secs() -> u64 {
     PAIRING_TIMEOUT_SECS
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use keynear_protocol::DaemonConfig;
+
+    #[test]
+    fn default_config_summary_reports_visibility_and_incoming_dir() {
+        let config = DaemonConfig::default();
+        assert_eq!(
+            default_config_summary(),
+            format!(
+                "visibility={:?},incoming_dir={}",
+                config.visibility_mode, config.incoming_directory
+            )
+        );
+        assert!(default_config_summary().contains("PairedOnly"));
+    }
+}
