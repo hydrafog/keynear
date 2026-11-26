@@ -1,8 +1,8 @@
 package org.keynear.app.ui.settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -102,6 +103,9 @@ internal fun AppearanceSection(
             }
 
             Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(KeynearLayout.ContentGap),
             ) {
@@ -155,18 +159,10 @@ private fun AccentColorTile(
 ) {
     val palette = LocalKeynearPalette.current
     val interactionSource = remember { MutableInteractionSource() }
-    val ringModifier = if (selected) {
-        Modifier
-            .border(KeynearDimensions.Dp2, palette.focusRing, KeynearShapes.Xl)
-            .padding(KeynearDimensions.Dp2)
-    } else {
-        Modifier
-    }
     Box(
         modifier = Modifier
             .size(KeynearDimensions.Dp48)
             .tactilePressScale(interactionSource, KeynearPressScale.PRESS_95)
-            .then(ringModifier)
             .clip(KeynearShapes.Xl)
             .background(tileColor)
             .let { m ->
