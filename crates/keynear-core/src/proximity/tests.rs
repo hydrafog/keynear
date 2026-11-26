@@ -121,3 +121,41 @@ fn invalid_configuration_is_rejected() {
         Err(KeynearError::Validation { .. })
     ));
 }
+
+#[test]
+fn desk_distance_calibrates_rssi_and_update_config_reloads_live() {
+    let near_cfg = ProximityConfig::from_desk_distance(1.0);
+    let far_cfg = ProximityConfig::from_desk_distance(6.0);
+    assert!(near_cfg.exit_rssi_dbm > far_cfg.exit_rssi_dbm);
+    assert!(near_cfg.enter_rssi_dbm >= near_cfg.exit_rssi_dbm);
+    assert!(far_cfg.enter_rssi_dbm >= far_cfg.exit_rssi_dbm);
+    assert!(
+        (ProximityConfig::from_desk_distance(f32::NAN).exit_distance_meters
+            - ProximityConfig::default().exit_distance_meters)
+            .abs()
+            < 0.01
+    );
+
+    let mut evaluator = ProximityEvaluator::new(far_cfg).expect("evaluator");
+    evaluator.set_session_locked(true);
+    evaluator
+        .update(sample(1, RangingTechnology::BleRssi, None, Some(-68)))
+        .unwrap();
+    assert_eq!(evaluator.snapshot().status, ProximityStatus::InRange);
+
+    evaluator.update_config(near_cfg).expect("update config");
+    assert!(evaluator.snapshot().session_locked);
+    for seq in 2..=3 {
+        evaluator
+            .update(sample(seq, RangingTechnology::BleRssi, None, Some(-68)))
+            .unwrap();
+    }
+    assert_eq!(evaluator.snapshot().status, ProximityStatus::OutOfRange);
+
+    let bad = ProximityConfig {
+        exit_rssi_dbm: -50,
+        enter_rssi_dbm: -70,
+        ..near_cfg
+    };
+    assert!(evaluator.update_config(bad).is_err());
+}

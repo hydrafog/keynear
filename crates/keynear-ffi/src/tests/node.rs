@@ -193,6 +193,8 @@ fn node_handle_api_surface_handles_empty_and_invalid_inputs() {
     assert!(handle.cancel_transfer("missing".to_string()).is_err());
     assert!(handle.send_paths("unknown".to_string(), vec![]).is_err());
     handle.set_clipboard_config(true, true, true, vec!["x-secret".to_string()]);
+    handle.sync_proximity_config(true, 4.5);
+    handle.sync_proximity_config(false, 2.0);
     assert!(handle
         .send_clipboard_text("hello".to_string(), false)
         .is_err());

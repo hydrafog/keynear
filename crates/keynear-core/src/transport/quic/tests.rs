@@ -156,3 +156,106 @@ async fn rejects_unpaired_and_invalid_hmac() {
     paired.close().await;
     server.close().await;
 }
+
+#[tokio::test]
+async fn send_proximity_state_roundtrips_and_peer_lifecycle_works() {
+    let server = OrionQuicNode::bind(node_config("linux-host", 0x61), Some(loopback_addr()))
+        .await
+        .expect("bind server");
+    let client = OrionQuicNode::bind(node_config("pixel-phone", 0x62), Some(loopback_addr()))
+        .await
+        .expect("bind client");
+    let secret = [0x77; 32];
+    let server_ep = server.local_lan_endpoint();
+    assert_eq!(server_ep.device_id, "linux-host");
+    let server_addrs: Vec<SocketAddr> = server.endpoint_addr().ip_addrs().copied().collect();
+    let client_addrs: Vec<SocketAddr> = client.endpoint_addr().ip_addrs().copied().collect();
+
+    server
+        .register_peer("pixel-phone", client.endpoint_id(), client_addrs, secret)
+        .expect("register client");
+    client
+        .register_peer("linux-host", server.endpoint_id(), server_addrs, secret)
+        .expect("register server");
+    assert_eq!(
+        server.peer_device_id(&client.endpoint_id()).as_deref(),
+        Some("pixel-phone")
+    );
+
+    let server_clone = server.clone();
+    let recv_task = tokio::spawn(async move {
+        let (_peer, conn) = server_clone
+            .accept_authenticated()
+            .await
+            .expect("accept")
+            .expect("conn");
+        let (mut send, mut recv) = conn.accept_bi().await.expect("bi");
+        let kind = read_stream_kind(&mut recv).await.expect("kind");
+        assert_eq!(kind, QuicStreamKind::Control);
+        let env = read_control_envelope(&mut recv).await.expect("env");
+        let ack = v1::Envelope {
+            version: 1,
+            sequence: env.sequence,
+            timestamp_ms: 1,
+            payload: Some(v1::envelope::Payload::ControlAck(v1::ControlAck {
+                acked_sequence: env.sequence,
+                accepted: true,
+                reason: String::new(),
+            })),
+        };
+        write_control_envelope(&mut send, &ack).await.expect("ack");
+        let _ = send.finish();
+        env.payload
+    });
+
+    let state = v1::ProximityState {
+        device_id: "pixel-phone".to_string(),
+        status: v1::ProximityStatus::ProximityInRange as i32,
+        distance_meters: 4.5,
+        session_locked: false,
+        sequence: 1,
+    };
+    client
+        .send_proximity_state("linux-host", state.clone())
+        .await
+        .expect("send proximity state");
+    let got = recv_task.await.expect("join");
+    assert_eq!(got, Some(v1::envelope::Payload::ProximityState(state)));
+
+    client.invalidate_peer_connection("linux-host").await;
+    let secrets = crate::InMemorySecretStore::new();
+    let device_list = vec![
+        PairedDevice {
+            device_id: "skip-empty".to_string(),
+            display_name: "Skip".to_string(),
+            device_role: keynear_protocol::DeviceRole::Mobile,
+            static_x25519_pubkey: "aa".repeat(32),
+            last_ble_address: String::new(),
+            last_lan_address: String::new(),
+            last_endpoint_id: String::new(),
+            capability_flags: 1,
+            auto_accept_files: false,
+            paired_at: "1".to_string(),
+        },
+        PairedDevice {
+            device_id: "skip-bad-hex".to_string(),
+            display_name: "Bad".to_string(),
+            device_role: keynear_protocol::DeviceRole::Mobile,
+            static_x25519_pubkey: "aa".repeat(32),
+            last_ble_address: String::new(),
+            last_lan_address: String::new(),
+            last_endpoint_id: "zzzz".to_string(),
+            capability_flags: 1,
+            auto_accept_files: false,
+            paired_at: "1".to_string(),
+        },
+    ];
+    server
+        .sync_paired_devices(&device_list, &secrets)
+        .expect("sync paired devices");
+    server.remove_peer("pixel-phone").expect("remove peer");
+    assert!(server.peer_device_id(&client.endpoint_id()).is_none());
+
+    client.close().await;
+    server.close().await;
+}

@@ -126,3 +126,66 @@ pub(super) fn spawn_clipboard_accept_loop(
         }
     })
 }
+
+#[tokio::test]
+async fn incoming_control_envelope_handles_rejections_and_unknown_payloads() {
+    use keynear_protocol::{read_control_envelope, v1};
+
+    let (server, client) = connected_pair().await;
+    let engine = Arc::new(ClipboardEngine::new(ClipboardPolicy::default()));
+    let server_clone = server.clone();
+    let eng_clone = Arc::clone(&engine);
+
+    let srv_task = tokio::spawn(async move {
+        let (peer, conn) = server_clone
+            .accept_authenticated()
+            .await
+            .expect("accept")
+            .expect("conn");
+        for _ in 0..3 {
+            let (mut send, mut recv) = conn.accept_bi().await.expect("bi");
+            let env = read_control_envelope(&mut recv).await.expect("env");
+            let _ = eng_clone
+                .handle_control_envelope(&peer, env, &mut send)
+                .await;
+            let _ = send.finish();
+        }
+    });
+
+    let conn = client.connect_peer("linux-host").await.expect("connect");
+    let payloads = vec![
+        v1::envelope::Payload::Clipboard(v1::ClipboardPayload {
+            mime_type: "bad mime!".to_string(),
+            data: b"x".to_vec(),
+            is_otp: false,
+        }),
+        v1::envelope::Payload::Clipboard(v1::ClipboardPayload {
+            mime_type: "text/plain".to_string(),
+            data: vec![],
+            is_otp: false,
+        }),
+        v1::envelope::Payload::ControlAck(v1::ControlAck {
+            acked_sequence: 1,
+            accepted: true,
+            reason: String::new(),
+        }),
+    ];
+    for (idx, payload) in payloads.into_iter().enumerate() {
+        let (mut send, mut recv) = conn.open_bi().await.expect("open_bi");
+        let env = v1::Envelope {
+            version: 1,
+            sequence: (idx + 1) as u64,
+            timestamp_ms: 1,
+            payload: Some(payload),
+        };
+        keynear_protocol::write_control_envelope(&mut send, &env)
+            .await
+            .expect("write");
+        let _ = send.finish();
+        let _ = read_control_envelope(&mut recv).await;
+    }
+
+    srv_task.await.expect("join");
+    client.close().await;
+    server.close().await;
+}

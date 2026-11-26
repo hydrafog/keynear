@@ -87,3 +87,99 @@ async fn preserves_empty_folders_subdirs_and_avoids_folder_collision_scattering(
     server.close().await;
     let _ = fs::remove_dir_all(&dir);
 }
+
+#[tokio::test]
+async fn send_paths_handles_colon_filenames_mime_types_and_drive_prefixes() {
+    use crate::transfer::io::sanitize_relative_path;
+
+    assert_eq!(
+        sanitize_relative_path("1:2.txt").expect("unix colon ok"),
+        PathBuf::from("1:2.txt")
+    );
+    assert!(sanitize_relative_path("C:/windows.txt").is_err());
+    assert!(sanitize_relative_path("C:\\windows.txt").is_err());
+    assert!(sanitize_relative_path("C:").is_err());
+    assert!(sanitize_relative_path("../escape").is_err());
+    assert!(sanitize_relative_path("/abs").is_err());
+    assert!(sanitize_relative_path("").is_err());
+
+    let dir = temp_dir("folder-retry-and-colon");
+    let src_dir = dir.join("batch");
+    let dest_dir = dir.join("dest");
+    fs::create_dir_all(&src_dir).expect("mkdir src");
+    fs::create_dir_all(&dest_dir).expect("mkdir dest");
+    fs::write(src_dir.join("1:2.txt"), b"colon ok").expect("write colon");
+    let mut ext_files = Vec::new();
+    for ext in [
+        "apk", "pdf", "png", "jpg", "gif", "webp", "svg", "mp4", "mkv", "webm", "mp3", "ogg",
+        "wav", "flac", "html", "json", "xml", "zip", "tar", "gz", "7z", "bin",
+    ] {
+        let p = src_dir.join(format!("sample.{ext}"));
+        fs::write(&p, b"x").expect("write ext");
+        ext_files.push(p);
+    }
+    let multi_plan = crate::transfer::io::prepare_send_plan(&ext_files).expect("multi plan");
+    assert_eq!(multi_plan.items.len(), ext_files.len());
+    let single_plan = crate::transfer::io::prepare_send_plan(std::slice::from_ref(&ext_files[0]))
+        .expect("single plan");
+    assert_eq!(
+        single_plan.items[0].mime_type,
+        "application/vnd.android.package-archive"
+    );
+
+    let (server, client, server_conn, _client_conn) = connected_pair().await;
+    let receiver_engine = Arc::new(TransferEngine::new(dest_dir.clone(), true));
+    let sender_engine = Arc::new(TransferEngine::new(dir.clone(), false));
+
+    let recv_clone = Arc::clone(&receiver_engine);
+    let recv_task = tokio::spawn(async move {
+        let mut out = Vec::new();
+        for _ in 0..2 {
+            let (s, r) = server_conn.accept_bi().await.expect("accept");
+            out.push(
+                recv_clone
+                    .handle_incoming_stream("client-1", s, r)
+                    .await
+                    .expect("recv"),
+            );
+        }
+        out
+    });
+
+    assert!(sender_engine
+        .send_paths(&client, "server-1", &[])
+        .await
+        .is_err());
+    let sent = sender_engine
+        .send_paths(&client, "server-1", std::slice::from_ref(&src_dir))
+        .await
+        .expect("send_paths ok");
+    assert_eq!(sent.state, TransferState::Completed);
+
+    let handle_file = fs::File::open(&ext_files[1]).expect("open pdf");
+    let sent_fd = sender_engine
+        .send_file_handle(
+            &client,
+            "server-1",
+            "doc.pdf".to_string(),
+            "application/pdf".to_string(),
+            1,
+            handle_file,
+        )
+        .await
+        .expect("send_file_handle ok");
+    assert_eq!(sent_fd.state, TransferState::Completed);
+
+    let received = recv_task.await.expect("join");
+    assert_eq!(received.len(), 2);
+    assert_eq!(received[0].state, TransferState::Completed);
+    assert_eq!(received[1].state, TransferState::Completed);
+    assert_eq!(
+        fs::read(dest_dir.join("batch").join("1:2.txt")).expect("read colon"),
+        b"colon ok"
+    );
+
+    client.close().await;
+    server.close().await;
+    let _ = fs::remove_dir_all(&dir);
+}
