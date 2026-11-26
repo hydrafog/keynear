@@ -3,7 +3,15 @@ name: Fast Feedback
 on:
   push:
     branches-ignore: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - ".agents/artifacts/**"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - ".agents/artifacts/**"
 
 jobs:
   fast:
@@ -23,7 +31,7 @@ jobs:
       - name: Design token guard
         run: python3 scripts/validation/token-check.py
       - name: Cargo check
-        run: cargo check --workspace --all-features
+        run: cargo check --locked --workspace --all-features
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -40,7 +48,7 @@ jobs:
       - name: Native Android libraries
         run: |
           export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/30.0.16248370"
-          cargo ndk -t arm64-v8a -t x86_64 -o android/core-ffi/src/main/jniLibs build --release -p keynear-ffi
+          cargo ndk -t arm64-v8a -t x86_64 -o android/core-ffi/src/main/jniLibs build --locked --release -p keynear-ffi
       - name: Assemble Android debug APK
         working-directory: android
         run: ./gradlew assembleDebug

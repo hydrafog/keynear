@@ -97,6 +97,22 @@ These guides cover the trust model, permissions, and licensing.
 
 </details>
 
+<h3 id="screenshots">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/heading-screenshots-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="assets/brand/heading-screenshots-light.svg">
+    <img src="assets/brand/heading-screenshots-light.svg" alt="Screenshots" width="100%">
+  </picture>
+</h3>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/screenshots-coverflow-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="assets/brand/screenshots-coverflow-light.png">
+    <img src="assets/brand/screenshots-coverflow-light.png" alt="Keynear Android app screenshots showing Send, Receive proximity radar, and Settings screens in a Coverflow layout" width="100%">
+  </picture>
+</p>
+
 <h3 id="license">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/brand/heading-license-dark.svg">

@@ -3,14 +3,42 @@ name: Quality Gate
 on:
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - ".agents/artifacts/**"
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - ".agents/artifacts/**"
+  merge_group:
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
 
 jobs:
   quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Commit message check
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            range="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+          else
+            range="HEAD~1..HEAD"
+          fi
+          while IFS= read -r sha; do
+            [ -n "$sha" ] || continue
+            tmp="$(mktemp)"
+            git log -n 1 --format=%B "$sha" > "$tmp"
+            bash scripts/validation/commit-msg.sh "$tmp"
+            rm -f "$tmp"
+          done < <(git rev-list --no-merges "$range")
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy, llvm-tools-preview
@@ -32,17 +60,18 @@ jobs:
       - name: Format check
         run: cargo fmt --check
       - name: Clippy
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+        run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
       - name: Workspace tests
-        run: cargo test --workspace --all-features
+        run: cargo test --locked --workspace --all-features
       - name: Dependency audit and license policy
         run: |
           cargo deny check
           cargo audit
       - name: Coverage gate
-        run: cargo llvm-cov -p keynear-protocol -p keynear-core -p keynear-ffi -p keynear-ipc --all-features --fail-under-lines 75 --summary-only
+        run: cargo llvm-cov --locked -p keynear-protocol -p keynear-core -p keynear-ffi -p keynear-ipc --all-features --fail-under-lines 75 --summary-only
 
   fuzz:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.event_name == 'merge_group' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-fuzz'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -97,7 +126,7 @@ jobs:
       - name: Build Android native libraries
         run: |
           export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/30.0.16248370"
-          cargo ndk -t arm64-v8a -t x86_64 -o android/core-ffi/src/main/jniLibs build --release -p keynear-ffi
+          cargo ndk -t arm64-v8a -t x86_64 -o android/core-ffi/src/main/jniLibs build --locked --release -p keynear-ffi
       - name: Expose NDK LLVM tools
         run: echo "$ANDROID_HOME/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/bin" >> "$GITHUB_PATH"
       - name: Verify 16 KB ELF page alignment

@@ -14,3 +14,9 @@ if ! printf '%s\n' "$subject" | grep -qE '^(feat|fix|docs|chore|refactor|test|bu
   exit 1
 fi
 
+# Reject any non-empty body lines beyond optional Co-authored-by trailers and git comments.
+body_bad="$(tail -n +2 "$msg_file" | tr -d '\r' | grep -vE '^[[:space:]]*$|^[[:space:]]*#|^Co-authored-by: ' || true)"
+if [ -n "$body_bad" ]; then
+  echo "commit-msg: commit body is disallowed beyond optional Co-authored-by: trailers" >&2
+  exit 1
+fi

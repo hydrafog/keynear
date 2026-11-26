@@ -84,6 +84,7 @@
               cargo-audit
               cargo-deny
               cargo-llvm-cov
+              cargo-sweep
               rustc.llvmPackages.llvm
               llvmPackages.libclang
               protobuf
@@ -107,11 +108,13 @@
             BINDGEN_EXTRA_CLANG_ARGS = "-I${pkgs.glibc.dev}/include";
 
             shellHook = ''
-              for tool in cargo cargo-audit cargo-deny cargo-llvm-cov llvm-profdata llvm-cov rustc protoc java gradle; do
+              for tool in cargo cargo-audit cargo-deny cargo-llvm-cov cargo-sweep llvm-profdata llvm-cov rustc protoc java gradle lefthook jq; do
                 if ! command -v "$tool" >/dev/null 2>&1; then
-                  echo "keynear devShell warning: missing tool '$tool'" >&2
+                  echo "keynear devShell error: missing required tool '$tool'" >&2
+                  exit 1
                 fi
               done
+              echo "keynear devShell: $(rustc --version) | $(cargo --version) | $(cargo-sweep --version) | $(protoc --version) | $(java -version 2>&1 | head -n 1)"
             '';
           };
 
@@ -138,9 +141,11 @@
             shellHook = ''
               for tool in cargo rustc cargo-ndk cmake protoc java gradle llvm-readelf; do
                 if ! command -v "$tool" >/dev/null 2>&1; then
-                  echo "keynear android devShell warning: missing tool '$tool'" >&2
+                  echo "keynear android devShell error: missing required tool '$tool'" >&2
+                  exit 1
                 fi
               done
+              echo "keynear android devShell: $(rustc --version) | $(cargo --version) | $(cargo-ndk --version) | $(protoc --version) | $(java -version 2>&1 | head -n 1)"
             '';
           };
         });

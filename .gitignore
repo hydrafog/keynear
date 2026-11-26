@@ -8,6 +8,9 @@ design/prototype/dist/
 design/website/node_modules/
 design/website/dist/
 target/
+fuzz/target/
+*.profraw
+lcov.info
 android/.gradle/
 android/build/
 android/*/build/
@@ -15,11 +18,17 @@ android/local.properties
 .direnv/
 result
 .env
+.env.*
 !.env.example
 out/
+exports/
 android/app/src/main/jniLibs/
 android/core-ffi/src/main/jniLibs/
 *.jks
 *.keystore
 keystore.properties
 android/keystore.properties
+.DS_Store
+*.swp
+*.swo
+*~
