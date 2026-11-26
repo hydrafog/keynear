@@ -18,6 +18,10 @@ on:
     - cron: "0 4 * * 1"
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -89,6 +93,7 @@ jobs:
         run: cargo fuzz run --target x86_64-unknown-linux-gnu proto_decode -- -max_total_time=30 -rss_limit_mb=2048
 
   nix:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.event_name == 'merge_group' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-nix'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -103,6 +108,7 @@ jobs:
           nix build --no-link .#keynear .#keynear-fuse .#keynear-gnome-extension
 
   android:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.event_name == 'merge_group' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-android'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
