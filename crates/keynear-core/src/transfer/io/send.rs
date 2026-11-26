@@ -136,47 +136,66 @@ fn spawn_zip_writer(
     chunk_tx: mpsc::Sender<Result<Vec<u8>, KeynearError>>,
 ) -> tokio::task::JoinHandle<Result<(), KeynearError>> {
     tokio::task::spawn_blocking(move || -> Result<(), KeynearError> {
-        let channel_writer = ChannelChunkWriter::new(chunk_tx.clone(), cancel_writer);
-        let buffered = BufWriter::with_capacity(ZIP_IO_BUFFER_BYTES, channel_writer);
-        let mut zip = ZipWriter::new_stream(buffered);
-        let options = SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
-
-        for entry in entries {
-            if entry.is_dir {
-                let dir_name = if entry.archive_path.ends_with('/') {
-                    entry.archive_path
-                } else {
-                    format!("{}/", entry.archive_path)
-                };
-                zip.add_directory(dir_name, options).map_err(zip_err)?;
-                continue;
-            }
-            let Some(src_path) = entry.source_path else {
-                continue;
-            };
-            let meta = fs::symlink_metadata(&src_path)?;
-            if meta.file_type().is_symlink() || !meta.is_file() {
-                continue;
-            }
-            zip.start_file(&entry.archive_path, options)
-                .map_err(zip_err)?;
-            let file = File::open(&src_path)?;
-            let mut reader = BufReader::with_capacity(ZIP_IO_BUFFER_BYTES, file);
-            let mut copy_buf = vec![0u8; STREAM_CHUNK_BYTES];
-            loop {
-                let n = reader.read(&mut copy_buf)?;
-                if n == 0 {
-                    break;
+        let result = write_zip_entries(entries, cancel_writer, chunk_tx.clone());
+        if let Err(ref err) = result {
+            let forwarded = match err {
+                KeynearError::TransferCancelled(msg) => {
+                    KeynearError::TransferCancelled(msg.clone())
                 }
-                zip.write_all(&copy_buf[..n])?;
-            }
+                other => KeynearError::Transfer(other.to_string()),
+            };
+            let _ = chunk_tx.blocking_send(Err(forwarded));
         }
-
-        let stream_writer = zip.finish().map_err(zip_err)?;
-        let mut buffered = stream_writer.into_inner();
-        buffered.flush()?;
-        Ok(())
+        result
     })
+}
+
+fn write_zip_entries(
+    entries: Vec<ArchiveSourceEntry>,
+    cancel_writer: Arc<AtomicBool>,
+    chunk_tx: mpsc::Sender<Result<Vec<u8>, KeynearError>>,
+) -> Result<(), KeynearError> {
+    let channel_writer = ChannelChunkWriter::new(chunk_tx, cancel_writer);
+    let buffered = BufWriter::with_capacity(ZIP_IO_BUFFER_BYTES, channel_writer);
+    let mut zip = ZipWriter::new_stream(buffered);
+    let options = SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
+
+    for entry in entries {
+        if entry.is_dir {
+            let dir_name = if entry.archive_path.ends_with('/') {
+                entry.archive_path
+            } else {
+                format!("{}/", entry.archive_path)
+            };
+            zip.add_directory(dir_name, options).map_err(zip_err)?;
+            continue;
+        }
+        let Some(src_path) = entry.source_path else {
+            continue;
+        };
+        let meta = fs::symlink_metadata(&src_path)?;
+        if meta.file_type().is_symlink() || !meta.is_file() {
+            continue;
+        }
+        let file_options = options.large_file(entry.expected_size >= u64::from(u32::MAX));
+        zip.start_file(&entry.archive_path, file_options)
+            .map_err(zip_err)?;
+        let file = File::open(&src_path)?;
+        let mut reader = BufReader::with_capacity(ZIP_IO_BUFFER_BYTES, file.take(entry.expected_size));
+        let mut copy_buf = vec![0u8; STREAM_CHUNK_BYTES];
+        loop {
+            let n = reader.read(&mut copy_buf)?;
+            if n == 0 {
+                break;
+            }
+            zip.write_all(&copy_buf[..n])?;
+        }
+    }
+
+    let stream_writer = zip.finish().map_err(zip_err)?;
+    let mut buffered = stream_writer.into_inner();
+    buffered.flush()?;
+    Ok(())
 }
 
 struct SendContext<'a> {

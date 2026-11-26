@@ -107,14 +107,19 @@ object SafFolderHelper {
         val sizeBytes: Long,
     )
 
-    private fun queryChildren(context: Context, treeUri: Uri, parentDocId: String): List<ChildDoc> {
+    private fun queryChildren(context: Context, treeUri: Uri, parentDocId: String): List<ChildDoc> =
+        runCatching { queryChildrenOrThrow(context, treeUri, parentDocId) }.getOrDefault(emptyList())
+
+    private fun queryChildrenOrThrow(context: Context, treeUri: Uri, parentDocId: String): List<ChildDoc> {
         val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentDocId)
-        val result = runCatching {
+        val children = runCatching {
             context.contentResolver.query(childrenUri, CHILD_PROJECTION, null, null, null)?.use { cursor ->
                 readCursorChildren(cursor)
             }
-        }.getOrNull().orEmpty()
-        return result.sortedBy { it.displayName }
+        }.getOrElse { err ->
+            throw IllegalStateException("Unable to read folder contents for $parentDocId", err)
+        } ?: throw IllegalStateException("Unable to open folder listing for $parentDocId")
+        return children.sortedBy { it.displayName }
     }
 
     private fun readCursorChildren(cursor: android.database.Cursor): List<ChildDoc> {
@@ -170,7 +175,7 @@ object SafFolderHelper {
 
         fun walk(docId: String, destDir: File, depth: Int) {
             if (depth > MAX_FOLDER_DEPTH || entries >= MAX_FOLDER_ENTRIES || !visited.add(docId)) return
-            for (child in queryChildren(context, treeUri, docId)) {
+            for (child in queryChildrenOrThrow(context, treeUri, docId)) {
                 if (entries >= MAX_FOLDER_ENTRIES) break
                 entries += 1
                 if (child.isDirectory) {

@@ -15,6 +15,16 @@ pub(crate) struct ArchiveSourceEntry {
     pub(crate) archive_path: String,
     pub(crate) source_path: Option<PathBuf>,
     pub(crate) is_dir: bool,
+    pub(crate) expected_size: u64,
+}
+
+fn check_archive_entry_limit(entries: &[ArchiveSourceEntry]) -> Result<(), KeynearError> {
+    if entries.len() >= MAX_FILES_IN_ARCHIVE {
+        return Err(KeynearError::Transfer(format!(
+            "archive exceeds maximum of {MAX_FILES_IN_ARCHIVE} entries"
+        )));
+    }
+    Ok(())
 }
 
 pub(crate) fn prepare_send_plan(paths: &[PathBuf]) -> Result<SendPlan, KeynearError> {
@@ -146,6 +156,7 @@ fn add_path_to_plan(
             checksum: None,
         });
     } else if meta.is_file() {
+        check_archive_entry_limit(entries)?;
         let size = meta.len();
         *total_bytes = total_bytes
             .checked_add(size)
@@ -155,6 +166,7 @@ fn add_path_to_plan(
             archive_path: rel_str.clone(),
             source_path: Some(path.to_path_buf()),
             is_dir: false,
+            expected_size: size,
         });
         items.push(TransferItem {
             name: rel_str,
@@ -174,11 +186,13 @@ fn collect_directory_entries(
     entries: &mut Vec<ArchiveSourceEntry>,
     dir_bytes: &mut u64,
 ) -> Result<(), KeynearError> {
+    check_archive_entry_limit(entries)?;
     let rel_str = archive_rel.to_string_lossy().replace('\\', "/");
     entries.push(ArchiveSourceEntry {
         archive_path: rel_str,
         source_path: None,
         is_dir: true,
+        expected_size: 0,
     });
 
     let mut children: Vec<fs::DirEntry> = fs::read_dir(fs_dir)?.collect::<Result<Vec<_>, _>>()?;
@@ -199,17 +213,27 @@ fn collect_directory_entries(
         if meta.is_dir() {
             collect_directory_entries(&child_path, &next_rel, entries, dir_bytes)?;
         } else if meta.is_file() {
+            check_archive_entry_limit(entries)?;
+            let file_size = meta.len();
             *dir_bytes = dir_bytes
-                .checked_add(meta.len())
+                .checked_add(file_size)
                 .ok_or_else(|| KeynearError::Transfer("directory size overflow".to_string()))?;
             entries.push(ArchiveSourceEntry {
                 archive_path: next_rel.to_string_lossy().replace('\\', "/"),
                 source_path: Some(child_path),
                 is_dir: false,
+                expected_size: file_size,
             });
         }
     }
     Ok(())
+}
+
+fn is_windows_drive_prefix(raw: &str) -> bool {
+    let bytes = raw.as_bytes();
+    bytes.first().is_some_and(u8::is_ascii_alphabetic)
+        && bytes.get(1) == Some(&b':')
+        && (bytes.len() == 2 || bytes.get(2) == Some(&b'/'))
 }
 
 pub fn sanitize_relative_path(raw: &str) -> Result<PathBuf, KeynearError> {
@@ -219,7 +243,7 @@ pub fn sanitize_relative_path(raw: &str) -> Result<PathBuf, KeynearError> {
             message: "relative path contains forbidden characters".to_string(),
         });
     }
-    if raw.starts_with('/') || raw.as_bytes().get(1) == Some(&b':') {
+    if raw.starts_with('/') || is_windows_drive_prefix(raw) {
         return Err(KeynearError::Validation {
             field: "path",
             message: "absolute path is forbidden".to_string(),
