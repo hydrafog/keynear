@@ -121,6 +121,7 @@ private fun EventQueue.decrementPendingPairing() {
 private const val UI_PREFS_NAME = "keynear_ui_prefs"
 private const val PREF_DARK_THEME = "dark_theme"
 private const val PREF_ACCENT_COLOR = "accent_color_hex"
+private const val PREF_DISMISSED_TRANSFERS = "dismissed_transfer_ids"
 
 internal fun readDarkThemePref(context: Context): Boolean =
     context.getSharedPreferences(UI_PREFS_NAME, Context.MODE_PRIVATE)
@@ -143,6 +144,19 @@ internal fun writeAccentColorPref(context: Context, hex: String) {
     context.getSharedPreferences(UI_PREFS_NAME, Context.MODE_PRIVATE)
         .edit()
         .putString(PREF_ACCENT_COLOR, normalizeAccentHex(hex))
+        .apply()
+}
+
+internal fun readDismissedTransferIds(context: Context): Set<String> =
+    context.getSharedPreferences(UI_PREFS_NAME, Context.MODE_PRIVATE)
+        .getStringSet(PREF_DISMISSED_TRANSFERS, emptySet())
+        ?.toSet()
+        .orEmpty()
+
+internal fun writeDismissedTransferIds(context: Context, ids: Set<String>) {
+    context.getSharedPreferences(UI_PREFS_NAME, Context.MODE_PRIVATE)
+        .edit()
+        .putStringSet(PREF_DISMISSED_TRANSFERS, ids.toSet())
         .apply()
 }
 

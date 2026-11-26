@@ -26,6 +26,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.keynear.app.ble.BleScanner
 import org.keynear.app.bridge.CoreBridge
+import org.keynear.app.bridge.readDismissedTransferIds
+import org.keynear.app.bridge.writeDismissedTransferIds
 import org.keynear.app.ui.model.CoreState
 import org.keynear.app.ui.model.VisibilityState
 import org.keynear.app.ui.model.evaluatePermissionsChecklist
@@ -55,7 +57,7 @@ internal fun KeynearAppRoot(
     var activeTab by rememberSaveable { mutableStateOf(KeynearTab.RECEIVE) }
     var subScreen by remember { mutableStateOf<KeynearSubScreen?>(null) }
     var sheetExpanded by rememberSaveable { mutableStateOf(false) }
-    var dismissedTransferIds by remember { mutableStateOf(emptySet<String>()) }
+    var dismissedTransferIds by remember { mutableStateOf(readDismissedTransferIds(context)) }
 
     val snapshot = snapshotFromState(uiState)
     val darkTheme = snapshot?.daemonConfig?.darkTheme ?: isSystemInDarkTheme()
@@ -181,7 +183,11 @@ internal fun KeynearAppRoot(
             sheetExpanded = sheetExpanded,
             onSetSheetExpanded = { sheetExpanded = it },
             dismissedTransferIds = dismissedTransferIds,
-            onDismissTransfers = { ids -> dismissedTransferIds = dismissedTransferIds + ids },
+            onDismissTransfers = { ids ->
+                val updated = dismissedTransferIds + ids
+                dismissedTransferIds = updated
+                writeDismissedTransferIds(context, updated)
+            },
             onBack = ::clearSubScreen,
             onSelectTab = { tab ->
                 clearSubScreen()
