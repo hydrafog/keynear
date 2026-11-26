@@ -70,7 +70,7 @@ HTML_TEMPLATE = """<!doctype html>
     transform-style: preserve-3d;
   }}
   .phone-wrap.left {{
-    transform: translateX(-348px) translateY(20px) translateZ(-120px) rotateY(32deg) scale(0.87);
+    transform: translateX(-430px) translateY(20px) translateZ(-120px) rotateY(32deg) scale(0.95);
     z-index: 2;
     filter: drop-shadow(-20px 30px 36px {side_shadow});
   }}
@@ -80,7 +80,7 @@ HTML_TEMPLATE = """<!doctype html>
     filter: drop-shadow(0px 34px 44px {center_shadow}) drop-shadow(0px 10px 18px {center_shadow_tight});
   }}
   .phone-wrap.right {{
-    transform: translateX(348px) translateY(20px) translateZ(-120px) rotateY(-32deg) scale(0.87);
+    transform: translateX(430px) translateY(20px) translateZ(-120px) rotateY(-32deg) scale(0.95);
     z-index: 2;
     filter: drop-shadow(20px 30px 36px {side_shadow});
   }}
@@ -207,8 +207,8 @@ HTML_TEMPLATE = """<!doctype html>
 
 THEMES = {
     "light": {
-        "aura_inner": "rgba(74, 187, 213, 0.34)",
-        "aura_mid": "rgba(74, 187, 213, 0.11)",
+        "aura_inner": "rgba(74, 187, 213, 0.18)",
+        "aura_mid": "rgba(74, 187, 213, 0.06)",
         "floor_shadow": "rgba(7, 26, 33, 0.24)",
         "side_shadow": "rgba(7, 26, 33, 0.28)",
         "center_shadow": "rgba(7, 26, 33, 0.34)",
@@ -223,8 +223,8 @@ THEMES = {
         "center_glare": "0.07",
     },
     "dark": {
-        "aura_inner": "rgba(74, 187, 213, 0.36)",
-        "aura_mid": "rgba(74, 187, 213, 0.10)",
+        "aura_inner": "rgba(74, 187, 213, 0.20)",
+        "aura_mid": "rgba(74, 187, 213, 0.06)",
         "floor_shadow": "rgba(0, 0, 0, 0.65)",
         "side_shadow": "rgba(0, 0, 0, 0.72)",
         "center_shadow": "rgba(0, 0, 0, 0.80)",
