@@ -3,19 +3,18 @@ use std::sync::Arc;
 
 use bluer::adv::AdvertisementHandle;
 use bluer::gatt::local::{ApplicationHandle, CharacteristicNotifier};
-use bluer::{
-    Adapter, AdapterEvent, Address, DeviceEvent, DeviceProperty, DiscoveryFilter,
-    DiscoveryTransport, Session,
-};
+use bluer::{Adapter, AdapterEvent, Address, DiscoveryFilter, DiscoveryTransport, Session};
 use futures_util::{Stream, StreamExt};
 use keynear_core::{
-    PairedBeaconState, PairedDeviceStore, PairingPeerMetadata, SecretStore, KEYNEAR_BLE_SERVICE_UUID,
+    PairedDeviceStore, PairingPeerMetadata, SecretStore, KEYNEAR_BLE_SERVICE_UUID,
 };
 use keynear_protocol::{v1, DeviceRole, KeynearError, VisibilityMode};
 use tokio::sync::{mpsc, watch, Mutex};
-use tokio::task::JoinHandle;
 
-type RssiWatcherEntry = (String, PairedBeaconState, JoinHandle<()>);
+#[path = "adapter_rssi.rs"]
+mod rssi;
+
+use rssi::{ensure_rssi_watcher, handle_device_removed, RssiWatchTarget, RssiWatcherEntry};
 
 use super::advertiser::{
     decode_service_data_for_known_peers, register_visibility_advertisement, DecodedBleBeacon,
@@ -234,23 +233,28 @@ async fn handle_device_event(
     match maybe_ev {
         None => true,
         Some(AdapterEvent::DeviceRemoved(addr)) => {
-            if let Some((device_id, state, handle)) = ctx.rssi_watchers.remove(&addr) {
-                handle.abort();
-                if let Some(tx) = ctx.discovered_tx {
-                    let _ = tx.try_send(DiscoveredBlePeer {
-                        address: addr.to_string(),
-                        rssi: Some(-127),
-                        beacon: DecodedBleBeacon::Paired { device_id, state },
-                    });
-                }
-            }
+            handle_device_removed(ctx.rssi_watchers, ctx.discovered_tx, addr);
             false
         }
         Some(AdapterEvent::DeviceAdded(addr)) => {
-            let Some(peer) = inspect_discovered_device(ctx, addr).await else { return false; };
+            let Some(peer) = inspect_discovered_device(ctx, addr).await else {
+                return false;
+            };
             if let DecodedBleBeacon::Paired { ref device_id, ref state } = peer.beacon {
-                ctx.ble_addr_map.lock().await.insert(peer.address.to_ascii_lowercase(), device_id.clone());
-                ensure_rssi_watcher(ctx, addr, device_id, state.clone());
+                ctx.ble_addr_map
+                    .lock()
+                    .await
+                    .insert(peer.address.to_ascii_lowercase(), device_id.clone());
+                ensure_rssi_watcher(
+                    ctx.adapter,
+                    ctx.rssi_watchers,
+                    ctx.discovered_tx,
+                    RssiWatchTarget {
+                        addr,
+                        device_id,
+                        state: state.clone(),
+                    },
+                );
             }
             if let Some(tx) = ctx.discovered_tx {
                 let _ = tx.try_send(peer);
@@ -259,38 +263,6 @@ async fn handle_device_event(
         }
         Some(_) => false,
     }
-}
-
-fn ensure_rssi_watcher(
-    ctx: &mut DiscoveryContext<'_>,
-    addr: Address,
-    device_id: &str,
-    state: PairedBeaconState,
-) {
-    if ctx.rssi_watchers.get(&addr).is_some_and(|(_, _, h)| !h.is_finished()) {
-        return;
-    }
-    let Some(tx) = ctx.discovered_tx.clone() else { return; };
-    let adapter = ctx.adapter.clone();
-    let (watch_id, watch_state) = (device_id.to_string(), state.clone());
-    let handle = tokio::spawn(async move {
-        let Ok(device) = adapter.device(addr) else { return; };
-        let Ok(mut evs) = device.events().await else { return; };
-        while let Some(ev) = evs.next().await {
-            if let DeviceEvent::PropertyChanged(DeviceProperty::Rssi(rssi)) = ev {
-                let peer = DiscoveredBlePeer {
-                    address: addr.to_string(),
-                    rssi: Some(rssi),
-                    beacon: DecodedBleBeacon::Paired {
-                        device_id: watch_id.clone(),
-                        state: watch_state.clone(),
-                    },
-                };
-                if tx.try_send(peer).is_err() && tx.is_closed() { break; }
-            }
-        }
-    });
-    ctx.rssi_watchers.insert(addr, (device_id.to_string(), state, handle));
 }
 
 async fn inspect_discovered_device(
