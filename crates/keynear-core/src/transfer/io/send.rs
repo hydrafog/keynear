@@ -181,7 +181,8 @@ fn write_zip_entries(
         zip.start_file(&entry.archive_path, file_options)
             .map_err(zip_err)?;
         let file = File::open(&src_path)?;
-        let mut reader = BufReader::with_capacity(ZIP_IO_BUFFER_BYTES, file.take(entry.expected_size));
+        let mut reader =
+            BufReader::with_capacity(ZIP_IO_BUFFER_BYTES, file.take(entry.expected_size));
         let mut copy_buf = vec![0u8; STREAM_CHUNK_BYTES];
         loop {
             let n = reader.read(&mut copy_buf)?;

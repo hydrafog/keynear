@@ -62,7 +62,10 @@ async fn resolve_user_session(
             continue;
         }
         let rank = session_priority(connection, &path).await;
-        if best.as_ref().is_none_or(|(best_rank, _, _)| rank > *best_rank) {
+        if best
+            .as_ref()
+            .is_none_or(|(best_rank, _, _)| rank > *best_rank)
+        {
             best = Some((rank, id, path));
         }
     }

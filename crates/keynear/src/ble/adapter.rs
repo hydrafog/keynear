@@ -3,18 +3,18 @@ use std::sync::Arc;
 
 use bluer::adv::AdvertisementHandle;
 use bluer::gatt::local::{ApplicationHandle, CharacteristicNotifier};
-use bluer::{Adapter, AdapterEvent, Address, DiscoveryFilter, DiscoveryTransport, Session};
+use bluer::{Adapter, AdapterEvent, Address};
 use futures_util::{Stream, StreamExt};
-use keynear_core::{
-    PairedDeviceStore, PairingPeerMetadata, SecretStore, KEYNEAR_BLE_SERVICE_UUID,
-};
+use keynear_core::{PairedDeviceStore, PairingPeerMetadata, SecretStore, KEYNEAR_BLE_SERVICE_UUID};
 use keynear_protocol::{v1, DeviceRole, KeynearError, VisibilityMode};
 use tokio::sync::{mpsc, watch, Mutex};
 
 #[path = "adapter_rssi.rs"]
 mod rssi;
 
-use rssi::{ensure_rssi_watcher, handle_device_removed, RssiWatchTarget, RssiWatcherEntry};
+use rssi::{
+    ensure_rssi_watcher, handle_device_removed, init_adapter, RssiWatchTarget, RssiWatcherEntry,
+};
 
 use super::advertiser::{
     decode_service_data_for_known_peers, register_visibility_advertisement, DecodedBleBeacon,
@@ -156,22 +156,6 @@ impl BlePeerDriver {
     }
 }
 
-async fn init_adapter() -> Result<Adapter, KeynearError> {
-    let bt_err = |msg: &str, err: bluer::Error| KeynearError::Bluetooth(format!("{msg}: {err}"));
-    let session = Session::new().await.map_err(|e| bt_err("dbus bluez session failed", e))?;
-    let adapter = session.default_adapter().await.map_err(|e| bt_err("no default bluetooth adapter", e))?;
-    if !adapter.is_powered().await.map_err(|e| bt_err("adapter power query failed", e))? {
-        return Err(KeynearError::Bluetooth("default bluetooth adapter is powered off".to_string()));
-    }
-    let filter = DiscoveryFilter {
-        transport: DiscoveryTransport::Le,
-        duplicate_data: true,
-        ..Default::default()
-    };
-    adapter.set_discovery_filter(filter).await.map_err(|e| bt_err("discovery filter failed", e))?;
-    Ok(adapter)
-}
-
 impl GattSetup {
     fn new(params: &BleDriverParams) -> Self {
         let responder = Arc::new(Mutex::new(GattPairingResponder::new(
@@ -220,8 +204,13 @@ async fn register_advertisement(
     params: &BleDriverParams,
 ) -> Result<Option<AdvertisementHandle>, KeynearError> {
     register_visibility_advertisement(
-        adapter, mode, &params.local_device_id, &params.display_name,
-        params.capability_flags, params.secret_store.as_ref(), &params.device_store,
+        adapter,
+        mode,
+        &params.local_device_id,
+        &params.display_name,
+        params.capability_flags,
+        params.secret_store.as_ref(),
+        &params.device_store,
     )
     .await
 }
@@ -240,7 +229,11 @@ async fn handle_device_event(
             let Some(peer) = inspect_discovered_device(ctx, addr).await else {
                 return false;
             };
-            if let DecodedBleBeacon::Paired { ref device_id, ref state } = peer.beacon {
+            if let DecodedBleBeacon::Paired {
+                ref device_id,
+                ref state,
+            } = peer.beacon
+            {
                 ctx.ble_addr_map
                     .lock()
                     .await
@@ -274,10 +267,18 @@ async fn inspect_discovered_device(
     let bytes = service_data_map.get(&KEYNEAR_BLE_SERVICE_UUID)?;
     let paired_devices = ctx.device_store.load().unwrap_or_default();
     let decoded = decode_service_data_for_known_peers(
-        bytes, &paired_devices, ctx.secret_store, &mut *ctx.last_counters,
-    ).ok()??;
+        bytes,
+        &paired_devices,
+        ctx.secret_store,
+        &mut *ctx.last_counters,
+    )
+    .ok()??;
     let rssi = device.rssi().await.ok().flatten();
-    Some(DiscoveredBlePeer { address: addr.to_string(), rssi, beacon: decoded })
+    Some(DiscoveredBlePeer {
+        address: addr.to_string(),
+        rssi,
+        beacon: decoded,
+    })
 }
 
 async fn recv_optional<T>(rx: &mut Option<mpsc::Receiver<T>>) -> Option<T> {

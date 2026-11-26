@@ -139,7 +139,10 @@ fn ranging_report_to_sample(peer_device_id: &str, rr: v1::RangingReport) -> Opti
     })
 }
 
-async fn apply_proximity_state(ctx: &ControlDispatchCtx, ps: &v1::ProximityState) -> Result<(), &'static str> {
+async fn apply_proximity_state(
+    ctx: &ControlDispatchCtx,
+    ps: &v1::ProximityState,
+) -> Result<(), &'static str> {
     if !ps.distance_meters.is_finite() || !(0.5..=MAX_RANGE_METERS).contains(&ps.distance_meters) {
         return Err("invalid proximity distance");
     }
@@ -198,38 +201,32 @@ async fn run_quic_accept_loop(state: AcceptLoopState) {
             }
         };
         sync_on_accept(&state).await;
-        let conn_engine = Arc::clone(&state.engine);
-        let conn_control = state.control.clone();
+        let (eng, ctrl) = (Arc::clone(&state.engine), state.control.clone());
         tokio::spawn(async move {
             while let Ok((mut send, mut recv)) = conn.accept_bi().await {
                 let Ok(kind) = read_stream_kind(&mut recv).await else {
                     break;
                 };
-                let peer = peer_device_id.clone();
-                if matches!(
-                    kind,
-                    QuicStreamKind::RawFileChunk | QuicStreamKind::StoredZipArchive
-                ) {
-                    let eng = Arc::clone(&conn_engine);
-                    tokio::spawn(async move {
-                        let _ = eng.handle_incoming_stream_with_kind(&peer, kind, send, recv).await;
-                    });
-                } else if kind == QuicStreamKind::Control {
-                    let ctrl = conn_control.clone();
-                    tokio::spawn(async move {
-                        let Ok(env) = read_control_envelope(&mut recv).await else { return; };
-                        if handle_proximity_or_ranging(&ctrl, &peer, &env, &mut send).await {
-                            let _ = send.finish();
-                        } else {
-                            let _ = ctrl.clipboard.handle_control_envelope(&peer, env, &mut send).await;
+                let (peer, eng, ctrl) = (peer_device_id.clone(), Arc::clone(&eng), ctrl.clone());
+                tokio::spawn(async move {
+                    match kind {
+                        QuicStreamKind::RawFileChunk | QuicStreamKind::StoredZipArchive => {
+                            let _ = eng.handle_incoming_stream_with_kind(&peer, kind, send, recv).await;
                         }
-                    });
-                } else {
-                    let clip = Arc::clone(&conn_control.clipboard);
-                    tokio::spawn(async move {
-                        let _ = clip.handle_incoming_stream_with_kind(&peer, kind, send, recv).await;
-                    });
-                }
+                        QuicStreamKind::Control => {
+                            if let Ok(env) = read_control_envelope(&mut recv).await {
+                                if handle_proximity_or_ranging(&ctrl, &peer, &env, &mut send).await {
+                                    let _ = send.finish();
+                                } else {
+                                    let _ = ctrl.clipboard.handle_control_envelope(&peer, env, &mut send).await;
+                                }
+                            }
+                        }
+                        _ => {
+                            let _ = ctrl.clipboard.handle_incoming_stream_with_kind(&peer, kind, send, recv).await;
+                        }
+                    }
+                });
             }
         });
     }

@@ -1,13 +1,46 @@
 use std::collections::BTreeMap;
 
-use bluer::{Adapter, Address, DeviceEvent, DeviceProperty};
+use bluer::{
+    Adapter, Address, DeviceEvent, DeviceProperty, DiscoveryFilter, DiscoveryTransport, Session,
+};
 use futures_util::StreamExt;
 use keynear_core::PairedBeaconState;
+use keynear_protocol::KeynearError;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
 use super::super::advertiser::DecodedBleBeacon;
 use super::DiscoveredBlePeer;
+
+pub(super) async fn init_adapter() -> Result<Adapter, KeynearError> {
+    let bt_err = |msg: &str, err: bluer::Error| KeynearError::Bluetooth(format!("{msg}: {err}"));
+    let session = Session::new()
+        .await
+        .map_err(|e| bt_err("dbus bluez session failed", e))?;
+    let adapter = session
+        .default_adapter()
+        .await
+        .map_err(|e| bt_err("no default bluetooth adapter", e))?;
+    if !adapter
+        .is_powered()
+        .await
+        .map_err(|e| bt_err("adapter power query failed", e))?
+    {
+        return Err(KeynearError::Bluetooth(
+            "default bluetooth adapter is powered off".to_string(),
+        ));
+    }
+    let filter = DiscoveryFilter {
+        transport: DiscoveryTransport::Le,
+        duplicate_data: true,
+        ..Default::default()
+    };
+    adapter
+        .set_discovery_filter(filter)
+        .await
+        .map_err(|e| bt_err("discovery filter failed", e))?;
+    Ok(adapter)
+}
 
 pub(super) type RssiWatcherEntry = (String, PairedBeaconState, JoinHandle<()>);
 
@@ -46,7 +79,10 @@ pub(super) fn ensure_rssi_watcher(
         device_id,
         state,
     } = target;
-    if watchers.get(&addr).is_some_and(|(_, _, h)| !h.is_finished()) {
+    if watchers
+        .get(&addr)
+        .is_some_and(|(_, _, h)| !h.is_finished())
+    {
         return;
     }
     let Some(tx) = discovered_tx.clone() else {

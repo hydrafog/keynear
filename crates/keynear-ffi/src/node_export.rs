@@ -103,7 +103,10 @@ impl OrionNodeHandle {
         };
         self.runtime.block_on(async {
             for peer_id in peers {
-                let _ = self.node.send_proximity_state(&peer_id, state.clone()).await;
+                let _ = self
+                    .node
+                    .send_proximity_state(&peer_id, state.clone())
+                    .await;
             }
         });
     }

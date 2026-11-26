@@ -31,9 +31,7 @@ impl OrionQuicNode {
 
         let idle_timeout = Duration::from_secs(QUIC_MAX_IDLE_TIMEOUT_SECS)
             .try_into()
-            .map_err(|err| {
-                KeynearError::Transport(format!("invalid QUIC idle timeout: {err}"))
-            })?;
+            .map_err(|err| KeynearError::Transport(format!("invalid QUIC idle timeout: {err}")))?;
         let transport_config = QuicTransportConfig::builder()
             .keep_alive_interval(Duration::from_secs(QUIC_KEEP_ALIVE_SECS))
             .max_idle_timeout(Some(idle_timeout))
