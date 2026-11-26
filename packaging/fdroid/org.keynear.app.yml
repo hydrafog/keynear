@@ -19,9 +19,9 @@ Description: |
 RepoType: git
 Repo: https://github.com/hydrafog/keynear
 Builds:
-  - versionName: 1.2.0
-    versionCode: 8
-    commit: 191822636824a2bd3a0ee505ce308a2ee236520a
+  - versionName: 1.3.0-phoenix
+    versionCode: 9
+    commit: v1.3.0
     subdir: android
     ndk: 30.0.16248370
     sudo:
@@ -39,6 +39,6 @@ Builds:
     gradle:
       - foss
 AutoUpdateMode: Version
-UpdateCheckMode: None
-CurrentVersion: 1.2.0
-CurrentVersionCode: 8
+UpdateCheckMode: Tags
+CurrentVersion: 1.3.0-phoenix
+CurrentVersionCode: 9

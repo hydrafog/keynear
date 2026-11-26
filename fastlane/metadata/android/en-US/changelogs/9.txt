@@ -1,0 +1,4 @@
+- Phoenix release (1.3.0-phoenix): automatic audio continuity, proximity lock with desk-distance sync, and presence gating.
+- Fixed persistent "SMS User Consent unavailable" notification on FOSS builds.
+- Improved folder transfer reliability and SAF error reporting.
+- Updated Appearance > Accent color picker: removed selected outline and enabled horizontal swiping.
