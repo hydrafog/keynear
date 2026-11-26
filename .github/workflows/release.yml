@@ -1,4 +1,4 @@
-name: Release APKs
+name: Release Artifacts
 
 on:
   push:
@@ -10,6 +10,38 @@ permissions:
   contents: write
 
 jobs:
+  linux-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler libdbus-1-dev libpipewire-0.3-dev libclang-dev pkg-config
+      - name: Build Linux release binary
+        run: cargo build --release --locked -p keynear
+      - name: Package Linux release archive
+        run: |
+          mkdir -p dist
+          cp target/release/keynear dist/keynear
+          tar -C dist -czf dist/keynear-linux-x86_64.tar.gz keynear
+          (cd dist && sha256sum keynear-linux-x86_64.tar.gz > keynear-linux-x86_64.tar.gz.sha256)
+      - name: Upload Linux binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: keynear-linux-x86_64
+          path: |
+            dist/keynear-linux-x86_64.tar.gz
+            dist/keynear-linux-x86_64.tar.gz.sha256
+      - name: Attach Linux binary to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/keynear-linux-x86_64.tar.gz
+            dist/keynear-linux-x86_64.tar.gz.sha256
+
   android-release:
     runs-on: ubuntu-latest
     steps:
