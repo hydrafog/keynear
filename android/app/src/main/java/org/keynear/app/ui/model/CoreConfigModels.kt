@@ -38,13 +38,18 @@ fun radarLayoutFor(widthDp: Float, heightDp: Float): RadarLayout {
     return RadarLayout(scale = scale, maxRadiusDp = maxRadiusDp)
 }
 
-fun orbitPlacementsFor(deviceIds: List<String>, layout: RadarLayout): List<OrbitPlacement> {
+fun orbitPlacementsFor(
+    deviceIds: List<String>,
+    layout: RadarLayout,
+    middleRingIds: Set<String> = emptySet(),
+): List<OrbitPlacement> {
     val count = deviceIds.size
     if (count == 0) return emptyList()
     val rankById = deviceIds.indices.sortedBy { deviceIds[it] }
     val ringOf = IntArray(count)
     rankById.forEachIndexed { rank, index ->
         ringOf[index] = when {
+            deviceIds[index] in middleRingIds -> 1
             count == 1 -> 1
             count == 2 -> if (rank == 0) 0 else 2
             else -> rank % ORBIT_RING_COUNT

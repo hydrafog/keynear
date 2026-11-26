@@ -1,18 +1,11 @@
 package org.keynear.app.ui.receive
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -30,7 +23,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.disabled
@@ -57,7 +49,6 @@ import org.keynear.designsystem.KeynearTypeSizes
 import org.keynear.designsystem.LocalKeynearPalette
 import org.keynear.designsystem.TactileSurface
 import org.keynear.designsystem.TactileTone
-import org.keynear.designsystem.tactileCushion
 import org.keynear.designsystem.tactilePressScale
 import kotlin.math.PI
 import kotlin.math.cos
@@ -68,20 +59,7 @@ private const val MAX_FRAME_DELTA_MS = 64f
 private const val NANOS_PER_MS = 1_000_000f
 private const val PIN_ENTER_BASE_SCALE = 0.92f
 private const val PIN_VISIBLE_BASE_SCALE = 0.75f
-private const val SKELETON_DRIFT_HALF_MS = 4_000
-private const val SKELETON_PULSE_MIN = 0.45f
-private const val SKELETON_PULSE_MAX = 0.85f
-private const val SKELETON_PULSE_IDLE = 0.55f
-private const val SKELETON_SCALE_MIN = 0.97f
-private const val SKELETON_SCALE_MAX = 1.03f
-private const val SKELETON_ICON_ALPHA = 0.55f
-private const val SKELETON_TITLE_ALPHA = 0.32f
-private const val SKELETON_SUB_ALPHA = 0.22f
 private val PinLabelMaxWidth = 164.dp
-private val SkeletonBarHeight = 6.dp
-private val SkeletonLabelWidth = 56.dp
-private val SkeletonSubLabelWidth = 36.dp
-private val SkeletonIds = listOf("skeleton-inner", "skeleton-middle", "skeleton-outer")
 
 private fun nextOrbitRate(
     startRate: Float,
@@ -121,11 +99,11 @@ internal fun OrbitPinsLayer(
         }
     }
 
-    if (pins.isEmpty()) {
-        SkeletonPins(radarActive = radarActive, layout = layout, orbitPhase = orbitPhase.value)
-        return
-    }
-    val placements = orbitPlacementsFor(pins.map { it.id }, layout)
+    val placements = orbitPlacementsFor(
+        pins.map { it.id },
+        layout,
+        pins.filter { it.role == DeviceRoleUi.DESKTOP }.map { it.id }.toSet(),
+    )
     pins.forEachIndexed { idx, pin ->
         OrbitPeerPin(pin, idx, placements[idx], orbitPhase.value, actions)
     }
@@ -213,68 +191,13 @@ private fun OrbitPeerPin(
             ) {
                 Text(pin.displayName, color = palette.textPrimary, fontSize = KeynearTypeSizes.Caption, fontWeight = FontWeight.Bold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("${pin.statusLabel} · ${pin.rssi} dBm", color = palette.textMuted, fontSize = KeynearTypeSizes.Caption,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    pin.rssi?.let { "${pin.statusLabel} · $it dBm" } ?: pin.statusLabel,
+                    color = palette.textMuted, fontSize = KeynearTypeSizes.Caption,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
 }
 
-@Composable
-private fun SkeletonPins(radarActive: Boolean, layout: RadarLayout, orbitPhase: Float) {
-    val palette = LocalKeynearPalette.current
-    val pulses = if (radarActive) {
-        val transition = rememberInfiniteTransition(label = "skeletonDrift")
-        val spec = infiniteRepeatable<Float>(
-            animation = tween(durationMillis = SKELETON_DRIFT_HALF_MS, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
-        )
-        listOf(
-            transition.animateFloat(SKELETON_PULSE_MIN, SKELETON_PULSE_MAX, spec, label = "s0").value,
-            transition.animateFloat(SKELETON_PULSE_MAX, SKELETON_PULSE_MIN, spec, label = "s1").value,
-            transition.animateFloat(SKELETON_PULSE_MIN, SKELETON_PULSE_MAX, spec, label = "s2").value,
-        )
-    } else {
-        listOf(SKELETON_PULSE_IDLE, SKELETON_PULSE_IDLE, SKELETON_PULSE_IDLE)
-    }
-    val density = LocalDensity.current.density
-    val placements = orbitPlacementsFor(SkeletonIds, layout)
-    SkeletonIds.forEachIndexed { idx, _ ->
-        val pulse = pulses[idx]
-        val (xPx, yPx) = orbitCoordinatesPx(placements[idx], orbitPhase, density)
-        val scale = SKELETON_SCALE_MIN +
-            ((pulse - SKELETON_PULSE_MIN) / (SKELETON_PULSE_MAX - SKELETON_PULSE_MIN)) * (SKELETON_SCALE_MAX - SKELETON_SCALE_MIN)
-        Column(
-            modifier = Modifier.graphicsLayer { translationX = xPx; translationY = yPx; scaleX = scale; scaleY = scale },
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Sm),
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(KeynearDimensions.Dp58)
-                    .clip(CircleShape)
-                    .background(palette.surfaceTonal.copy(alpha = pulse))
-                    .tactileCushion(TactileTone.INSET, palette.isDark, KeynearDimensions.Dp58 / 2, isCircle = true),
-                contentAlignment = Alignment.Center,
-            ) {
-                IconLaptop(
-                    modifier = Modifier.size(KeynearDimensions.Dp26),
-                    tint = palette.textMuted.copy(alpha = SKELETON_ICON_ALPHA * pulse),
-                )
-            }
-            Column(
-                modifier = Modifier
-                    .clip(KeynearShapes.Xl)
-                    .background(palette.surfaceTonal.copy(alpha = pulse))
-                    .padding(horizontal = KeynearDimensions.Dp14, vertical = KeynearDimensions.Dp6),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(KeynearSpacing.Xs),
-            ) {
-                Box(Modifier.size(SkeletonLabelWidth, SkeletonBarHeight).clip(CircleShape)
-                    .background(palette.textMuted.copy(alpha = SKELETON_TITLE_ALPHA * pulse)))
-                Box(Modifier.size(SkeletonSubLabelWidth, SkeletonBarHeight).clip(CircleShape)
-                    .background(palette.textMuted.copy(alpha = SKELETON_SUB_ALPHA * pulse)))
-            }
-        }
-    }
-}

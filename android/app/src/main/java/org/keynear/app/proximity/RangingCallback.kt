@@ -37,6 +37,9 @@ object RangingDecision {
         return false
     }
 
+    fun selectTechnology(uwbAvailable: Boolean): FfiRangingTechnology =
+        if (uwbAvailable) FfiRangingTechnology.UWB else FfiRangingTechnology.BLE_RSSI
+
     fun snapshot(samples: List<FfiRangingSample>): FfiProximitySnapshot =
         evaluateRangingSequence(samples)
 
@@ -48,6 +51,7 @@ object RangingDecision {
 class RangingCallback(
     private val deviceId: String,
     private val onSample: (FfiRangingSample) -> Unit,
+    private val onFallback: () -> Unit,
 ) : RangingSession.Callback {
     private var sequence = 0uL
 
@@ -65,8 +69,8 @@ class RangingCallback(
     }
 
     override fun onOpened() = Unit
-    override fun onOpenFailed(reason: Int) = Unit
+    override fun onOpenFailed(reason: Int) = onFallback()
     override fun onStarted(peer: RangingDevice, technology: Int) = Unit
-    override fun onStopped(peer: RangingDevice, technology: Int) = Unit
-    override fun onClosed(reason: Int) = Unit
+    override fun onStopped(peer: RangingDevice, technology: Int) = onFallback()
+    override fun onClosed(reason: Int) = onFallback()
 }

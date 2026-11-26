@@ -14,7 +14,6 @@ import org.keynear.app.bridge.KeystoreSecretStore
 import org.keynear.app.bridge.PeerSecretRecord
 import org.keynear.app.bridge.SecretCipher
 import org.keynear.app.bridge.SecretStorageBackend
-import org.keynear.app.bridge.VisibilityCountdownTracker
 import org.keynear.app.ui.model.VisibilityState
 
 private class TestXorCipher : SecretCipher {
@@ -34,25 +33,10 @@ private class FailingPutStorage : SecretStorageBackend {
 
 class PairingAndBleTest {
     @Test
-    fun visibilityCountdownRevertsEveryoneNearbyAfterTimeout() {
-        val tracker = VisibilityCountdownTracker(timeoutSecs = 600L)
-        assertEquals(VisibilityState.PAIRED_ONLY, tracker.currentMode())
-        assertEquals(0L, tracker.remainingSecs())
-
-        tracker.setMode(VisibilityState.EVERYONE_NEARBY)
-        assertEquals(600L, tracker.remainingSecs())
-        assertEquals("Everyone (10:00)", tracker.currentMode().formattedStatus(tracker.remainingSecs()))
-
-        repeat(599) {
-            assertEquals(VisibilityState.EVERYONE_NEARBY, tracker.tick())
-        }
-        assertEquals(1L, tracker.remainingSecs())
-        assertEquals("Everyone (00:01)", tracker.currentMode().formattedStatus(tracker.remainingSecs()))
-
-        val finalMode = tracker.tick()
-        assertEquals(VisibilityState.PAIRED_ONLY, finalMode)
-        assertEquals(0L, tracker.remainingSecs())
-        assertEquals("Paired devices only", finalMode.formattedStatus(0L))
+    fun everyoneNearbyFormatsCountdownAndClampsNegativeRemaining() {
+        assertEquals("Everyone (09:59)", VisibilityState.EVERYONE_NEARBY.formattedStatus(599L))
+        assertEquals("Everyone (00:00)", VisibilityState.EVERYONE_NEARBY.formattedStatus(0L))
+        assertEquals("Everyone (00:00)", VisibilityState.EVERYONE_NEARBY.formattedStatus(-1L))
     }
 
     @Test

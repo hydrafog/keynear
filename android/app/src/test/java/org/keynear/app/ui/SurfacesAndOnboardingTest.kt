@@ -30,6 +30,7 @@ import uniffi.keynear_core.FfiVisibilityMode
 import org.keynear.app.service.TileTransitionDecision
 import org.keynear.app.service.evaluateTileTransition
 import org.keynear.app.share.DirectShareManager
+import kotlin.math.abs
 
 class SurfacesAndOnboardingTest {
     @Test
@@ -232,6 +233,19 @@ class SurfacesAndOnboardingTest {
         val five = orbitPlacementsFor(listOf("a", "b", "c", "d", "e"), wide)
         assertEquals(listOf(138, 155, 172, 138, 155), five.map { it.radiusPx })
         assertEquals(20f, five[3].phaseSec, 0.001f)
+    }
+
+    @Test
+    fun orbitPlacementsForceMiddleRingIdsAndSpaceTheirPhasesEvenly() {
+        val wide = radarLayoutFor(640f, 720f)
+
+        val twoMiddle = orbitPlacementsFor(listOf("a", "b", "c"), wide, setOf("a", "b"))
+        assertEquals(listOf(155, 155, 172), twoMiddle.map { it.radiusPx })
+        assertEquals(20f, abs(twoMiddle[1].phaseSec - twoMiddle[0].phaseSec), 0.001f)
+
+        val fourMiddle = orbitPlacementsFor(listOf("a", "b", "c", "d"), wide, setOf("a", "b", "c", "d"))
+        assertEquals(listOf(155, 155, 155, 155), fourMiddle.map { it.radiusPx })
+        assertEquals(10f, abs(fourMiddle[1].phaseSec - fourMiddle[0].phaseSec), 0.001f)
     }
 
     @Test

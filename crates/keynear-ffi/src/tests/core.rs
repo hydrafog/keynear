@@ -75,6 +75,38 @@ fn load_daemon_config_does_not_reset_active_everyone_deadline() {
 }
 
 #[test]
+fn repeated_everyone_visibility_keeps_deadline_and_cycle_rearms_it() {
+    let now = Instant::now();
+    let mut inner = VisibilityStateInner::default();
+    inner.set_mode(VisibilityMode::EveryoneNearby, now);
+    inner.set_mode(VisibilityMode::EveryoneNearby, now + Duration::from_secs(2));
+    assert_eq!(inner.remaining_secs(now + Duration::from_secs(2)), 598);
+
+    let handle = CoreHandle::new();
+    handle.set_visibility_mode(FfiVisibilityMode::EveryoneNearby);
+    std::thread::sleep(Duration::from_millis(1100));
+    let before = handle.everyone_nearby_remaining_secs();
+    handle.set_visibility_mode(FfiVisibilityMode::EveryoneNearby);
+    let after = handle.everyone_nearby_remaining_secs();
+    assert!(
+        after <= before,
+        "same-mode set must not re-arm timer: before={before} after={after}"
+    );
+    assert!(before < 600, "timer must count down: before={before}");
+
+    assert_eq!(handle.cycle_visibility_mode(), FfiVisibilityMode::Hidden);
+    assert_eq!(
+        handle.cycle_visibility_mode(),
+        FfiVisibilityMode::PairedOnly
+    );
+    assert_eq!(
+        handle.cycle_visibility_mode(),
+        FfiVisibilityMode::EveryoneNearby
+    );
+    assert!(handle.everyone_nearby_remaining_secs() >= 599);
+}
+
+#[test]
 fn ffi_beacons_and_noise_pairing_roundtrip() {
     let handle = CoreHandle::new();
     let beacon_bytes = handle

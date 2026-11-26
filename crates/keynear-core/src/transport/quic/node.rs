@@ -219,4 +219,37 @@ impl OrionQuicNode {
             )),
         }
     }
+
+    pub async fn send_ranging_report(
+        &self,
+        peer_device_id: &str,
+        report: v1::RangingReport,
+    ) -> Result<(), KeynearError> {
+        let conn = self.connect_peer(peer_device_id).await?;
+        let (mut send, mut recv) = conn.open_bi().await.map_err(|err| {
+            KeynearError::Transport(format!("open ranging control stream failed: {err}"))
+        })?;
+        write_stream_kind(&mut send, QuicStreamKind::Control).await?;
+        let env = v1::Envelope {
+            version: 1,
+            sequence: report.sequence.max(1),
+            timestamp_ms: now_millis(),
+            payload: Some(v1::envelope::Payload::RangingReport(report)),
+        };
+        write_control_envelope(&mut send, &env).await?;
+        send.finish().map_err(|err| {
+            KeynearError::Transport(format!("finish ranging control stream failed: {err}"))
+        })?;
+        let reply = read_control_envelope(&mut recv).await?;
+        match reply.payload {
+            Some(v1::envelope::Payload::ControlAck(ack)) if ack.accepted => Ok(()),
+            Some(v1::envelope::Payload::ControlAck(ack)) => Err(KeynearError::Protocol(format!(
+                "peer rejected ranging report: {}",
+                ack.reason
+            ))),
+            _ => Err(KeynearError::Protocol(
+                "expected ControlAck for ranging report".to_string(),
+            )),
+        }
+    }
 }

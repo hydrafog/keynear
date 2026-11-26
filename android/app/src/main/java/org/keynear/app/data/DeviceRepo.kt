@@ -15,8 +15,6 @@ object DeviceRepo {
     private const val KEY_DEVICE_ID = "device_id"
     private const val GENERATED_ID_SUFFIX_LEN = 12
     private const val FINGERPRINT_HEX_LEN = 12
-    private const val RSSI_ONLINE = -52
-    private const val RSSI_STANDBY = -76
 
     fun resolveStableLocalDeviceId(context: Context): String {
         val prefs = context.getSharedPreferences(DEVICE_IDENTITY_PREFS, Context.MODE_PRIVATE)
@@ -48,7 +46,7 @@ object DeviceRepo {
                 lastEndpointId = dev.lastEndpointId,
                 lastLanAddress = dev.lastLanAddress,
                 isOnline = online,
-                rssi = if (online) RSSI_ONLINE else RSSI_STANDBY,
+                rssi = null,
             )
         }
 

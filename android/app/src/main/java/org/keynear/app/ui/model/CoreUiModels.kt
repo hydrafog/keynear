@@ -36,7 +36,7 @@ data class PairedDeviceUi(
     val lastEndpointId: String = "",
     val lastLanAddress: String = "",
     val isOnline: Boolean = lastLanAddress.isNotBlank(),
-    val rssi: Int = if (lastLanAddress.isNotBlank()) -52 else -76,
+    val rssi: Int? = null,
 )
 
 data class PendingPairingUi(

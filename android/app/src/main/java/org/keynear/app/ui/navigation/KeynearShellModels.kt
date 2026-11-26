@@ -19,7 +19,7 @@ data class OrbitPinUi(
     val displayName: String,
     val statusLabel: String,
     val role: DeviceRoleUi,
-    val rssi: Int,
+    val rssi: Int?,
     val isPaired: Boolean,
     val isOnline: Boolean,
     val peerAddress: String,

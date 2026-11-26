@@ -1,8 +1,11 @@
 package org.keynear.app.proximity
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.keynear.app.ble.KeynearBleConstants
+import uniffi.keynear_core.FfiRangingTechnology
 
 class ProximityDecisionTest {
     @Test
@@ -78,5 +81,26 @@ class ProximityDecisionTest {
         assertTrue(parsed.size == 6)
         assertTrue(parsed[0] == 0xAA.toByte())
         assertTrue(parsed[5] == 0xFF.toByte())
+    }
+
+    @Test
+    fun advertisedFlagsIncludeProximityRangingAndPresenceGating() {
+        val flags = KeynearBleConstants.ANDROID_CAPABILITY_FLAGS
+        assertTrue((flags and KeynearBleConstants.CAP_PROXIMITY_LOCK) != 0u)
+        assertTrue((flags and KeynearBleConstants.CAP_RANGING_UWB) != 0u)
+        assertTrue((flags and KeynearBleConstants.CAP_PRESENCE_GATING) != 0u)
+    }
+
+    @Test
+    fun unavailableUwbFallsBackToBleRssi() {
+        assertEquals(FfiRangingTechnology.BLE_RSSI, RangingDecision.selectTechnology(false))
+        assertEquals(FfiRangingTechnology.UWB, RangingDecision.selectTechnology(true))
+        var fallbacks = 0
+        val callback = RangingCallback("phone-1", { }, { fallbacks += 1 })
+        callback.onOpened()
+        assertEquals(0, fallbacks)
+        callback.onOpenFailed(1)
+        callback.onClosed(1)
+        assertEquals(2, fallbacks)
     }
 }

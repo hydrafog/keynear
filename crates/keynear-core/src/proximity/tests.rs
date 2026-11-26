@@ -18,25 +18,43 @@ fn sample(
 #[test]
 fn uwb_distance_crosses_the_exit_bound_only_after_hysteresis() {
     let mut evaluator = ProximityEvaluator::new(ProximityConfig::default()).expect("evaluator");
-    assert_eq!(
-        evaluator
-            .update(sample(1, RangingTechnology::Uwb, Some(1.0), None))
-            .unwrap()
-            .status,
-        ProximityStatus::InRange
-    );
+    let first = evaluator
+        .update(sample(1, RangingTechnology::Uwb, Some(1.0), None))
+        .unwrap();
+    assert_eq!(first.status, ProximityStatus::Unknown);
+    let in_range = evaluator
+        .update(sample(2, RangingTechnology::Uwb, Some(1.0), None))
+        .unwrap();
+    assert_eq!(in_range.status, ProximityStatus::InRange);
     let near_boundary = evaluator
-        .update(sample(2, RangingTechnology::Uwb, Some(3.0), None))
+        .update(sample(3, RangingTechnology::Uwb, Some(3.0), None))
         .unwrap();
     assert_eq!(near_boundary.status, ProximityStatus::InRange);
     let outside = evaluator
-        .update(sample(3, RangingTechnology::Uwb, Some(9.0), None))
+        .update(sample(4, RangingTechnology::Uwb, Some(9.0), None))
         .unwrap();
     assert_eq!(outside.status, ProximityStatus::InRange);
     let confirmed = evaluator
-        .update(sample(4, RangingTechnology::Uwb, Some(9.0), None))
+        .update(sample(5, RangingTechnology::Uwb, Some(9.0), None))
         .unwrap();
     assert_eq!(confirmed.status, ProximityStatus::OutOfRange);
+}
+
+#[test]
+fn first_out_of_range_sample_keeps_status_unknown() {
+    let mut evaluator = ProximityEvaluator::new(ProximityConfig::default()).expect("evaluator");
+    let first = evaluator
+        .update(sample(1, RangingTechnology::Uwb, Some(9.0), None))
+        .unwrap();
+    assert_eq!(first.status, ProximityStatus::Unknown);
+    let second = evaluator
+        .update(sample(2, RangingTechnology::Uwb, Some(9.0), None))
+        .unwrap();
+    assert_eq!(second.status, ProximityStatus::OutOfRange);
+    let third = evaluator
+        .update(sample(3, RangingTechnology::Uwb, Some(9.0), None))
+        .unwrap();
+    assert_eq!(third.status, ProximityStatus::OutOfRange);
 }
 
 #[test]
@@ -63,19 +81,26 @@ fn entering_range_requires_the_stricter_enter_bound() {
 #[test]
 fn ble_rssi_is_smoothed_before_comparison() {
     let mut evaluator = ProximityEvaluator::new(ProximityConfig::default()).expect("evaluator");
-    evaluator
+    let first = evaluator
         .update(sample(1, RangingTechnology::BleRssi, None, Some(-60)))
         .unwrap();
+    assert_eq!(first.status, ProximityStatus::Unknown);
+    evaluator
+        .update(sample(2, RangingTechnology::BleRssi, None, Some(-60)))
+        .unwrap();
+    assert_eq!(evaluator.snapshot().status, ProximityStatus::InRange);
     let weak = evaluator
-        .update(sample(2, RangingTechnology::BleRssi, None, Some(-90)))
+        .update(sample(3, RangingTechnology::BleRssi, None, Some(-90)))
         .unwrap();
     assert_eq!(weak.status, ProximityStatus::InRange);
-    for seq in 3..=4 {
-        evaluator
-            .update(sample(seq, RangingTechnology::BleRssi, None, Some(-90)))
-            .unwrap();
-    }
-    assert_eq!(evaluator.snapshot().status, ProximityStatus::OutOfRange);
+    let still_in_range = evaluator
+        .update(sample(4, RangingTechnology::BleRssi, None, Some(-90)))
+        .unwrap();
+    assert_eq!(still_in_range.status, ProximityStatus::InRange);
+    let confirmed = evaluator
+        .update(sample(5, RangingTechnology::BleRssi, None, Some(-90)))
+        .unwrap();
+    assert_eq!(confirmed.status, ProximityStatus::OutOfRange);
 }
 
 #[test]
@@ -101,9 +126,11 @@ fn stale_and_invalid_samples_are_rejected_without_state_change() {
 #[test]
 fn session_lock_is_recorded_without_changing_range() {
     let mut evaluator = ProximityEvaluator::new(ProximityConfig::default()).expect("evaluator");
-    evaluator
-        .update(sample(1, RangingTechnology::Uwb, Some(1.0), None))
-        .unwrap();
+    for seq in 1..=2 {
+        evaluator
+            .update(sample(seq, RangingTechnology::Uwb, Some(1.0), None))
+            .unwrap();
+    }
     evaluator.set_session_locked(true);
     assert!(evaluator.snapshot().session_locked);
     assert_eq!(evaluator.snapshot().status, ProximityStatus::InRange);
@@ -138,14 +165,16 @@ fn desk_distance_calibrates_rssi_and_update_config_reloads_live() {
 
     let mut evaluator = ProximityEvaluator::new(far_cfg).expect("evaluator");
     evaluator.set_session_locked(true);
-    evaluator
-        .update(sample(1, RangingTechnology::BleRssi, None, Some(-68)))
-        .unwrap();
+    for seq in 1..=2 {
+        evaluator
+            .update(sample(seq, RangingTechnology::BleRssi, None, Some(-68)))
+            .unwrap();
+    }
     assert_eq!(evaluator.snapshot().status, ProximityStatus::InRange);
 
     evaluator.update_config(near_cfg).expect("update config");
     assert!(evaluator.snapshot().session_locked);
-    for seq in 2..=3 {
+    for seq in 3..=4 {
         evaluator
             .update(sample(seq, RangingTechnology::BleRssi, None, Some(-68)))
             .unwrap();

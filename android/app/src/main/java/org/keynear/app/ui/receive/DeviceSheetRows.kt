@@ -154,7 +154,7 @@ internal fun DeviceSheetRow(
                 }
             }
             Text(
-                text = "${pin.statusLabel} · ${pin.rssi} dBm",
+                text = pin.rssi?.let { "${pin.statusLabel} · $it dBm" } ?: pin.statusLabel,
                 color = palette.textMuted,
                 fontSize = KeynearTypeSizes.Caption,
                 maxLines = 1,

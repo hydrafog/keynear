@@ -31,6 +31,9 @@ impl VisibilityStateInner {
     }
 
     pub(crate) fn set_mode(&mut self, mode: VisibilityMode, now: Instant) -> VisibilityMode {
+        if self.mode == mode {
+            return mode;
+        }
         self.mode = mode;
         self.deadline = if mode == VisibilityMode::EveryoneNearby {
             Some(now + Duration::from_secs(EVERYONE_NEARBY_TIMEOUT_SECS))

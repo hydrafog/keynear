@@ -124,7 +124,6 @@ class EventQueue(
         val path = configPath ?: return
         runCatching {
             val loaded = handle.loadDaemonConfig(path)
-            handle.setVisibilityMode(loaded.visibilityMode)
             cachedDaemonConfig = DaemonConfigUi.fromFfi(loaded, cachedDarkTheme, cachedAccentColorHex)
         }
     }

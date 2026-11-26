@@ -182,16 +182,6 @@ impl ProximityEvaluator {
     }
 
     fn apply_hysteresis(&mut self, in_range: bool) {
-        if self.status == ProximityStatus::Unknown {
-            self.status = if in_range {
-                ProximityStatus::InRange
-            } else {
-                ProximityStatus::OutOfRange
-            };
-            self.pending_in_range = Some(in_range);
-            self.pending_samples = 1;
-            return;
-        }
         if self.pending_in_range == Some(in_range) {
             self.pending_samples += 1;
         } else {

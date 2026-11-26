@@ -34,6 +34,7 @@ import org.keynear.app.bridge.syncTransferStates
 import org.keynear.app.bridge.syncClipboardStates
 import org.keynear.app.bridge.acceptIncomingTransferOrSync
 import org.keynear.app.bridge.localLanEndpoint
+import org.keynear.app.proximity.ProximitySupervisor
 
 class KeynearForegroundService : Service() {
     @Volatile
@@ -44,6 +45,9 @@ class KeynearForegroundService : Service() {
 
     @Volatile
     private var smsUserConsentManager: SmsUserConsentManager? = null
+
+    @Volatile
+    private var proximitySupervisor: ProximitySupervisor? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -174,7 +178,31 @@ class KeynearForegroundService : Service() {
             )
         }
         ensureTransferMonitor()
+        startProximitySupervisor(client)
         smsUserConsentManager?.startIfEnabled(client.isOtpPassthroughEnabled())
+    }
+
+    private fun startProximitySupervisor(client: EventQueue) {
+        if (proximitySupervisor != null) return
+        val snapshot = when (val state = client.loadState()) {
+            is CoreState.Empty -> state.snapshot
+            is CoreState.Ready -> state.snapshot
+            else -> return
+        }
+        val paired = snapshot.pairedDevices.firstOrNull() ?: return
+        val peerDeviceId = paired.deviceId
+        proximitySupervisor = ProximitySupervisor.startIfEnabled(
+            context = applicationContext,
+            onRangingSample = { sample ->
+                runCatching {
+                    val node = client.ensureOrionNode(applicationContext) ?: return@runCatching
+                    node.sendRangingReport(peerDeviceId, sample)
+                }.onFailure { err -> Log.w(TAG, "ranging_report_failed: ${err.message}") }
+            },
+            measuredRssiDbm = {
+                ProximitySupervisor.measuredRssi(peerDeviceId, paired.lastBleAddress)
+            },
+        )
     }
 
     private fun ensureTransferMonitor() {
@@ -189,6 +217,7 @@ class KeynearForegroundService : Service() {
                     }
                     client.syncClipboardStates(applicationContext)
                     smsUserConsentManager?.startIfEnabled(client.isOtpPassthroughEnabled())
+                    proximitySupervisor?.refreshBleRssi()
                 }
             },
             TRANSFER_POLL_INTERVAL_MS,
@@ -205,6 +234,8 @@ class KeynearForegroundService : Service() {
         actionExecutor = null
         smsUserConsentManager?.shutdown()
         smsUserConsentManager = null
+        proximitySupervisor?.stop()
+        proximitySupervisor = null
         LanManager.stop(applicationContext)
         CoreClientProvider.getClient().shutdownOrion()
         BleScanner.stopAdvertisingAndScanning(applicationContext)
