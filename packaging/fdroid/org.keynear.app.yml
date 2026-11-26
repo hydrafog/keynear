@@ -18,6 +18,7 @@ Description: |
   dependencies.
 RepoType: git
 Repo: https://github.com/hydrafog/keynear
+Binaries: https://github.com/hydrafog/keynear/releases/download/v%v/app-foss-release.apk
 Builds:
   - versionName: 1.3.0
     versionCode: 9
@@ -38,7 +39,7 @@ Builds:
       - cargo ndk -t arm64-v8a -t x86_64 -o core-ffi/src/main/jniLibs build --release --manifest-path ../Cargo.toml -p keynear-ffi
     gradle:
       - foss
-AutoUpdateMode: Version
+AutoUpdateMode: Version v%v
 UpdateCheckMode: Tags
 CurrentVersion: 1.3.0
 CurrentVersionCode: 9

@@ -93,6 +93,11 @@ android {
             useLegacyPackaging = false
         }
     }
+
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
 }
 
 kotlin {
