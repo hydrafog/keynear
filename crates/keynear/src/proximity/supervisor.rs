@@ -40,6 +40,16 @@ impl<L: SessionLock> ProximitySupervisor<L> {
         PresenceGate.allows(operation, self.evaluator.snapshot())
     }
 
+    pub fn update_config(
+        &mut self,
+        config: ProximityConfig,
+        lock_enabled: bool,
+    ) -> Result<(), KeynearError> {
+        self.evaluator.update_config(config)?;
+        self.lock_enabled = lock_enabled;
+        Ok(())
+    }
+
     pub async fn observe(
         &mut self,
         sample: RangingSample,
@@ -202,5 +212,31 @@ mod tests {
         }
         assert_eq!(supervisor.snapshot().status, ProximityStatus::OutOfRange);
         assert!(!supervisor.snapshot().session_locked);
+    }
+
+    #[tokio::test]
+    async fn live_config_update_recalibrates_thresholds_and_enables_lock() {
+        let lock = FakeLock {
+            locked: std::sync::atomic::AtomicBool::new(false),
+            calls: std::sync::atomic::AtomicUsize::new(0),
+        };
+        let initial = ProximityConfig::from_desk_distance(10.0);
+        let mut supervisor =
+            ProximitySupervisor::new(lock, initial, "2".to_string(), false).expect("supervisor");
+        for seq in 1..=2 {
+            supervisor.observe(sample(seq, 2.0)).await.expect("near");
+        }
+        assert_eq!(supervisor.snapshot().status, ProximityStatus::InRange);
+
+        let tighter = ProximityConfig::from_desk_distance(1.5);
+        assert!(tighter.exit_rssi_dbm > initial.exit_rssi_dbm);
+        supervisor
+            .update_config(tighter, true)
+            .expect("update config");
+        for seq in 3..=4 {
+            supervisor.observe(sample(seq, 2.5)).await.expect("now far");
+        }
+        assert_eq!(supervisor.snapshot().status, ProximityStatus::OutOfRange);
+        assert!(supervisor.snapshot().session_locked);
     }
 }

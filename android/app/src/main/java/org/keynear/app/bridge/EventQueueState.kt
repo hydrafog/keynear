@@ -173,6 +173,14 @@ internal fun EventQueue.updateDaemonConfigImpl(transform: (DaemonConfigUi) -> Da
     orionNode?.let { node ->
         node.setAutoAcceptFromPaired(cachedDaemonConfig.autoAcceptFromPaired)
         syncClipboardPolicyToNode(node)
+        runCatching {
+            node.syncProximityConfig(
+                cachedDaemonConfig.proximityLockEnabled,
+                cachedDaemonConfig.proximityDistanceMeters,
+            )
+        }.onFailure { err ->
+            Log.w("EventQueueState", "sync_proximity_config_failed", err)
+        }
     }
     buildState()
 } catch (t: Throwable) {

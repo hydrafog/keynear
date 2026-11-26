@@ -60,14 +60,7 @@ pub(super) async fn init_services(params: InitParams<'_>) -> Result<RuntimeServi
 fn init_phoenix(
     config: &DaemonConfig,
 ) -> Result<Option<ProximitySupervisor<Login1SessionLock>>, KeynearError> {
-    if !config.proximity_lock_enabled && !config.presence_gating_enabled {
-        return Ok(None);
-    }
-    let bounds = ProximityConfig {
-        enter_distance_meters: (config.proximity_distance_meters * 0.6).max(0.5),
-        exit_distance_meters: config.proximity_distance_meters,
-        ..ProximityConfig::default()
-    };
+    let bounds = ProximityConfig::from_desk_distance(config.proximity_distance_meters);
     let session_id = std::env::var("XDG_SESSION_ID").unwrap_or_default();
     let supervisor = ProximitySupervisor::new(
         Login1SessionLock,

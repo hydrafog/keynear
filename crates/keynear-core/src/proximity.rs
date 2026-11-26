@@ -28,6 +28,32 @@ pub struct ProximityConfig {
     pub samples_to_switch: u8,
 }
 
+impl ProximityConfig {
+    pub fn from_desk_distance(exit_distance_meters: f32) -> Self {
+        let exit = if exit_distance_meters.is_finite() {
+            exit_distance_meters.clamp(0.5, MAX_RANGE_METERS)
+        } else {
+            Self::default().exit_distance_meters
+        };
+        let enter = (exit * 0.6).max(0.5);
+        let enter_rssi = distance_to_rssi_dbm(enter);
+        let exit_rssi = distance_to_rssi_dbm(exit).min(enter_rssi);
+        Self {
+            enter_distance_meters: enter,
+            exit_distance_meters: exit,
+            enter_rssi_dbm: enter_rssi,
+            exit_rssi_dbm: exit_rssi,
+            ..Self::default()
+        }
+    }
+}
+
+fn distance_to_rssi_dbm(distance_meters: f32) -> i32 {
+    let clamped = distance_meters.clamp(0.5, MAX_RANGE_METERS);
+    let estimated = (-56.0 - 25.0 * clamped.log10()).round() as i32;
+    estimated.clamp(MIN_RSSI_DBM, MAX_RSSI_DBM)
+}
+
 impl Default for ProximityConfig {
     fn default() -> Self {
         Self {
@@ -94,6 +120,14 @@ impl ProximityEvaluator {
 
     pub fn set_session_locked(&mut self, locked: bool) {
         self.session_locked = locked;
+    }
+
+    pub fn update_config(&mut self, config: ProximityConfig) -> Result<(), KeynearError> {
+        validate_config(&config)?;
+        self.config = config;
+        self.pending_in_range = None;
+        self.pending_samples = 0;
+        Ok(())
     }
 
     pub fn update(&mut self, sample: RangingSample) -> Result<ProximitySnapshot, KeynearError> {

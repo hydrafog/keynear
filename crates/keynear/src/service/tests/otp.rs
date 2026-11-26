@@ -68,6 +68,7 @@ fn build_otp_rig() -> OtpRig {
         mdns_degraded: false,
         mdns: None,
         pairing_decision_tx: None,
+        phoenix_supervisor: None,
     };
     OtpRig {
         dir,

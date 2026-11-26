@@ -24,6 +24,7 @@ use tracing::{info, warn};
 use zeroize::Zeroizing;
 
 use crate::clipboard::ClipboardMonitorHandle;
+use crate::proximity::{Login1SessionLock, ProximitySupervisor};
 
 const OUTBOUND_QUEUE_CAPACITY: usize = 256;
 
@@ -89,6 +90,7 @@ pub(crate) struct IpcDispatchContext {
     pub mdns_degraded: bool,
     pub mdns: Option<Arc<MdnsDiscovery>>,
     pub pairing_decision_tx: Option<mpsc::Sender<bool>>,
+    pub phoenix_supervisor: Option<Arc<Mutex<ProximitySupervisor<Login1SessionLock>>>>,
 }
 
 impl IpcDispatchContext {

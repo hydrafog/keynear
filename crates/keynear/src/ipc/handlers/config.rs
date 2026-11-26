@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use keynear_core::ClipboardPolicy;
+use keynear_core::{ClipboardPolicy, ProximityConfig};
 use keynear_protocol::{DaemonConfig, KeynearError, VisibilityMode};
 use tokio::time::Instant;
 
@@ -33,6 +33,13 @@ pub(crate) async fn apply_daemon_config(
         .set_incoming_directory(PathBuf::from(&new_config.incoming_directory))?;
     ctx.clipboard_engine
         .set_policy(ClipboardPolicy::from(new_config));
+    if let Some(ref supervisor) = ctx.phoenix_supervisor {
+        let mut guard = supervisor.lock().await;
+        guard.update_config(
+            ProximityConfig::from_desk_distance(new_config.proximity_distance_meters),
+            new_config.proximity_lock_enabled,
+        )?;
+    }
     let _ = ctx.config_watch_tx.send(new_config.clone());
     *ctx.everyone_deadline.lock().await = deadline_for(new_config.visibility_mode, ctx);
     let _ = ctx.visibility_tx.send(new_config.visibility_mode);

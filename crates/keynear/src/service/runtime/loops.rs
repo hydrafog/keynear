@@ -10,7 +10,7 @@ use crate::service::clipboard::{spawn_clipboard_loops, ClipboardLoopParams};
 use crate::service::pairing::{
     spawn_bluez_loops, spawn_devices_poll_loop, spawn_mdns_browse_loop, BluezLoopParams,
 };
-use crate::service::transfer::spawn_quic_accept_loop;
+use crate::service::transfer::{spawn_quic_accept_loop, QuicAcceptParams};
 
 use super::{RuntimeOptions, RuntimeServices, RuntimeState};
 
@@ -34,7 +34,11 @@ struct LoopCtx<'a> {
     pairing_event_tx: Option<mpsc::Sender<PairingUiEvent>>,
 }
 
-fn spawn_network_loops(ctx: &LoopCtx<'_>, tasks: &mut Vec<JoinHandle<()>>) {
+fn spawn_network_loops(
+    ctx: &LoopCtx<'_>,
+    ranging_tx: &mpsc::Sender<RangingSample>,
+    tasks: &mut Vec<JoinHandle<()>>,
+) {
     let services = &*ctx.services;
     spawn_mdns_browse_loop(
         services.mdns.as_ref(),
@@ -46,12 +50,18 @@ fn spawn_network_loops(ctx: &LoopCtx<'_>, tasks: &mut Vec<JoinHandle<()>>) {
     );
     if let Some(ref node) = services.quic_node {
         spawn_quic_accept_loop(
-            node,
-            ctx.device_store,
-            ctx.secret_store,
-            &services.transfer_engine,
-            &services.clipboard_engine,
-            &services.known_peers,
+            QuicAcceptParams {
+                node,
+                device_store: ctx.device_store,
+                secret_store: ctx.secret_store,
+                transfer_engine: &services.transfer_engine,
+                clipboard_engine: &services.clipboard_engine,
+                known_peers: &services.known_peers,
+                phoenix_supervisor: services.phoenix_supervisor.as_ref(),
+                config_state: &ctx.state.config_state,
+                config_path: ctx.state.config_path.as_deref(),
+                ranging_tx,
+            },
             tasks,
         );
     }
@@ -67,10 +77,11 @@ fn spawn_network_loops(ctx: &LoopCtx<'_>, tasks: &mut Vec<JoinHandle<()>>) {
 
 fn spawn_clipboard_and_bluez(
     ctx: &mut LoopCtx<'_>,
+    ranging_tx: mpsc::Sender<RangingSample>,
+    ranging_rx: mpsc::Receiver<RangingSample>,
     tasks: &mut Vec<JoinHandle<()>>,
 ) -> Sender<Option<keynear_protocol::v1::LanEndpoint>> {
     let services = &mut *ctx.services;
-    let (ranging_tx, ranging_rx) = mpsc::channel::<RangingSample>(32);
     if let Some(supervisor) = services.phoenix_supervisor.clone() {
         crate::proximity::spawn_proximity_loop(supervisor, ranging_rx, tasks);
     }
@@ -137,8 +148,9 @@ pub(super) fn spawn_all_loops(
         pairing_decision_rx,
         pairing_event_tx,
     };
-    spawn_network_loops(&ctx, tasks);
-    spawn_clipboard_and_bluez(&mut ctx, tasks)
+    let (ranging_tx, ranging_rx) = mpsc::channel::<RangingSample>(32);
+    spawn_network_loops(&ctx, &ranging_tx, tasks);
+    spawn_clipboard_and_bluez(&mut ctx, ranging_tx, ranging_rx, tasks)
 }
 
 pub(super) async fn visibility_revert_loop(

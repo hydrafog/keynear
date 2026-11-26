@@ -184,13 +184,23 @@ async fn check_devices(rig: &ControlRig) {
     assert!(auto_device.auto_accept_files);
 }
 
+fn assert_updated_config(cfg: &DaemonConfig, expected_dir: &str) {
+    assert!(cfg.auto_accept_from_paired);
+    assert!(cfg.proximity_lock_enabled);
+    assert!((cfg.proximity_distance_meters - 5.5).abs() < f32::EPSILON);
+    assert_eq!(cfg.incoming_directory, expected_dir);
+}
+
 async fn check_config(rig: &ControlRig) {
     let get_cfg_resp = ipc_request(&rig.sock_path, IpcRequest::GetConfig).await;
     let IpcResponse::Config(mut updated_cfg) = get_cfg_resp else {
         panic!("expected config response, got {get_cfg_resp:?}");
     };
+    let expected_dir = rig.incoming_dir_updated.display().to_string();
     updated_cfg.auto_accept_from_paired = true;
-    updated_cfg.incoming_directory = rig.incoming_dir_updated.display().to_string();
+    updated_cfg.incoming_directory = expected_dir.clone();
+    updated_cfg.proximity_lock_enabled = true;
+    updated_cfg.proximity_distance_meters = 5.5;
 
     let update_cfg_resp = ipc_request(
         &rig.sock_path,
@@ -202,18 +212,10 @@ async fn check_config(rig: &ControlRig) {
     let IpcResponse::Config(returned_cfg) = update_cfg_resp else {
         panic!("expected config response, got {update_cfg_resp:?}");
     };
-    assert!(returned_cfg.auto_accept_from_paired);
-    assert_eq!(
-        returned_cfg.incoming_directory,
-        rig.incoming_dir_updated.display().to_string()
-    );
+    assert_updated_config(&returned_cfg, &expected_dir);
     let persisted_cfg =
         DaemonConfig::load_or_default(&rig.config_path).expect("reload updated cfg");
-    assert!(persisted_cfg.auto_accept_from_paired);
-    assert_eq!(
-        persisted_cfg.incoming_directory,
-        rig.incoming_dir_updated.display().to_string()
-    );
+    assert_updated_config(&persisted_cfg, &expected_dir);
 }
 
 async fn check_unpair(rig: &ControlRig) {

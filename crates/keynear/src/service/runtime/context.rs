@@ -34,5 +34,6 @@ pub(crate) fn build_shared_ctx(
         mdns_degraded: services.mdns_degraded(),
         mdns: services.mdns.clone(),
         pairing_decision_tx,
+        phoenix_supervisor: services.phoenix_supervisor.clone(),
     }
 }

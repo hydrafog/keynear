@@ -1,6 +1,13 @@
+use std::time::Duration;
+
+use iroh::endpoint::QuicTransportConfig;
+
 use super::config::{PairedPeerHooks, PeerAuthEntry};
 use super::util::now_millis;
 use super::*;
+
+const QUIC_KEEP_ALIVE_SECS: u64 = 15;
+const QUIC_MAX_IDLE_TIMEOUT_SECS: u64 = 180;
 
 #[derive(Clone)]
 pub struct OrionQuicNode {
@@ -22,9 +29,20 @@ impl OrionQuicNode {
         let allowlist = Arc::new(RwLock::new(HashMap::new()));
         let peers_by_device = Arc::new(RwLock::new(HashMap::new()));
 
+        let idle_timeout = Duration::from_secs(QUIC_MAX_IDLE_TIMEOUT_SECS)
+            .try_into()
+            .map_err(|err| {
+                KeynearError::Transport(format!("invalid QUIC idle timeout: {err}"))
+            })?;
+        let transport_config = QuicTransportConfig::builder()
+            .keep_alive_interval(Duration::from_secs(QUIC_KEEP_ALIVE_SECS))
+            .max_idle_timeout(Some(idle_timeout))
+            .build();
+
         let mut builder = Endpoint::builder(presets::Empty)
             .secret_key(SecretKey::from_bytes(&config.quic_secret_key))
             .crypto_provider(build_orion_crypto_provider())
+            .transport_config(transport_config)
             .relay_mode(RelayMode::Disabled)
             .alpns(vec![QUIC_ALPN.to_vec()])
             .hooks(PairedPeerHooks {
@@ -169,5 +187,38 @@ impl OrionQuicNode {
             .read()
             .ok()
             .and_then(|guard| guard.get(endpoint_id).cloned())
+    }
+
+    pub async fn send_proximity_state(
+        &self,
+        peer_device_id: &str,
+        state: v1::ProximityState,
+    ) -> Result<(), KeynearError> {
+        let conn = self.connect_peer(peer_device_id).await?;
+        let (mut send, mut recv) = conn.open_bi().await.map_err(|err| {
+            KeynearError::Transport(format!("open proximity control stream failed: {err}"))
+        })?;
+        write_stream_kind(&mut send, QuicStreamKind::Control).await?;
+        let env = v1::Envelope {
+            version: 1,
+            sequence: state.sequence.max(1),
+            timestamp_ms: now_millis(),
+            payload: Some(v1::envelope::Payload::ProximityState(state)),
+        };
+        write_control_envelope(&mut send, &env).await?;
+        send.finish().map_err(|err| {
+            KeynearError::Transport(format!("finish proximity control stream failed: {err}"))
+        })?;
+        let reply = read_control_envelope(&mut recv).await?;
+        match reply.payload {
+            Some(v1::envelope::Payload::ControlAck(ack)) if ack.accepted => Ok(()),
+            Some(v1::envelope::Payload::ControlAck(ack)) => Err(KeynearError::Protocol(format!(
+                "peer rejected proximity state: {}",
+                ack.reason
+            ))),
+            _ => Err(KeynearError::Protocol(
+                "expected ControlAck for proximity state".to_string(),
+            )),
+        }
     }
 }

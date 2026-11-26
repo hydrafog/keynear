@@ -75,6 +75,39 @@ impl OrionNodeHandle {
             .map_err(FfiError::from)
     }
 
+    pub fn sync_proximity_config(&self, lock_enabled: bool, distance_meters: f64) {
+        let peers = self
+            .synced_peers
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .clone();
+        if peers.is_empty() {
+            return;
+        }
+        let sequence = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(1)
+            .max(1);
+        let status = if lock_enabled {
+            keynear_protocol::v1::ProximityStatus::ProximityInRange as i32
+        } else {
+            keynear_protocol::v1::ProximityStatus::ProximityUnspecified as i32
+        };
+        let state = keynear_protocol::v1::ProximityState {
+            device_id: self.node.local_lan_endpoint().device_id,
+            status,
+            distance_meters: distance_meters as f32,
+            session_locked: false,
+            sequence,
+        };
+        self.runtime.block_on(async {
+            for peer_id in peers {
+                let _ = self.node.send_proximity_state(&peer_id, state.clone()).await;
+            }
+        });
+    }
+
     pub fn list_transfers(&self) -> Vec<FfiTransferSession> {
         self.engine
             .list_transfers()

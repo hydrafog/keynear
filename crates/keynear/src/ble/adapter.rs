@@ -3,11 +3,19 @@ use std::sync::Arc;
 
 use bluer::adv::AdvertisementHandle;
 use bluer::gatt::local::{ApplicationHandle, CharacteristicNotifier};
-use bluer::{Adapter, AdapterEvent, Address, DiscoveryFilter, DiscoveryTransport, Session};
+use bluer::{
+    Adapter, AdapterEvent, Address, DeviceEvent, DeviceProperty, DiscoveryFilter,
+    DiscoveryTransport, Session,
+};
 use futures_util::{Stream, StreamExt};
-use keynear_core::{PairedDeviceStore, PairingPeerMetadata, SecretStore, KEYNEAR_BLE_SERVICE_UUID};
+use keynear_core::{
+    PairedBeaconState, PairedDeviceStore, PairingPeerMetadata, SecretStore, KEYNEAR_BLE_SERVICE_UUID,
+};
 use keynear_protocol::{v1, DeviceRole, KeynearError, VisibilityMode};
 use tokio::sync::{mpsc, watch, Mutex};
+use tokio::task::JoinHandle;
+
+type RssiWatcherEntry = (String, PairedBeaconState, JoinHandle<()>);
 
 use super::advertiser::{
     decode_service_data_for_known_peers, register_visibility_advertisement, DecodedBleBeacon,
@@ -53,6 +61,7 @@ struct DiscoveryContext<'a> {
     discovered_tx: &'a Option<mpsc::Sender<DiscoveredBlePeer>>,
     ble_addr_map: &'a Arc<Mutex<BTreeMap<String, String>>>,
     last_counters: &'a mut BTreeMap<String, u32>,
+    rssi_watchers: &'a mut BTreeMap<Address, RssiWatcherEntry>,
 }
 
 struct EventLoopState<'a, S> {
@@ -62,6 +71,7 @@ struct EventLoopState<'a, S> {
     adv_handle: Option<AdvertisementHandle>,
     events: S,
     last_counters: BTreeMap<String, u32>,
+    rssi_watchers: BTreeMap<Address, RssiWatcherEntry>,
 }
 
 impl<S> EventLoopState<'_, S>
@@ -69,34 +79,56 @@ where
     S: Stream<Item = AdapterEvent> + Unpin,
 {
     async fn run(mut self) -> Result<(), KeynearError> {
-        loop {
-            tokio::select! {
-                changed = self.params.visibility_rx.changed() => {
-                    let Ok(()) = changed else {
-                        break;
-                    };
-                    reapply_advertisement(self.adapter, &mut self.adv_handle, self.params).await?;
-                }
-                Some(approved) = recv_optional(&mut self.params.pairing_decision_rx) => {
-                    handle_pairing_decision(self.setup, approved).await;
-                }
-                maybe_ev = self.events.next() => {
-                    let mut ctx = DiscoveryContext {
-                        adapter: self.adapter,
-                        device_store: &self.params.device_store,
-                        secret_store: self.params.secret_store.as_ref(),
-                        discovered_tx: &self.params.discovered_tx,
-                        ble_addr_map: &self.setup.ble_addr_map,
-                        last_counters: &mut self.last_counters,
-                    };
-                    if handle_device_event(&mut ctx, maybe_ev).await {
-                        break;
-                    }
-                }
-            }
-        }
+        while self.step().await? {}
+        self.abort_watchers();
         drop(self.adv_handle);
         Ok(())
+    }
+
+    async fn step(&mut self) -> Result<bool, KeynearError> {
+        tokio::select! {
+            changed = self.params.visibility_rx.changed() => {
+                if changed.is_err() {
+                    return Ok(false);
+                }
+                self.refresh_advertisement().await?;
+                Ok(true)
+            }
+            Some(approved) = recv_optional(&mut self.params.pairing_decision_rx) => {
+                super::gatt::apply_pairing_decision(
+                    &self.setup.responder, &self.setup.notifier_slot,
+                    self.setup.pairing_event_tx.as_ref(), approved,
+                ).await;
+                Ok(true)
+            }
+            maybe_ev = self.events.next() => Ok(!self.dispatch_device_event(maybe_ev).await),
+        }
+    }
+
+    async fn refresh_advertisement(&mut self) -> Result<(), KeynearError> {
+        drop(self.adv_handle.take());
+        let mode = *self.params.visibility_rx.borrow_and_update();
+        self.adv_handle = register_advertisement(self.adapter, mode, self.params).await?;
+        Ok(())
+    }
+
+    async fn dispatch_device_event(&mut self, maybe_ev: Option<AdapterEvent>) -> bool {
+        let mut ctx = DiscoveryContext {
+            adapter: self.adapter,
+            device_store: &self.params.device_store,
+            secret_store: self.params.secret_store.as_ref(),
+            discovered_tx: &self.params.discovered_tx,
+            ble_addr_map: &self.setup.ble_addr_map,
+            last_counters: &mut self.last_counters,
+            rssi_watchers: &mut self.rssi_watchers,
+        };
+        handle_device_event(&mut ctx, maybe_ev).await
+    }
+
+    fn abort_watchers(&mut self) {
+        for (_, (_, _, handle)) in std::mem::take(&mut self.rssi_watchers) {
+            handle.abort();
+        }
     }
 }
 
@@ -105,12 +137,10 @@ impl BlePeerDriver {
         let adapter = init_adapter().await?;
         let setup = GattSetup::new(&params);
         let _gatt_handle = register_gatt(&adapter, &mut params, &setup).await?;
-
         let events = adapter
             .discover_devices_with_changes()
             .await
-            .map_err(|err| KeynearError::Bluetooth(format!("le discovery start failed: {err}")))?;
-
+            .map_err(|e| KeynearError::Bluetooth(format!("le discovery start failed: {e}")))?;
         let initial_mode = *params.visibility_rx.borrow();
         let adv_handle = register_advertisement(&adapter, initial_mode, &params).await?;
         EventLoopState {
@@ -120,6 +150,7 @@ impl BlePeerDriver {
             adv_handle,
             events,
             last_counters: BTreeMap::new(),
+            rssi_watchers: BTreeMap::new(),
         }
         .run()
         .await
@@ -127,31 +158,18 @@ impl BlePeerDriver {
 }
 
 async fn init_adapter() -> Result<Adapter, KeynearError> {
-    let session = Session::new()
-        .await
-        .map_err(|err| KeynearError::Bluetooth(format!("dbus bluez session failed: {err}")))?;
-    let adapter = session
-        .default_adapter()
-        .await
-        .map_err(|err| KeynearError::Bluetooth(format!("no default bluetooth adapter: {err}")))?;
-    let powered = adapter
-        .is_powered()
-        .await
-        .map_err(|err| KeynearError::Bluetooth(format!("adapter power query failed: {err}")))?;
-    if !powered {
-        return Err(KeynearError::Bluetooth(
-            "default bluetooth adapter is powered off".to_string(),
-        ));
+    let bt_err = |msg: &str, err: bluer::Error| KeynearError::Bluetooth(format!("{msg}: {err}"));
+    let session = Session::new().await.map_err(|e| bt_err("dbus bluez session failed", e))?;
+    let adapter = session.default_adapter().await.map_err(|e| bt_err("no default bluetooth adapter", e))?;
+    if !adapter.is_powered().await.map_err(|e| bt_err("adapter power query failed", e))? {
+        return Err(KeynearError::Bluetooth("default bluetooth adapter is powered off".to_string()));
     }
     let filter = DiscoveryFilter {
         transport: DiscoveryTransport::Le,
         duplicate_data: true,
         ..Default::default()
     };
-    adapter
-        .set_discovery_filter(filter)
-        .await
-        .map_err(|err| KeynearError::Bluetooth(format!("discovery filter failed: {err}")))?;
+    adapter.set_discovery_filter(filter).await.map_err(|e| bt_err("discovery filter failed", e))?;
     Ok(adapter)
 }
 
@@ -194,7 +212,7 @@ async fn register_gatt(
     adapter
         .serve_gatt_application(app)
         .await
-        .map_err(|err| KeynearError::Bluetooth(format!("gatt registration failed: {err}")))
+        .map_err(|e| KeynearError::Bluetooth(format!("gatt registration failed: {e}")))
 }
 
 async fn register_advertisement(
@@ -203,58 +221,76 @@ async fn register_advertisement(
     params: &BleDriverParams,
 ) -> Result<Option<AdvertisementHandle>, KeynearError> {
     register_visibility_advertisement(
-        adapter,
-        mode,
-        &params.local_device_id,
-        &params.display_name,
-        params.capability_flags,
-        params.secret_store.as_ref(),
-        &params.device_store,
+        adapter, mode, &params.local_device_id, &params.display_name,
+        params.capability_flags, params.secret_store.as_ref(), &params.device_store,
     )
     .await
-}
-
-async fn reapply_advertisement(
-    adapter: &Adapter,
-    handle: &mut Option<AdvertisementHandle>,
-    params: &mut BleDriverParams,
-) -> Result<(), KeynearError> {
-    drop(handle.take());
-    let mode = *params.visibility_rx.borrow_and_update();
-    *handle = register_advertisement(adapter, mode, params).await?;
-    Ok(())
-}
-
-async fn handle_pairing_decision(setup: &GattSetup, approved: bool) {
-    super::gatt::apply_pairing_decision(
-        &setup.responder,
-        &setup.notifier_slot,
-        setup.pairing_event_tx.as_ref(),
-        approved,
-    )
-    .await;
 }
 
 async fn handle_device_event(
     ctx: &mut DiscoveryContext<'_>,
     maybe_ev: Option<AdapterEvent>,
 ) -> bool {
-    let Some(AdapterEvent::DeviceAdded(addr)) = maybe_ev else {
-        return maybe_ev.is_none();
-    };
-    let Some(peer) = inspect_discovered_device(ctx, addr).await else {
-        return false;
-    };
-    if let DecodedBleBeacon::Paired { ref device_id, .. } = peer.beacon {
-        ctx.ble_addr_map
-            .lock()
-            .await
-            .insert(peer.address.to_ascii_lowercase(), device_id.clone());
+    match maybe_ev {
+        None => true,
+        Some(AdapterEvent::DeviceRemoved(addr)) => {
+            if let Some((device_id, state, handle)) = ctx.rssi_watchers.remove(&addr) {
+                handle.abort();
+                if let Some(tx) = ctx.discovered_tx {
+                    let _ = tx.try_send(DiscoveredBlePeer {
+                        address: addr.to_string(),
+                        rssi: Some(-127),
+                        beacon: DecodedBleBeacon::Paired { device_id, state },
+                    });
+                }
+            }
+            false
+        }
+        Some(AdapterEvent::DeviceAdded(addr)) => {
+            let Some(peer) = inspect_discovered_device(ctx, addr).await else { return false; };
+            if let DecodedBleBeacon::Paired { ref device_id, ref state } = peer.beacon {
+                ctx.ble_addr_map.lock().await.insert(peer.address.to_ascii_lowercase(), device_id.clone());
+                ensure_rssi_watcher(ctx, addr, device_id, state.clone());
+            }
+            if let Some(tx) = ctx.discovered_tx {
+                let _ = tx.try_send(peer);
+            }
+            false
+        }
+        Some(_) => false,
     }
-    if let Some(tx) = ctx.discovered_tx {
-        let _ = tx.try_send(peer);
+}
+
+fn ensure_rssi_watcher(
+    ctx: &mut DiscoveryContext<'_>,
+    addr: Address,
+    device_id: &str,
+    state: PairedBeaconState,
+) {
+    if ctx.rssi_watchers.get(&addr).is_some_and(|(_, _, h)| !h.is_finished()) {
+        return;
     }
-    false
+    let Some(tx) = ctx.discovered_tx.clone() else { return; };
+    let adapter = ctx.adapter.clone();
+    let (watch_id, watch_state) = (device_id.to_string(), state.clone());
+    let handle = tokio::spawn(async move {
+        let Ok(device) = adapter.device(addr) else { return; };
+        let Ok(mut evs) = device.events().await else { return; };
+        while let Some(ev) = evs.next().await {
+            if let DeviceEvent::PropertyChanged(DeviceProperty::Rssi(rssi)) = ev {
+                let peer = DiscoveredBlePeer {
+                    address: addr.to_string(),
+                    rssi: Some(rssi),
+                    beacon: DecodedBleBeacon::Paired {
+                        device_id: watch_id.clone(),
+                        state: watch_state.clone(),
+                    },
+                };
+                if tx.try_send(peer).is_err() && tx.is_closed() { break; }
+            }
+        }
+    });
+    ctx.rssi_watchers.insert(addr, (device_id.to_string(), state, handle));
 }
 
 async fn inspect_discovered_device(
@@ -266,18 +302,10 @@ async fn inspect_discovered_device(
     let bytes = service_data_map.get(&KEYNEAR_BLE_SERVICE_UUID)?;
     let paired_devices = ctx.device_store.load().unwrap_or_default();
     let decoded = decode_service_data_for_known_peers(
-        bytes,
-        &paired_devices,
-        ctx.secret_store,
-        &mut *ctx.last_counters,
-    )
-    .ok()??;
+        bytes, &paired_devices, ctx.secret_store, &mut *ctx.last_counters,
+    ).ok()??;
     let rssi = device.rssi().await.ok().flatten();
-    Some(DiscoveredBlePeer {
-        address: addr.to_string(),
-        rssi,
-        beacon: decoded,
-    })
+    Some(DiscoveredBlePeer { address: addr.to_string(), rssi, beacon: decoded })
 }
 
 async fn recv_optional<T>(rx: &mut Option<mpsc::Receiver<T>>) -> Option<T> {

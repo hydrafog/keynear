@@ -19,31 +19,41 @@ impl ClipboardEngine {
         match kind {
             QuicStreamKind::Control => {
                 let env = read_control_envelope(&mut recv).await?;
-                let mut ctx = IncomingContext {
-                    peer_device_id,
-                    send: &mut send,
-                    sequence: env.sequence,
-                };
-                match env.payload {
-                    Some(v1::envelope::Payload::Clipboard(payload)) => {
-                        self.handle_clipboard(&mut ctx, payload).await
-                    }
-                    Some(v1::envelope::Payload::ClipboardOffer(offer)) => {
-                        self.handle_offer(&mut ctx, offer).await
-                    }
-                    Some(v1::envelope::Payload::ClipboardFetch(fetch)) => {
-                        self.handle_fetch(&mut ctx, fetch).await
-                    }
-                    _ => Err(KeynearError::Protocol(
-                        "unexpected envelope payload on clipboard control stream".to_string(),
-                    )),
-                }
+                self.handle_control_envelope(peer_device_id, env, &mut send)
+                    .await
             }
             QuicStreamKind::ClipboardBlob => {
                 self.handle_blob(peer_device_id, &mut send, &mut recv).await
             }
             _ => Err(KeynearError::Protocol(
                 "unexpected stream kind on clipboard stream".to_string(),
+            )),
+        }
+    }
+
+    pub async fn handle_control_envelope(
+        &self,
+        peer_device_id: &str,
+        env: v1::Envelope,
+        send: &mut SendStream,
+    ) -> Result<(), KeynearError> {
+        let mut ctx = IncomingContext {
+            peer_device_id,
+            send,
+            sequence: env.sequence,
+        };
+        match env.payload {
+            Some(v1::envelope::Payload::Clipboard(payload)) => {
+                self.handle_clipboard(&mut ctx, payload).await
+            }
+            Some(v1::envelope::Payload::ClipboardOffer(offer)) => {
+                self.handle_offer(&mut ctx, offer).await
+            }
+            Some(v1::envelope::Payload::ClipboardFetch(fetch)) => {
+                self.handle_fetch(&mut ctx, fetch).await
+            }
+            _ => Err(KeynearError::Protocol(
+                "unexpected envelope payload on clipboard control stream".to_string(),
             )),
         }
     }

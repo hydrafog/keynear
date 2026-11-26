@@ -1,37 +1,76 @@
 use std::collections::{HashMap, HashSet};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use keynear_core::{
-    read_stream_kind, ClipboardEngine, OrionQuicNode, PairedDeviceStore, QuicStreamKind,
-    SecretStore, TransferEngine, TransferState,
+    read_stream_kind, ClipboardEngine, OrionQuicNode, PairedDeviceStore, ProximityConfig,
+    QuicStreamKind, RangingSample, RangingTechnology, SecretStore, TransferEngine, TransferState,
+    MAX_RANGE_METERS,
 };
-use keynear_protocol::KeynearError;
-use tokio::sync::Mutex;
+use keynear_protocol::{
+    read_control_envelope, v1, write_control_envelope, DaemonConfig, KeynearError,
+};
+use tokio::io::AsyncWrite;
+use tokio::sync::{mpsc, Mutex};
 use tokio::task::JoinHandle;
 use tracing::warn;
 
 use crate::ipc::IpcDispatchContext;
 use crate::notifications::NotificationsClient;
+use crate::proximity::{Login1SessionLock, ProximitySupervisor};
 use crate::service::pairing::sync_paired_devices_and_policies;
 
-#[allow(clippy::too_many_arguments)]
+pub(crate) struct QuicAcceptParams<'a> {
+    pub node: &'a Arc<OrionQuicNode>,
+    pub device_store: &'a PairedDeviceStore,
+    pub secret_store: Option<&'a Arc<dyn SecretStore>>,
+    pub transfer_engine: &'a Arc<TransferEngine>,
+    pub clipboard_engine: &'a Arc<ClipboardEngine>,
+    pub known_peers: &'a Arc<Mutex<HashSet<String>>>,
+    pub phoenix_supervisor: Option<&'a Arc<Mutex<ProximitySupervisor<Login1SessionLock>>>>,
+    pub config_state: &'a Arc<Mutex<DaemonConfig>>,
+    pub config_path: Option<&'a Path>,
+    pub ranging_tx: &'a mpsc::Sender<RangingSample>,
+}
+
+#[derive(Clone)]
+struct ControlDispatchCtx {
+    clipboard: Arc<ClipboardEngine>,
+    phoenix_supervisor: Option<Arc<Mutex<ProximitySupervisor<Login1SessionLock>>>>,
+    config_state: Arc<Mutex<DaemonConfig>>,
+    config_path: Option<PathBuf>,
+    ranging_tx: mpsc::Sender<RangingSample>,
+}
+
+struct AcceptLoopState {
+    node: Arc<OrionQuicNode>,
+    store: PairedDeviceStore,
+    secrets: Option<Arc<dyn SecretStore>>,
+    engine: Arc<TransferEngine>,
+    known: Arc<Mutex<HashSet<String>>>,
+    control: ControlDispatchCtx,
+}
+
 pub(crate) fn spawn_quic_accept_loop(
-    node: &Arc<OrionQuicNode>,
-    device_store: &PairedDeviceStore,
-    secret_store: Option<&Arc<dyn SecretStore>>,
-    transfer_engine: &Arc<TransferEngine>,
-    clipboard_engine: &Arc<ClipboardEngine>,
-    known_peers: &Arc<Mutex<HashSet<String>>>,
+    params: QuicAcceptParams<'_>,
     tasks: &mut Vec<JoinHandle<()>>,
 ) {
-    tasks.push(tokio::spawn(run_quic_accept_loop(
-        Arc::clone(node),
-        device_store.clone(),
-        secret_store.cloned(),
-        Arc::clone(transfer_engine),
-        Arc::clone(clipboard_engine),
-        Arc::clone(known_peers),
-    )));
+    let control = ControlDispatchCtx {
+        clipboard: Arc::clone(params.clipboard_engine),
+        phoenix_supervisor: params.phoenix_supervisor.cloned(),
+        config_state: Arc::clone(params.config_state),
+        config_path: params.config_path.map(Path::to_path_buf),
+        ranging_tx: params.ranging_tx.clone(),
+    };
+    let state = AcceptLoopState {
+        node: Arc::clone(params.node),
+        store: params.device_store.clone(),
+        secrets: params.secret_store.cloned(),
+        engine: Arc::clone(params.transfer_engine),
+        known: Arc::clone(params.known_peers),
+        control,
+    };
+    tasks.push(tokio::spawn(run_quic_accept_loop(state)));
 }
 
 fn warn_quic_accept_failed(err: &KeynearError) {
@@ -42,32 +81,115 @@ fn warn_peer_sync_failed(err: &KeynearError) {
     warn!(event = "peer_sync_on_accept_failed", error = %err);
 }
 
-#[allow(clippy::too_many_arguments)]
-async fn sync_on_accept(
-    store: &PairedDeviceStore,
-    secrets: Option<&dyn SecretStore>,
-    node: &OrionQuicNode,
-    engine: &TransferEngine,
-    known: &Mutex<HashSet<String>>,
-) {
-    if let Err(err) =
-        sync_paired_devices_and_policies(store, secrets, Some(node), engine, known).await
+async fn sync_on_accept(state: &AcceptLoopState) {
+    if let Err(err) = sync_paired_devices_and_policies(
+        &state.store,
+        state.secrets.as_deref(),
+        Some(&state.node),
+        &state.engine,
+        &state.known,
+    )
+    .await
     {
         warn_peer_sync_failed(&err);
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-async fn run_quic_accept_loop(
-    node: Arc<OrionQuicNode>,
-    store: PairedDeviceStore,
-    secrets: Option<Arc<dyn SecretStore>>,
-    engine: Arc<TransferEngine>,
-    clipboard: Arc<ClipboardEngine>,
-    known: Arc<Mutex<HashSet<String>>>,
+async fn send_control_ack<W: AsyncWrite + Unpin>(
+    send: &mut W,
+    acked_sequence: u64,
+    accepted: bool,
+    reason: &str,
 ) {
+    let ack = v1::Envelope {
+        version: 1,
+        sequence: acked_sequence,
+        timestamp_ms: 0,
+        payload: Some(v1::envelope::Payload::ControlAck(v1::ControlAck {
+            acked_sequence,
+            accepted,
+            reason: reason.to_string(),
+        })),
+    };
+    let _ = write_control_envelope(send, &ack).await;
+}
+
+fn ranging_report_to_sample(peer_device_id: &str, rr: v1::RangingReport) -> Option<RangingSample> {
+    let tech = match v1::RangingTechnology::try_from(rr.technology).ok()? {
+        v1::RangingTechnology::Uwb => RangingTechnology::Uwb,
+        v1::RangingTechnology::BleCs => RangingTechnology::BleChannelSounding,
+        v1::RangingTechnology::BleRssi => RangingTechnology::BleRssi,
+        v1::RangingTechnology::Unknown => return None,
+    };
+    let uses_distance = matches!(
+        tech,
+        RangingTechnology::Uwb | RangingTechnology::BleChannelSounding
+    );
+    let device_id = if rr.device_id.trim().is_empty() {
+        peer_device_id.to_string()
+    } else {
+        rr.device_id
+    };
+    Some(RangingSample {
+        device_id,
+        technology: tech,
+        distance_meters: uses_distance.then_some(rr.distance_meters),
+        rssi_dbm: (!uses_distance).then_some(rr.rssi_dbm),
+        sequence: rr.sequence,
+    })
+}
+
+async fn apply_proximity_state(ctx: &ControlDispatchCtx, ps: &v1::ProximityState) -> Result<(), &'static str> {
+    if !ps.distance_meters.is_finite() || !(0.5..=MAX_RANGE_METERS).contains(&ps.distance_meters) {
+        return Err("invalid proximity distance");
+    }
+    let lock_enabled = ps.status != v1::ProximityStatus::ProximityUnspecified as i32;
+    if let Some(ref supervisor) = ctx.phoenix_supervisor {
+        let mut guard = supervisor.lock().await;
+        let cfg = ProximityConfig::from_desk_distance(ps.distance_meters);
+        guard
+            .update_config(cfg, lock_enabled)
+            .map_err(|_| "invalid proximity config")?;
+    }
+    let mut cfg = ctx.config_state.lock().await;
+    cfg.proximity_lock_enabled = lock_enabled;
+    cfg.proximity_distance_meters = ps.distance_meters;
+    if let Some(ref path) = ctx.config_path {
+        let _ = cfg.save_to_path(path);
+    }
+    Ok(())
+}
+
+async fn handle_proximity_or_ranging<W: AsyncWrite + Unpin>(
+    ctrl: &ControlDispatchCtx,
+    peer: &str,
+    env: &v1::Envelope,
+    send: &mut W,
+) -> bool {
+    match &env.payload {
+        Some(v1::envelope::Payload::ProximityState(ps)) => {
+            match apply_proximity_state(ctrl, ps).await {
+                Ok(()) => send_control_ack(send, env.sequence, true, "").await,
+                Err(reason) => send_control_ack(send, env.sequence, false, reason).await,
+            }
+            true
+        }
+        Some(v1::envelope::Payload::RangingReport(rr)) => {
+            if let Some(sample) = ranging_report_to_sample(peer, rr.clone()) {
+                let _ = ctrl.ranging_tx.try_send(sample);
+                send_control_ack(send, env.sequence, true, "").await;
+            } else {
+                send_control_ack(send, env.sequence, false, "invalid ranging report").await;
+            }
+            true
+        }
+        _ => false,
+    }
+}
+
+async fn run_quic_accept_loop(state: AcceptLoopState) {
     loop {
-        let (peer_device_id, conn) = match node.accept_authenticated().await {
+        let (peer_device_id, conn) = match state.node.accept_authenticated().await {
             Ok(Some(accepted)) => accepted,
             Ok(None) => break,
             Err(err) => {
@@ -75,11 +197,11 @@ async fn run_quic_accept_loop(
                 continue;
             }
         };
-        sync_on_accept(&store, secrets.as_deref(), &node, &engine, &known).await;
-        let conn_engine = Arc::clone(&engine);
-        let conn_clipboard = Arc::clone(&clipboard);
+        sync_on_accept(&state).await;
+        let conn_engine = Arc::clone(&state.engine);
+        let conn_control = state.control.clone();
         tokio::spawn(async move {
-            while let Ok((send, mut recv)) = conn.accept_bi().await {
+            while let Ok((mut send, mut recv)) = conn.accept_bi().await {
                 let Ok(kind) = read_stream_kind(&mut recv).await else {
                     break;
                 };
@@ -90,16 +212,22 @@ async fn run_quic_accept_loop(
                 ) {
                     let eng = Arc::clone(&conn_engine);
                     tokio::spawn(async move {
-                        let _ = eng
-                            .handle_incoming_stream_with_kind(&peer, kind, send, recv)
-                            .await;
+                        let _ = eng.handle_incoming_stream_with_kind(&peer, kind, send, recv).await;
+                    });
+                } else if kind == QuicStreamKind::Control {
+                    let ctrl = conn_control.clone();
+                    tokio::spawn(async move {
+                        let Ok(env) = read_control_envelope(&mut recv).await else { return; };
+                        if handle_proximity_or_ranging(&ctrl, &peer, &env, &mut send).await {
+                            let _ = send.finish();
+                        } else {
+                            let _ = ctrl.clipboard.handle_control_envelope(&peer, env, &mut send).await;
+                        }
                     });
                 } else {
-                    let clip = Arc::clone(&conn_clipboard);
+                    let clip = Arc::clone(&conn_control.clipboard);
                     tokio::spawn(async move {
-                        let _ = clip
-                            .handle_incoming_stream_with_kind(&peer, kind, send, recv)
-                            .await;
+                        let _ = clip.handle_incoming_stream_with_kind(&peer, kind, send, recv).await;
                     });
                 }
             }
