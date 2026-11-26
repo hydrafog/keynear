@@ -70,7 +70,7 @@ HTML_TEMPLATE = """<!doctype html>
     transform-style: preserve-3d;
   }}
   .phone-wrap.left {{
-    transform: translateX(-430px) translateY(20px) translateZ(-120px) rotateY(32deg) scale(0.95);
+    transform: translateX(-430px) translateY(20px) translateZ(-120px) rotateY(20deg) scale(1.05);
     z-index: 2;
     filter: drop-shadow(-20px 30px 36px {side_shadow});
   }}
@@ -80,7 +80,7 @@ HTML_TEMPLATE = """<!doctype html>
     filter: drop-shadow(0px 34px 44px {center_shadow}) drop-shadow(0px 10px 18px {center_shadow_tight});
   }}
   .phone-wrap.right {{
-    transform: translateX(430px) translateY(20px) translateZ(-120px) rotateY(-32deg) scale(0.95);
+    transform: translateX(430px) translateY(20px) translateZ(-120px) rotateY(-20deg) scale(1.05);
     z-index: 2;
     filter: drop-shadow(20px 30px 36px {side_shadow});
   }}
