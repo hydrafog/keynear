@@ -37,7 +37,7 @@ default = []
 fuse = ["dep:fuser", "dep:libc"]
 
 [dependencies.fuser]
-version = "0.18"
+version = "0.19"
 optional = true
 default-features = false
 
