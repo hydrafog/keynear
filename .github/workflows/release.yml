@@ -36,7 +36,7 @@ jobs:
             dist/keynear-linux-x86_64.tar.gz.sha256
       - name: Attach Linux binary to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             dist/keynear-linux-x86_64.tar.gz
@@ -110,7 +110,7 @@ jobs:
             android/app/build/outputs/apk/foss/release/app-foss-release.apk
       - name: Attach signed APKs to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             android/app/build/outputs/apk/gms/release/app-gms-release.apk
