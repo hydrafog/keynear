@@ -14,39 +14,36 @@ import org.keynear.app.bridge.CoreClientProvider
 import org.keynear.app.ui.model.BluetoothStatus
 import uniffi.keynear_core.FfiDeviceRole
 import uniffi.keynear_core.FfiNoisePairingSession
+import uniffi.keynear_core.FfiPairingState
 
 object GattSession {
     internal const val TAG = "GattSession"
+    internal val pairingLock = Any()
+
+    internal enum class ApprovalAction { NO_SESSION, ALREADY_APPROVED, APPROVE_NOW }
+
+    internal fun decideApprovalAction(state: FfiPairingState?): ApprovalAction = when (state) {
+        null -> ApprovalAction.NO_SESSION
+        FfiPairingState.APPROVED -> ApprovalAction.ALREADY_APPROVED
+        FfiPairingState.AWAITING_CONFIRMATION -> ApprovalAction.APPROVE_NOW
+        else -> ApprovalAction.NO_SESSION
+    }
+
+    internal fun shouldClearOnDisconnect(activeHandle: Any?, disconnectedHandle: Any?): Boolean =
+        activeHandle != null && activeHandle === disconnectedHandle
 
     internal fun shouldIgnorePairingTap(activePeerAddress: String?, requestedAddress: String): Boolean =
         activePeerAddress?.equals(requestedAddress, ignoreCase = true) == true
 
-    @Volatile
-    internal var gattServer: BluetoothGattServer? = null
-
-    @Volatile
-    internal var activeClientGatt: BluetoothGatt? = null
-
-    @Volatile
-    internal var activeSession: FfiNoisePairingSession? = null
-
-    @Volatile
-    internal var activePeerAddress: String? = null
-
-    @Volatile
-    internal var activeDeviceForNotification: BluetoothDevice? = null
-
-    @Volatile
-    internal var rxNotifyCharacteristic: BluetoothGattCharacteristic? = null
-
-    @Volatile
-    internal var pendingLocalExport: ByteArray? = null
-
-    @Volatile
-    internal var pendingPeerExport: ByteArray? = null
-
-    @Volatile
-    internal var pendingLanExchangePeerId: String? = null
+    @Volatile internal var gattServer: BluetoothGattServer? = null
+    @Volatile internal var activeClientGatt: BluetoothGatt? = null
+    @Volatile internal var activeSession: FfiNoisePairingSession? = null
+    @Volatile internal var activePeerAddress: String? = null
+    @Volatile internal var activeDeviceForNotification: BluetoothDevice? = null
+    @Volatile internal var rxNotifyCharacteristic: BluetoothGattCharacteristic? = null
+    @Volatile internal var pendingLocalExport: ByteArray? = null
+    @Volatile internal var pendingPeerExport: ByteArray? = null
+    @Volatile internal var pendingLanExchangePeerId: String? = null
 
     @SuppressLint("MissingPermission")
     fun ensureGattServer(context: Context, manager: BluetoothManager) {
@@ -88,12 +85,41 @@ object GattSession {
 
     @SuppressLint("MissingPermission")
     fun close(context: Context) {
-        if (KeynearBleConstants.hasConnectPermission(context)) {
-            runCatching { activeClientGatt?.close() }
-            runCatching { gattServer?.close() }
+        val (clientGatt, server) = synchronized(pairingLock) {
+            val handles = activeClientGatt to gattServer
+            activeClientGatt = null
+            gattServer = null
+            clearActivePairingFieldsLocked()
+            pendingLanExchangePeerId = null
+            handles
         }
-        activeClientGatt = null
-        gattServer = null
+        if (KeynearBleConstants.hasConnectPermission(context)) {
+            runCatching { clientGatt?.close() }
+            runCatching { server?.close() }
+        }
+    }
+
+    internal fun clearActivePairingFieldsLocked() {
+        activeSession = null
+        activePeerAddress = null
+        activeDeviceForNotification = null
+        pendingLocalExport = null
+        pendingPeerExport = null
+    }
+
+    internal fun clearDisconnectedClientGatt(context: Context, gatt: BluetoothGatt) {
+        val cleared = synchronized(pairingLock) {
+            if (!shouldClearOnDisconnect(activeClientGatt, gatt)) return
+            activeClientGatt = null
+            clearActivePairingFieldsLocked()
+            pendingLanExchangePeerId = null
+            true
+        }
+        if (cleared) {
+            CoreClientProvider.init(context).setPendingPairing(null)
+            PairingNotifier.cancel(context)
+            BleScanner.notifyUiRefresh()
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -108,10 +134,16 @@ object GattSession {
         val manager = context.getSystemService(BluetoothManager::class.java) ?: return false
         val adapter = manager.adapter ?: return false
         val device = runCatching { adapter.getRemoteDevice(peerAddress) }.getOrNull() ?: return false
-        if (activeSession != null) {
-            if (shouldIgnorePairingTap(activePeerAddress, peerAddress)) return false
-            rejectActivePairing(context)
+        val needsReject = synchronized(pairingLock) {
+            if (activeSession == null) {
+                false
+            } else if (shouldIgnorePairingTap(activePeerAddress, peerAddress)) {
+                return false
+            } else {
+                true
+            }
         }
+        if (needsReject) rejectActivePairing(context)
         val client = CoreClientProvider.init(context)
         val privKey = client.getOrCreateStaticPrivateKey()
         try {
@@ -122,21 +154,26 @@ object GattSession {
                 localRole = FfiDeviceRole.MOBILE,
                 capabilityFlags = KeynearBleConstants.ANDROID_CAPABILITY_FLAGS,
             )
-            activeSession = session
-            activePeerAddress = peerAddress
-            pendingLocalExport = null
-            pendingPeerExport = null
-            pendingLanExchangePeerId = null
-            activeClientGatt?.close()
-            activeClientGatt = device.connectGatt(
-                context,
-                false,
-                buildGattClientCallback(context.applicationContext, peerAddress),
-                BluetoothDevice.TRANSPORT_LE,
-            )
+            val previousGatt = synchronized(pairingLock) {
+                val old = activeClientGatt
+                activeSession = session
+                activePeerAddress = peerAddress
+                activeDeviceForNotification = null
+                pendingLocalExport = null
+                pendingPeerExport = null
+                pendingLanExchangePeerId = null
+                activeClientGatt = device.connectGatt(
+                    context,
+                    false,
+                    buildGattClientCallback(context.applicationContext, peerAddress),
+                    BluetoothDevice.TRANSPORT_LE,
+                )
+                old
+            }
+            runCatching { previousGatt?.close() }
             return true
         } catch (t: Throwable) {
-            Log.w(TAG, "initiate_pairing_failed")
+            Log.w(TAG, "initiate_pairing_failed", t)
             client.updateBluetoothStatus(BluetoothStatus.READY, t.message)
             return false
         } finally {
@@ -144,63 +181,113 @@ object GattSession {
         }
     }
 
-    @SuppressLint("MissingPermission")
-    fun approveActivePairing(context: Context) {
-        val session = activeSession ?: return
-        val client = CoreClientProvider.init(context)
-        try {
-            val export = session.approveAndBuildExport()
-            pendingLocalExport = export
-            val clientGatt = activeClientGatt
-            if (clientGatt != null && KeynearBleConstants.hasConnectPermission(context)) {
-                val txChar = clientGatt
-                    .getService(KeynearBleConstants.SERVICE_UUID)
-                    ?.getCharacteristic(KeynearBleConstants.PAIRING_TX_CHAR_UUID)
-                if (txChar != null) {
-                    KeynearBleGattCompat.writeCharacteristicCompat(clientGatt, txChar, export)
-                }
-            }
-            val responderDevice = activeDeviceForNotification
-            val rxChar = rxNotifyCharacteristic
-            if (responderDevice != null && rxChar != null && KeynearBleConstants.hasConnectPermission(context)) {
-                KeynearBleGattCompat.notifyCharacteristicCompat(gattServer, responderDevice, rxChar, export)
-            }
-            PairingNotifier.cancel(context)
-            completeBufferedPeerExport(context, client, session, clientGatt)
-        } catch (_: Throwable) {
-            rejectActivePairing(context)
+    internal fun approveSessionStep(
+        state: FfiPairingState?,
+        hasBufferedPeerExport: Boolean,
+        approveAndBuildExport: () -> ByteArray,
+        sendExport: (ByteArray) -> Unit,
+        clearPendingPrompt: () -> Unit,
+        completeBuffered: () -> Boolean,
+        onFailure: (Throwable) -> Unit,
+    ): Boolean = when (decideApprovalAction(state)) {
+        ApprovalAction.NO_SESSION -> false
+        ApprovalAction.ALREADY_APPROVED -> {
+            clearPendingPrompt()
+            if (hasBufferedPeerExport) completeBuffered() else false
+        }
+        ApprovalAction.APPROVE_NOW -> try {
+            val export = approveAndBuildExport()
+            sendExport(export)
+            clearPendingPrompt()
+            if (hasBufferedPeerExport) completeBuffered() else false
+        } catch (t: Throwable) {
+            onFailure(t)
+            false
         }
     }
 
     @SuppressLint("MissingPermission")
-    private fun completeBufferedPeerExport(
+    fun approveActivePairing(context: Context): Boolean {
+        val client = CoreClientProvider.init(context)
+        var failureToReject: Throwable? = null
+        var clearedPrompt = false
+        val completed = synchronized(pairingLock) {
+            val session = activeSession ?: return false
+            val clientGatt = activeClientGatt
+            val responderDevice = activeDeviceForNotification
+            val rxChar = rxNotifyCharacteristic
+            approveSessionStep(
+                state = runCatching { session.state() }.getOrNull(),
+                hasBufferedPeerExport = pendingPeerExport != null,
+                approveAndBuildExport = {
+                    val export = session.approveAndBuildExport()
+                    pendingLocalExport = export
+                    export
+                },
+                sendExport = { export ->
+                    if (clientGatt != null && KeynearBleConstants.hasConnectPermission(context)) {
+                        val txChar = clientGatt
+                            .getService(KeynearBleConstants.SERVICE_UUID)
+                            ?.getCharacteristic(KeynearBleConstants.PAIRING_TX_CHAR_UUID)
+                        if (txChar != null) {
+                            KeynearBleGattCompat.writeCharacteristicCompat(clientGatt, txChar, export)
+                        }
+                    }
+                    if (responderDevice != null && rxChar != null && KeynearBleConstants.hasConnectPermission(context)) {
+                        KeynearBleGattCompat.notifyCharacteristicCompat(gattServer, responderDevice, rxChar, export)
+                    }
+                },
+                clearPendingPrompt = {
+                    client.setPendingPairing(null)
+                    clearedPrompt = true
+                },
+                completeBuffered = { completeBufferedPeerExportLocked(context, client, session, clientGatt) },
+                onFailure = { failureToReject = it },
+            )
+        }
+        failureToReject?.let { err ->
+            Log.w(TAG, "approve_active_pairing_failed", err)
+            rejectActivePairing(context)
+            return false
+        }
+        if (clearedPrompt || completed) {
+            PairingNotifier.cancel(context)
+            BleScanner.notifyUiRefresh()
+        }
+        return completed
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun completeBufferedPeerExportLocked(
         context: Context,
         client: org.keynear.app.bridge.EventQueue,
         session: FfiNoisePairingSession,
         clientGatt: BluetoothGatt?,
-    ) {
-        val buffered = pendingPeerExport ?: return
-        val peerAddr = activePeerAddress ?: return
-        if (clientGatt == null) return
+    ): Boolean {
+        val buffered = pendingPeerExport ?: return false
+        val peerAddr = activePeerAddress ?: return false
         pendingPeerExport = null
-        completeGattClientPairing(
-            context,
-            client,
-            session,
-            clientGatt,
-            peerAddr,
-            buffered,
-            deferLanExchange = true,
-        )
+        return if (clientGatt != null) {
+            completeGattClientPairingLocked(
+                context,
+                client,
+                session,
+                clientGatt,
+                peerAddr,
+                buffered,
+                deferLanExchange = true,
+            )
+        } else {
+            completeGattServerPairingLocked(client, session, peerAddr, buffered)
+        }
     }
 
     fun rejectActivePairing(context: Context) {
-        runCatching { activeSession?.reject() }
-        activeSession = null
-        activePeerAddress = null
-        pendingLocalExport = null
-        pendingPeerExport = null
-        pendingLanExchangePeerId = null
+        synchronized(pairingLock) {
+            runCatching { activeSession?.reject() }
+            clearActivePairingFieldsLocked()
+            pendingLanExchangePeerId = null
+        }
         CoreClientProvider.init(context).setPendingPairing(null)
         PairingNotifier.cancel(context)
         BleScanner.notifyUiRefresh()

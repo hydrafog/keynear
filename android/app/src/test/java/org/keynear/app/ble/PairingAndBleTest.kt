@@ -14,7 +14,10 @@ import org.keynear.app.bridge.KeystoreSecretStore
 import org.keynear.app.bridge.PeerSecretRecord
 import org.keynear.app.bridge.SecretCipher
 import org.keynear.app.bridge.SecretStorageBackend
+import org.keynear.app.bridge.computeRemainingPairingSecs
+import org.keynear.app.ui.model.PendingPairingUi
 import org.keynear.app.ui.model.VisibilityState
+import uniffi.keynear_core.FfiPairingState
 
 private class TestXorCipher : SecretCipher {
     override fun encrypt(plaintext: ByteArray): ByteArray =
@@ -132,6 +135,134 @@ class PairingAndBleTest {
     fun tapForDifferentOrNoActivePeerStartsPairing() {
         assertFalse(GattSession.shouldIgnorePairingTap(null, "AA:BB:CC:DD:EE:FF"))
         assertFalse(GattSession.shouldIgnorePairingTap("11:22:33:44:55:66", "AA:BB:CC:DD:EE:FF"))
+    }
+
+    @Test
+    fun decideApprovalActionDistinguishesMissingApprovedAndAwaitingStates() {
+        assertEquals(GattSession.ApprovalAction.NO_SESSION, GattSession.decideApprovalAction(null))
+        assertEquals(
+            GattSession.ApprovalAction.NO_SESSION,
+            GattSession.decideApprovalAction(FfiPairingState.HANDSHAKE_M2),
+        )
+        assertEquals(
+            GattSession.ApprovalAction.ALREADY_APPROVED,
+            GattSession.decideApprovalAction(FfiPairingState.APPROVED),
+        )
+        assertEquals(
+            GattSession.ApprovalAction.APPROVE_NOW,
+            GattSession.decideApprovalAction(FfiPairingState.AWAITING_CONFIRMATION),
+        )
+    }
+
+    @Test
+    fun duplicateLocalApprovalTransitionsOnceClearsPromptAndNeverRejects() {
+        var state = FfiPairingState.AWAITING_CONFIRMATION
+        var exportBuildCount = 0
+        var sendCount = 0
+        var clearPromptCount = 0
+        var rejectCount = 0
+        var completeCount = 0
+
+        val firstCompleted = GattSession.approveSessionStep(
+            state = state,
+            hasBufferedPeerExport = false,
+            approveAndBuildExport = {
+                exportBuildCount++
+                state = FfiPairingState.APPROVED
+                byteArrayOf(1, 2, 3)
+            },
+            sendExport = { sendCount++ },
+            clearPendingPrompt = { clearPromptCount++ },
+            completeBuffered = {
+                completeCount++
+                true
+            },
+            onFailure = { rejectCount++ },
+        )
+        val secondCompleted = GattSession.approveSessionStep(
+            state = state,
+            hasBufferedPeerExport = false,
+            approveAndBuildExport = {
+                exportBuildCount++
+                throw IllegalStateException("already approved")
+            },
+            sendExport = { sendCount++ },
+            clearPendingPrompt = { clearPromptCount++ },
+            completeBuffered = {
+                completeCount++
+                true
+            },
+            onFailure = { rejectCount++ },
+        )
+
+        assertFalse(firstCompleted)
+        assertFalse(secondCompleted)
+        assertEquals(FfiPairingState.APPROVED, state)
+        assertEquals(1, exportBuildCount)
+        assertEquals(1, sendCount)
+        assertEquals(2, clearPromptCount)
+        assertEquals(0, rejectCount)
+        assertEquals(0, completeCount)
+    }
+
+    @Test
+    fun approvalWithBufferedPeerExportCompletesImmediately() {
+        var state = FfiPairingState.AWAITING_CONFIRMATION
+        var sentExport: ByteArray? = null
+        var clearedPrompt = false
+        var completedBuffered = false
+
+        val completed = GattSession.approveSessionStep(
+            state = state,
+            hasBufferedPeerExport = true,
+            approveAndBuildExport = {
+                state = FfiPairingState.APPROVED
+                byteArrayOf(7, 8, 9)
+            },
+            sendExport = { sentExport = it },
+            clearPendingPrompt = { clearedPrompt = true },
+            completeBuffered = {
+                completedBuffered = true
+                true
+            },
+            onFailure = { throw AssertionError("unexpected failure", it) },
+        )
+
+        assertTrue(completed)
+        assertArrayEquals(byteArrayOf(7, 8, 9), sentExport)
+        assertTrue(clearedPrompt)
+        assertTrue(completedBuffered)
+    }
+
+    @Test
+    fun computeRemainingPairingSecsDoesNotDecrementWithinSameSecondAndExpiresAtDeadline() {
+        val prompt = PendingPairingUi(
+            peerAddress = "AA:BB:CC:DD:EE:FF",
+            peerName = "workstation",
+            verificationCode = "482193",
+            remainingSecs = 120L,
+        )
+        val deadlineMs = 121_000L
+
+        assertEquals(120L, computeRemainingPairingSecs(prompt, deadlineMs, 1_000L)?.remainingSecs)
+        assertEquals(120L, computeRemainingPairingSecs(prompt, deadlineMs, 1_250L)?.remainingSecs)
+        assertEquals(120L, computeRemainingPairingSecs(prompt, deadlineMs, 1_999L)?.remainingSecs)
+        assertEquals(119L, computeRemainingPairingSecs(prompt, deadlineMs, 2_000L)?.remainingSecs)
+        assertEquals(1L, computeRemainingPairingSecs(prompt, deadlineMs, 120_500L)?.remainingSecs)
+        assertNull(computeRemainingPairingSecs(prompt, deadlineMs, 121_000L))
+        assertNull(computeRemainingPairingSecs(prompt, deadlineMs, 125_000L))
+        assertNull(computeRemainingPairingSecs(null, deadlineMs, 1_000L))
+    }
+
+    @Test
+    fun disconnectIdentityCheckClearsOnlyMatchingGattAndAllowsSubsequentTap() {
+        val activeGatt = Any()
+        val staleGatt = Any()
+
+        assertFalse(GattSession.shouldClearOnDisconnect(activeGatt, staleGatt))
+        assertFalse(GattSession.shouldClearOnDisconnect(null, activeGatt))
+        assertTrue(GattSession.shouldClearOnDisconnect(activeGatt, activeGatt))
+        assertFalse(GattSession.shouldIgnorePairingTap(null, "AA:BB:CC:DD:EE:FF"))
     }
 }
 

@@ -276,12 +276,8 @@ impl Tray for KeynearTray {
 
     fn menu(&self) -> Vec<MenuItem<Self>> {
         let snapshot = build_tray_snapshot(&self.state);
-        let mut items: Vec<MenuItem<Self>> = vec![
-            disabled_item(snapshot.status_summary.clone()),
-            MenuItem::Separator,
-            self.visibility_group(&snapshot),
-            MenuItem::Separator,
-        ];
+        let mut items: Vec<MenuItem<Self>> =
+            vec![self.visibility_group(&snapshot), MenuItem::Separator];
         if let Some(transfer_menu) = self.transfer_menu() {
             items.push(transfer_menu);
         }

@@ -77,6 +77,9 @@ class EventQueue(
     internal var cachedPendingPairing: PendingPairingUi? = null
 
     @Volatile
+    internal var pendingPairingDeadlineMs: Long = 0L
+
+    @Volatile
     internal var cachedBtStatus: BluetoothStatus = BluetoothStatus.READY
 
     @Volatile
@@ -202,9 +205,7 @@ class EventQueue(
 
     override fun currentLocalNetworkStatus(): LocalNetworkStatus = cachedLnpStatus
 
-    override fun setPendingPairing(prompt: PendingPairingUi?) {
-        cachedPendingPairing = prompt
-    }
+    override fun setPendingPairing(prompt: PendingPairingUi?) = setPendingPairingImpl(prompt)
 
     override fun loadState(): CoreState = buildState()
 

@@ -152,15 +152,21 @@ internal fun ActionsContext.initiatePairing(addr: String) {
 
 internal fun ActionsContext.resolvePairing(approve: Boolean) {
     scope.launch {
-        withContext(Dispatchers.IO) {
+        val completed = withContext(Dispatchers.IO) {
             if (approve) {
                 GattSession.approveActivePairing(context)
             } else {
                 GattSession.rejectActivePairing(context)
+                false
             }
         }
         onStateUpdated(withContext(Dispatchers.IO) { bridge.loadState() })
-        onShowSnackbar(if (approve) "Device paired" else "Pairing declined")
+        val message = when {
+            !approve -> "Pairing declined"
+            completed -> "Device paired"
+            else -> "Waiting for other device to confirm"
+        }
+        onShowSnackbar(message)
     }
 }
 

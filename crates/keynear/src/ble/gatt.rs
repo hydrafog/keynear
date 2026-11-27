@@ -53,6 +53,28 @@ fn log_buffered_export_failed(err: &keynear_protocol::KeynearError) {
     tracing::warn!(event = "pairing_buffered_export_failed", error = %err);
 }
 
+fn log_pairing_export_notify_failed(err: &impl std::fmt::Display) {
+    tracing::warn!(event = "pairing_export_notify_failed", error = %err);
+}
+
+fn log_pairing_export_notifier_missing() {
+    tracing::warn!(event = "pairing_export_notifier_missing");
+}
+
+async fn notify_pairing_export(
+    notifier_slot: &Mutex<Option<CharacteristicNotifier>>,
+    frame: Vec<u8>,
+) {
+    let mut guard = notifier_slot.lock().await;
+    let Some(notifier) = guard.as_mut() else {
+        log_pairing_export_notifier_missing();
+        return;
+    };
+    if let Err(err) = notifier.notify(frame).await {
+        log_pairing_export_notify_failed(&err);
+    }
+}
+
 pub(crate) async fn apply_pairing_decision(
     responder: &Mutex<GattPairingResponder>,
     notifier_slot: &Mutex<Option<CharacteristicNotifier>>,
@@ -70,9 +92,7 @@ pub(crate) async fn apply_pairing_decision(
             return;
         }
     };
-    if let Some(notifier) = notifier_slot.lock().await.as_mut() {
-        let _ = notifier.notify(frame).await;
-    }
+    notify_pairing_export(notifier_slot, frame).await;
     match responder.lock().await.complete_pending_export() {
         Ok(Some(done)) => {
             if let Some(tx) = pairing_event_tx {

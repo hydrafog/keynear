@@ -60,7 +60,7 @@ internal fun EventQueue.buildState(): CoreState = try {
     val paired = DeviceRepo.mapPairedDevices(rawPaired)
     syncShortcutSnapshotIfNeeded(paired)
     val transfers = collectActiveTransfers(peerNames)
-    decrementPendingPairing()
+    refreshPendingPairingCountdown()
     val activeConfig = cachedDaemonConfig.copy(
         darkTheme = cachedDarkTheme,
         accentColorHex = cachedAccentColorHex,
@@ -109,12 +109,37 @@ private fun EventQueue.collectActiveTransfers(peerNames: Map<String, String>): L
             .map { TransferRepo.mapTransferSessionToUi(it, peerNames) }
     } ?: emptyList()
 
-private fun EventQueue.decrementPendingPairing() {
-    val pending = cachedPendingPairing?.let { prompt ->
-        if (prompt.remainingSecs <= 1L) null else prompt.copy(remainingSecs = prompt.remainingSecs - 1L)
+internal fun computeRemainingPairingSecs(
+    prompt: PendingPairingUi?,
+    deadlineMs: Long,
+    nowMs: Long,
+): PendingPairingUi? {
+    if (prompt == null) return null
+    val remainingMs = deadlineMs - nowMs
+    if (remainingMs <= 0L) return null
+    val remainingSecs = (remainingMs + 999L) / 1000L
+    return if (prompt.remainingSecs == remainingSecs) prompt else prompt.copy(remainingSecs = remainingSecs)
+}
+
+internal fun EventQueue.setPendingPairingImpl(
+    prompt: PendingPairingUi?,
+    nowMs: Long = System.currentTimeMillis(),
+) {
+    if (prompt == null || prompt.remainingSecs <= 0L) {
+        pendingPairingDeadlineMs = 0L
+        cachedPendingPairing = null
+    } else {
+        pendingPairingDeadlineMs = nowMs + prompt.remainingSecs * 1000L
+        cachedPendingPairing = prompt
     }
-    if (cachedPendingPairing != null) {
-        cachedPendingPairing = pending
+}
+
+private fun EventQueue.refreshPendingPairingCountdown(nowMs: Long = System.currentTimeMillis()) {
+    val current = cachedPendingPairing ?: return
+    val updated = computeRemainingPairingSecs(current, pendingPairingDeadlineMs, nowMs)
+    cachedPendingPairing = updated
+    if (updated == null) {
+        pendingPairingDeadlineMs = 0L
     }
 }
 

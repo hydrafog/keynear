@@ -7,7 +7,9 @@ use keynear_core::{
 };
 use keynear_protocol::{DeviceRole, KeynearError};
 
-use super::gatt::{GattInboundResult, GattPairingResponder};
+use super::gatt::{
+    apply_pairing_decision, GattInboundResult, GattPairingResponder, PairingUiEvent,
+};
 use super::*;
 
 fn test_responder(store: PairedDeviceStore, secrets: Arc<dyn SecretStore>) -> GattPairingResponder {
@@ -183,5 +185,63 @@ fn gatt_approve_without_active_session_returns_validation_error() {
         })
     ));
     assert!(responder.reject().is_ok());
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[tokio::test]
+async fn apply_pairing_decision_completes_buffered_export_without_notifier() {
+    let (dir, device_store) = temp_devices_store("gatt-apply-no-notifier");
+    let resp_secrets = Arc::new(InMemorySecretStore::new());
+    let init_secrets = InMemorySecretStore::new();
+    let init_kp = init_secrets
+        .get_or_create_static_keypair()
+        .expect("init kp");
+    let mut responder = test_responder(
+        device_store.clone(),
+        Arc::clone(&resp_secrets) as Arc<dyn SecretStore>,
+    );
+    let mut initiator = test_initiator(&init_kp.private_key);
+
+    let m1 = initiator.start_handshake().expect("m1");
+    let GattInboundResult::Outbound(m2) = responder
+        .handle_tx_write(&m1, Some("11:22:33:44:55:66".to_string()))
+        .expect("m2")
+    else {
+        panic!("expected M2 outbound frame");
+    };
+    let m3 = initiator.step(&m2).expect("m3").expect("m3 frame");
+    let GattInboundResult::AwaitingApproval { .. } = responder
+        .handle_tx_write(&m3, Some("11:22:33:44:55:66".to_string()))
+        .expect("awaiting approval")
+    else {
+        panic!("expected AwaitingApproval");
+    };
+
+    let init_export = initiator.approve_and_build_export().expect("init approve");
+    let buffered = responder
+        .handle_tx_write(&init_export, Some("11:22:33:44:55:66".to_string()))
+        .expect("buffer peer export");
+    assert!(matches!(buffered, GattInboundResult::PeerExportBuffered));
+
+    let responder_mutex = tokio::sync::Mutex::new(responder);
+    let notifier_slot = tokio::sync::Mutex::new(None);
+    let (tx, mut rx) = tokio::sync::mpsc::channel(4);
+
+    apply_pairing_decision(&responder_mutex, &notifier_slot, Some(&tx), true).await;
+
+    assert_eq!(
+        rx.try_recv().expect("completed event"),
+        PairingUiEvent::Completed {
+            peer_device_id: "pixel-9".to_string(),
+        }
+    );
+    let devices = device_store.load().expect("load devices");
+    assert_eq!(devices.len(), 1);
+    assert_eq!(devices[0].device_id, "pixel-9");
+    assert!(resp_secrets
+        .get_peer_secrets("pixel-9")
+        .expect("secrets")
+        .is_some());
+
     let _ = fs::remove_dir_all(&dir);
 }

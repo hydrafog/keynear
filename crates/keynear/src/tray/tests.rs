@@ -130,18 +130,16 @@ fn tray_trait_exposes_app_title_tooltip_icon_and_activation() {
 }
 
 #[test]
-fn tray_menu_renders_header_and_omits_settings() {
+fn tray_menu_starts_with_visibility_and_omits_header_and_settings() {
     let (tx, _rx) = mpsc::unbounded_channel();
     let tray = KeynearTray {
         state: TrayState::default(),
         cmd_tx: tx,
     };
     let menu = tray.menu();
-    assert!(matches!(
-        &menu[0],
-        MenuItem::Standard(item) if !item.enabled && item.label == "Keynear — Paired devices only"
-    ));
+    assert!(matches!(&menu[0], MenuItem::RadioGroup(_)));
     let labels: Vec<&str> = menu.iter().filter_map(item_label).collect();
+    assert!(labels.iter().all(|label| !label.starts_with("Keynear —")));
     assert!(labels.iter().all(|label| !label.starts_with("Settings")));
     assert_eq!(
         &labels[labels.len() - 2..],

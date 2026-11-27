@@ -131,17 +131,27 @@ internal fun DevicesBottomSheet(
                 label = "devicesSheetState",
             ) { isEmpty ->
                 if (isEmpty) {
-                    SheetHandle()
-                    EmptyDevicesSheetContent()
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(KeynearLayout.CompactGap),
+                    ) {
+                        SheetHandle()
+                        EmptyDevicesSheetContent()
+                    }
                 } else {
-                    PopulatedDevicesSheetContent(
-                        pins = pins,
-                        visibleCount = visiblePins.size,
-                        hasBanner = hasBanner,
-                        expanded = expanded,
-                        onSetExpanded = onSetExpanded,
-                        actions = actions,
-                    )
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(KeynearLayout.CompactGap),
+                    ) {
+                        PopulatedDevicesSheetContent(
+                            pins = pins,
+                            visibleCount = visiblePins.size,
+                            hasBanner = hasBanner,
+                            expanded = expanded,
+                            onSetExpanded = onSetExpanded,
+                            actions = actions,
+                        )
+                    }
                 }
             }
         }

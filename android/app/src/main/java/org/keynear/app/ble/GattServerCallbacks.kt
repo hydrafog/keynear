@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattServerCallback
 import android.content.Context
+import android.util.Log
 import org.keynear.app.bridge.CoreClientProvider
 import org.keynear.app.ui.model.PendingPairingUi
 import uniffi.keynear_core.FfiDeviceRole
@@ -73,23 +74,21 @@ internal fun GattSession.buildGattServerCallback(context: Context): BluetoothGat
     }
 
 @SuppressLint("MissingPermission")
-
-
 private fun GattSession.handleServerHandshakeStep(
     context: Context,
     client: org.keynear.app.bridge.EventQueue,
     session: FfiNoisePairingSession,
     device: BluetoothDevice,
     value: ByteArray,
-) {
-    val step = runCatching { session.step(value) }.getOrNull() ?: return
+): Boolean {
+    val step = runCatching { session.step(value) }.getOrNull() ?: return false
     step.outboundFrame?.let { m2 ->
         rxNotifyCharacteristic?.let { rx ->
             KeynearBleGattCompat.notifyCharacteristicCompat(gattServer, device, rx, m2)
         }
     }
     if (step.state == FfiPairingState.AWAITING_CONFIRMATION) {
-        val code = step.verificationCode ?: return
+        val code = step.verificationCode ?: return false
         val peerName = BleScanner.discoveredDisplayName(device.address) ?: device.address
         client.setPendingPairing(
             PendingPairingUi(
@@ -100,18 +99,26 @@ private fun GattSession.handleServerHandshakeStep(
             ),
         )
         PairingNotifier.showVerificationPrompt(context, peerName, code)
-        BleScanner.notifyUiRefresh()
+        return true
     }
+    return false
 }
 
-private fun GattSession.completeGattServerPairing(
+internal fun GattSession.completeGattServerPairingLocked(
     client: org.keynear.app.bridge.EventQueue,
     session: FfiNoisePairingSession,
     bleAddress: String,
     value: ByteArray,
-) {
-    val completed = runCatching { session.completeWithPeerExport(value) }.getOrNull() ?: return
-    try {
+): Boolean {
+    val completed = try {
+        session.completeWithPeerExport(value)
+    } catch (t: Throwable) {
+        Log.w(TAG, "server_pairing_complete_failed", t)
+        clearActivePairingFieldsLocked()
+        client.setPendingPairing(null)
+        return false
+    }
+    return try {
         client.saveCompletedPairing(
             peerDeviceId = completed.peerDeviceId,
             peerDisplayName = completed.peerDisplayName,
@@ -121,12 +128,15 @@ private fun GattSession.completeGattServerPairing(
             bleAddress = bleAddress,
             reconnectSecret = completed.reconnectSecret,
         )
+        true
+    } catch (t: Throwable) {
+        Log.w(TAG, "server_pairing_save_failed", t)
+        false
     } finally {
         completed.reconnectSecret.fill(0)
+        clearActivePairingFieldsLocked()
+        client.setPendingPairing(null)
     }
-    activeSession = null
-    client.setPendingPairing(null)
-    BleScanner.notifyUiRefresh()
 }
 
 @SuppressLint("MissingPermission")
@@ -161,29 +171,39 @@ internal fun GattSession.handlePairingTxWrite(
     value: ByteArray,
 ) {
     val client = CoreClientProvider.init(context)
-    var session = activeSession
-    if (session == null) {
-        val priv = client.getOrCreateStaticPrivateKey()
-        session = try {
-            FfiNoisePairingSession.newResponder(
-                localStaticPrivate = priv,
-                localDeviceId = client.localDeviceId(),
-                localDisplayName = client.localDisplayName(),
-                localRole = FfiDeviceRole.MOBILE,
-                capabilityFlags = KeynearBleConstants.ANDROID_CAPABILITY_FLAGS,
-            )
-        } finally {
-            priv.fill(0)
+    var shouldNotifyUi = false
+    synchronized(pairingLock) {
+        var session = activeSession
+        if (session == null) {
+            val priv = client.getOrCreateStaticPrivateKey()
+            session = try {
+                FfiNoisePairingSession.newResponder(
+                    localStaticPrivate = priv,
+                    localDeviceId = client.localDeviceId(),
+                    localDisplayName = client.localDisplayName(),
+                    localRole = FfiDeviceRole.MOBILE,
+                    capabilityFlags = KeynearBleConstants.ANDROID_CAPABILITY_FLAGS,
+                )
+            } finally {
+                priv.fill(0)
+            }
+            activeSession = session
+            activePeerAddress = device.address
+            activeDeviceForNotification = device
         }
-        activeSession = session
-        activePeerAddress = device.address
-        activeDeviceForNotification = device
-    }
 
-    when (session.state()) {
-        FfiPairingState.HANDSHAKE_M1, FfiPairingState.HANDSHAKE_M3 ->
-            handleServerHandshakeStep(context, client, session, device, value)
-        FfiPairingState.APPROVED -> completeGattServerPairing(client, session, device.address, value)
-        else -> Unit
+        when (session.state()) {
+            FfiPairingState.HANDSHAKE_M1, FfiPairingState.HANDSHAKE_M3 ->
+                shouldNotifyUi = handleServerHandshakeStep(context, client, session, device, value)
+            FfiPairingState.AWAITING_CONFIRMATION -> pendingPeerExport = value
+            FfiPairingState.APPROVED -> {
+                completeGattServerPairingLocked(client, session, device.address, value)
+                shouldNotifyUi = true
+            }
+            else -> Unit
+        }
+    }
+    if (shouldNotifyUi) {
+        BleScanner.notifyUiRefresh()
     }
 }
