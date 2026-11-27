@@ -37,7 +37,7 @@ detekt {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2026.11.01")
+    val composeBom = platform("androidx.compose:compose-bom:2026.06.00")
     implementation(composeBom)
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.activity:activity-compose:1.12.4")
