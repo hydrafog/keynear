@@ -103,7 +103,14 @@ impl Filesystem for KeynearFuseFs {
         reply.ok();
     }
 
-    fn open(&self, _req: &Request, _ino: INodeNo, _flags: OpenFlags, reply: ReplyOpen) {
+    fn open(
+        &self,
+        _req: &Request,
+        _ino: INodeNo,
+        _flags: OpenFlags,
+        _kill_suid_gid: bool,
+        reply: ReplyOpen,
+    ) {
         reply.opened(FileHandle(0), FopenFlags::empty());
     }
 
