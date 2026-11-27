@@ -101,3 +101,94 @@ fn static_keypair_from_private_bytes_derives_the_matching_public_key() {
     let other = StaticKeypairRecord::from_private_bytes([0x22; 32]);
     assert_ne!(other.public_key, keypair.public_key);
 }
+
+#[test]
+fn in_memory_static_keypair_stable_and_debug_redacts_private_key() {
+    let store = InMemorySecretStore::new();
+    let first = store
+        .get_or_create_static_keypair()
+        .expect("create keypair");
+    let second = store
+        .get_or_create_static_keypair()
+        .expect("reload keypair");
+    assert_eq!(first.private_key, second.private_key);
+    assert_eq!(first.public_key, second.public_key);
+
+    let debug = format!("{first:?}");
+    assert!(!debug.contains(&hex::encode(first.private_key)));
+    assert!(debug.contains("[REDACTED]"));
+}
+
+#[test]
+fn in_memory_peer_secrets_lifecycle_with_two_devices() {
+    let store = InMemorySecretStore::new();
+    let first = PeerSecrets {
+        irk: [0x11; 32],
+        reconnect_secret: [0x22; 32],
+    };
+    let second = PeerSecrets {
+        irk: [0x33; 32],
+        reconnect_secret: [0x44; 32],
+    };
+
+    store
+        .put_peer_secrets("pixel-9", &first)
+        .expect("put first");
+    store
+        .put_peer_secrets("tablet-7", &second)
+        .expect("put second");
+
+    assert_eq!(
+        store.get_peer_secrets("pixel-9").expect("get first"),
+        Some(first.clone())
+    );
+    assert_eq!(
+        store.get_peer_secrets("tablet-7").expect("get second"),
+        Some(second.clone())
+    );
+
+    let mut ids = store.list_peer_ids().expect("list peers");
+    ids.sort();
+    assert_eq!(ids, vec!["pixel-9".to_string(), "tablet-7".to_string()]);
+
+    store.delete_peer_secrets("pixel-9").expect("delete first");
+    assert_eq!(
+        store.get_peer_secrets("pixel-9").expect("get after delete"),
+        None
+    );
+    assert_eq!(
+        store.get_peer_secrets("tablet-7").expect("get survivor"),
+        Some(second)
+    );
+    assert_eq!(
+        store.list_peer_ids().expect("list after delete"),
+        vec!["tablet-7".to_string()]
+    );
+}
+
+#[test]
+fn in_memory_rejects_invalid_device_id_without_storing() {
+    let store = InMemorySecretStore::new();
+    let secrets = PeerSecrets {
+        irk: [0x55; 32],
+        reconnect_secret: [0x66; 32],
+    };
+
+    assert!(matches!(
+        store.put_peer_secrets("../bad", &secrets),
+        Err(KeynearError::Validation {
+            field: "deviceId",
+            ..
+        })
+    ));
+    assert!(store.get_peer_secrets("../bad").is_err());
+    assert!(store.list_peer_ids().expect("list peers").is_empty());
+}
+
+#[test]
+fn in_memory_presence_counter_starts_at_one_and_increments() {
+    let store = InMemorySecretStore::new();
+    assert_eq!(store.next_presence_counter().expect("first"), 1);
+    assert_eq!(store.next_presence_counter().expect("second"), 2);
+    assert_eq!(store.next_presence_counter().expect("third"), 3);
+}

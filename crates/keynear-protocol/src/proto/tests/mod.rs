@@ -418,3 +418,39 @@ async fn stream_helpers_reject_truncated_and_unknown_frames() {
         Err(KeynearError::Protocol(_))
     ));
 }
+
+#[test]
+fn encode_control_frame_rejects_oversized_payload() {
+    let frame = ControlFrame {
+        version: 1,
+        sequence: 1,
+        timestamp_ms: 1,
+        kind: "clipboard".to_string(),
+        payload: vec![0u8; MAX_CONTROL_FRAME_BYTES],
+    };
+    let err = encode_control_frame(&frame).expect_err("oversized frame must fail");
+    assert!(matches!(
+        err,
+        KeynearError::FrameTooLarge {
+            size,
+            max: MAX_CONTROL_FRAME_BYTES
+        } if size > MAX_CONTROL_FRAME_BYTES
+    ));
+}
+
+#[test]
+fn envelope_to_control_frame_rejects_oversized_clipboard() {
+    let env = sample_envelope(v1::envelope::Payload::Clipboard(v1::ClipboardPayload {
+        mime_type: "application/octet-stream".to_string(),
+        data: vec![0u8; MAX_CONTROL_FRAME_BYTES],
+        is_otp: false,
+    }));
+    let err = envelope_to_control_frame(&env).expect_err("oversized clipboard must fail");
+    assert!(matches!(
+        err,
+        KeynearError::FrameTooLarge {
+            size,
+            max: MAX_CONTROL_FRAME_BYTES
+        } if size > MAX_CONTROL_FRAME_BYTES
+    ));
+}
