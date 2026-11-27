@@ -38,6 +38,10 @@ jobs:
           fi
           while IFS= read -r sha; do
             [ -n "$sha" ] || continue
+            author_email="$(git log -n 1 --format=%ae "$sha")"
+            if [ "$author_email" = "49699333+dependabot[bot]@users.noreply.github.com" ]; then
+              continue
+            fi
             tmp="$(mktemp)"
             git log -n 1 --format=%B "$sha" > "$tmp"
             bash scripts/validation/commit-msg.sh "$tmp"
