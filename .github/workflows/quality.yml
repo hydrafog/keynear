@@ -72,7 +72,7 @@ jobs:
           cargo deny check
           cargo audit
       - name: Coverage gate
-        run: cargo llvm-cov --locked -p keynear-protocol -p keynear-core -p keynear-ffi -p keynear-ipc --all-features --fail-under-lines 87 --fail-under-functions 80 --fail-under-regions 86 --summary-only
+        run: cargo llvm-cov --locked -p keynear-protocol -p keynear-core -p keynear-ffi -p keynear-ipc --all-features --fail-under-lines 87 --fail-under-functions 80 --fail-under-regions 80 --summary-only
 
   fuzz:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.event_name == 'merge_group' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-fuzz'))

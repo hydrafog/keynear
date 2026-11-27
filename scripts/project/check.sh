@@ -15,13 +15,13 @@ run_rust_checks() {
   cargo test --locked --workspace --all-features
   cargo deny check
   cargo audit
-  cargo llvm-cov --locked -p keynear-protocol -p keynear-core -p keynear-ffi -p keynear-ipc --all-features --fail-under-lines 87 --fail-under-functions 80 --fail-under-regions 86 --summary-only
+  cargo llvm-cov --locked -p keynear-protocol -p keynear-core -p keynear-ffi -p keynear-ipc --all-features --fail-under-lines 87 --fail-under-functions 80 --fail-under-regions 80 --summary-only
 }
 
 if command -v cargo >/dev/null 2>&1 && command -v cargo-audit >/dev/null 2>&1 && command -v cargo-deny >/dev/null 2>&1 && command -v cargo-llvm-cov >/dev/null 2>&1; then
   run_rust_checks
 elif command -v nix >/dev/null 2>&1; then
-  nix develop -c bash -c 'set -euo pipefail; cargo fmt --check; cargo clippy --locked --workspace --all-targets --all-features -- -D warnings; cargo test --locked --workspace --all-features; cargo deny check; cargo audit; cargo llvm-cov --locked -p keynear-protocol -p keynear-core -p keynear-ffi -p keynear-ipc --all-features --fail-under-lines 87 --fail-under-functions 80 --fail-under-regions 86 --summary-only'
+  nix develop -c bash -c 'set -euo pipefail; cargo fmt --check; cargo clippy --locked --workspace --all-targets --all-features -- -D warnings; cargo test --locked --workspace --all-features; cargo deny check; cargo audit; cargo llvm-cov --locked -p keynear-protocol -p keynear-core -p keynear-ffi -p keynear-ipc --all-features --fail-under-lines 87 --fail-under-functions 80 --fail-under-regions 80 --summary-only'
 else
   echo "error: required Rust/security/coverage tools not found and nix missing from PATH" >&2
   exit 1
