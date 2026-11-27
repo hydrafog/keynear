@@ -341,3 +341,58 @@ fn send_request_to_decodes_peer_response_and_rejects_bad_frames() {
     bad.join().expect("bad server");
     std::fs::remove_dir_all(&dir).expect("cleanup");
 }
+
+#[test]
+fn prepare_socket_dir_rejects_non_socket_file() {
+    let dir = temp_sock_dir("non-socket");
+    std::fs::create_dir_all(&dir).expect("create dir");
+    let path = dir.join("regular.sock");
+    std::fs::write(&path, b"not a socket").expect("write file");
+
+    assert!(matches!(
+        crate::prepare_daemon_socket_dir(&path),
+        Err(KeynearError::Config(_))
+    ));
+
+    std::fs::remove_dir_all(&dir).expect("cleanup");
+}
+
+#[test]
+fn prepare_socket_dir_rejects_live_daemon() {
+    let dir = temp_sock_dir("live-daemon");
+    std::fs::create_dir_all(&dir).expect("create dir");
+    let path = dir.join("daemon.sock");
+    let listener = UnixListener::bind(&path).expect("bind listener");
+
+    assert!(matches!(
+        crate::prepare_daemon_socket_dir(&path),
+        Err(KeynearError::Config(_))
+    ));
+
+    drop(listener);
+    std::fs::remove_dir_all(&dir).expect("cleanup");
+}
+
+#[test]
+fn prepare_socket_dir_creates_missing_parent() {
+    let dir = temp_sock_dir("create-parent");
+    let parent = dir.join("nested");
+    let path = parent.join("daemon.sock");
+    assert!(!parent.exists());
+
+    crate::prepare_daemon_socket_dir(&path).expect("prepare dir");
+    assert!(parent.is_dir());
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = std::fs::metadata(&parent)
+            .expect("meta")
+            .permissions()
+            .mode()
+            & 0o777;
+        assert_eq!(mode, 0o700);
+    }
+
+    std::fs::remove_dir_all(&dir).expect("cleanup");
+}

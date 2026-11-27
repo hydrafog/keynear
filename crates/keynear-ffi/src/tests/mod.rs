@@ -17,3 +17,4 @@ mod bridge;
 mod core;
 mod core_handle;
 mod node;
+mod pairing_types;

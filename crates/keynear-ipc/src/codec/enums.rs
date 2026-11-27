@@ -35,3 +35,52 @@ pub(crate) fn decode_device_role(raw: u8) -> Result<DeviceRole, KeynearError> {
         ))),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn invalid_visibility_raw_returns_protocol_error() {
+        for raw in [0, 4, 255] {
+            assert!(matches!(
+                decode_visibility(raw),
+                Err(KeynearError::Protocol(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn valid_visibility_values_round_trip() {
+        for mode in [
+            VisibilityMode::Hidden,
+            VisibilityMode::PairedOnly,
+            VisibilityMode::EveryoneNearby,
+        ] {
+            assert_eq!(
+                decode_visibility(encode_visibility(mode)).expect("decode"),
+                mode
+            );
+        }
+    }
+
+    #[test]
+    fn invalid_device_role_raw_returns_protocol_error() {
+        for raw in [0, 3, 255] {
+            assert!(matches!(
+                decode_device_role(raw),
+                Err(KeynearError::Protocol(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn valid_device_role_values_round_trip() {
+        for role in [DeviceRole::Desktop, DeviceRole::Mobile] {
+            assert_eq!(
+                decode_device_role(encode_device_role(role)).expect("decode"),
+                role
+            );
+        }
+    }
+}
